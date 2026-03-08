@@ -33,8 +33,7 @@ npm install
 Bu komut apps/api, apps/web ve packages/shared bağımlılıklarını da kurar
 (npm workspaces otomatik olarak alt dizinleri işler).
 
-============================== 2. POSTGRESQL VERİTABANI OLUŞTURMA
-==============================
+# ============================== 2. POSTGRESQL VERİTABANI OLUŞTURMA
 
 PostgreSQL servisinin çalıştığından emin olun:
 macOS (Homebrew): brew services start postgresql@15
@@ -52,8 +51,7 @@ ALTER USER crm_user CREATEDB;
 Not: Yukarıdaki değerler geliştirme ortamı içindir.
 Production'da güçlü parolalar ve kısıtlı yetkiler kullanın.
 
-============================== 3. ENVIRONMENT VARIABLES
-==============================
+# ============================== 3. ENVIRONMENT VARIABLES
 
 Her app için .env dosyası oluşturun (.env.example dosyalarını kopyalayın):
 
@@ -78,8 +76,7 @@ NEXT_PUBLIC_API_URL="http://localhost:3001/api/v1"
 
 UYARI: .env dosyalarını ASLA git'e commit etmeyin.
 
-============================== 4. VERİTABANI MIGRATION
-==============================
+# ============================== 4. VERİTABANI MIGRATION
 
 Prisma migration'larını çalıştırın:
 cd apps/api
@@ -93,8 +90,7 @@ Bu komut:
 İlk admin kullanıcısını oluşturmak için seed script çalıştırın:
 npx prisma db seed
 
-============================== 5. UYGULAMALARI BAŞLATMA
-==============================
+# ============================== 5. UYGULAMALARI BAŞLATMA
 
 Her app'i ayrı terminal penceresinde başlatın:
 
@@ -114,8 +110,7 @@ npm run dev
 Veya root'tan tüm app'leri aynı anda başlatın:
 npm run dev
 
-============================== 6. DOĞRULAMA
-==============================
+# ============================== 6. DOĞRULAMA
 
 Her şeyin çalıştığını doğrulamak için:
 
@@ -134,8 +129,7 @@ npx prisma studio
 
 Prisma Studio tarayıcıda açılır, tabloları görebilirsiniz.
 
-============================== 7. YARARLI KOMUTLAR
-==============================
+# ============================== 7. YARARLI KOMUTLAR
 
 Prisma:
 npx prisma migrate dev — yeni migration oluştur ve uygula
