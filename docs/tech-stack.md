@@ -18,13 +18,13 @@ MONOREPO STRUCTURE (MANDATORY)
 
 CRMProje/
 ├── apps/
-│   ├── api/              # NestJS backend
-│   ├── web/              # Next.js admin panel
-│   └── mobile/           # React Native + Expo
+│ ├── api/ # NestJS backend
+│ ├── web/ # Next.js admin panel
+│ └── mobile/ # React Native + Expo
 ├── packages/
-│   └── shared/           # Shared types, Zod schemas, API client, utils
-├── docs/                 # Project documentation
-└── package.json          # NPM Workspaces
+│ └── shared/ # Shared types, Zod schemas, API client, utils
+├── docs/ # Project documentation
+└── package.json # NPM Workspaces
 
 - Backend, Web, and Mobile MUST share types, validation schemas, and utilities via packages/shared.
 - Do not duplicate type definitions across apps.

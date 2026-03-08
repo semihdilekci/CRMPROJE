@@ -23,6 +23,5 @@ module.exports = {
     '.next',
     'out',
     'coverage',
-    '*.cjs',
   ],
 };

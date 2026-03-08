@@ -7,22 +7,25 @@ ALTYAPI & KURULUM (Feature 1–5)
 ==============================
 
 Feature 1 — Monorepo Kurulumu & Proje Yapılandırması
+
 - npm workspaces ile monorepo başlatma
 - apps/api, apps/web, packages/shared klasör yapısı
 - Root tsconfig.json (strict mode)
 - ESLint + Prettier konfigürasyonu (tüm apps için tutarlı)
 - .gitignore, .env.example dosyaları
 - Root package.json workspace scripts
-Durum: [ ]
+  Durum: [ ]
 
 Feature 2 — Shared Package Kurulumu
+
 - packages/shared TypeScript projesi oluşturma
 - Build konfigürasyonu (tsconfig.json, build script)
 - @crm/shared alias tanımı
 - Workspace referanslarını apps/api ve apps/web içine ekleme
-Durum: [ ]
+  Durum: [ ]
 
 Feature 3 — Backend: NestJS Proje Kurulumu & Temel Konfigürasyon
+
 - NestJS proje oluşturma (apps/api)
 - Helmet middleware (güvenlik başlıkları)
 - CORS konfigürasyonu (ortam bazlı)
@@ -31,18 +34,20 @@ Feature 3 — Backend: NestJS Proje Kurulumu & Temel Konfigürasyon
 - Standart API response format: { success, message, data? }
 - Logger konfigürasyonu
 - Environment variables yönetimi (@nestjs/config)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 4 — Veritabanı: Prisma Şema Tasarımı & Migration
+
 - Prisma ORM kurulumu ve PostgreSQL bağlantısı
 - User modeli (id, email, password, role, name, createdAt, updatedAt)
 - Fair modeli (id, name, address, startDate, endDate, createdAt, updatedAt)
 - Customer modeli (id, fairId, company, name, phone, email, budgetRaw, budgetCurrency, conversionRate, products, cardImage, createdAt, updatedAt)
 - İlişkiler: Fair → Customer (one-to-many), User → Fair (created-by)
 - İlk migration çalıştırma (prisma migrate dev)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 5 — Shared: Tip Tanımları, Enum'lar & Sabitler
+
 - User, Fair, Customer TypeScript interface'leri
 - Role enum (admin, user)
 - ConversionRate enum (very_high, high, medium, low, very_low)
@@ -50,13 +55,14 @@ Feature 5 — Shared: Tip Tanımları, Enum'lar & Sabitler
 - Product listesi sabiti (10 ürün kategorisi)
 - Dönüşüm oranı renk haritası
 - API endpoint sabitleri
-Durum: [ ]
+  Durum: [ ]
 
 ==============================
 BACKEND MODÜLLERİ (Feature 6–12)
 ==============================
 
 Feature 6 — Backend: Authentication Modülü
+
 - Passport.js + JWT strategy
 - Access token (kısa süreli) + Refresh token (uzun süreli)
 - Login endpoint (POST /auth/login)
@@ -66,9 +72,10 @@ Feature 6 — Backend: Authentication Modülü
 - Argon2 ile parola hashleme
 - JWT AuthGuard (korumalı endpoint'ler için)
 - Role-based guard (RBAC)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 7 — Backend: User Yönetimi Modülü
+
 - User CRUD (Controller → Service → Prisma)
 - GET /users — kullanıcı listesi (admin only)
 - GET /users/:id — tekil kullanıcı
@@ -76,9 +83,10 @@ Feature 7 — Backend: User Yönetimi Modülü
 - DELETE /users/:id — silme (admin only)
 - Parola alanı API yanıtlarından hariç tutma
 - Admin seed script (ilk admin kullanıcısını oluşturma)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 8 — Shared: Zod Validasyon Şemaları
+
 - createFairSchema (name zorunlu, dates opsiyonel)
 - updateFairSchema (partial)
 - createCustomerSchema (company + name zorunlu, diğerleri opsiyonel)
@@ -86,9 +94,10 @@ Feature 8 — Shared: Zod Validasyon Şemaları
 - loginSchema (email + password)
 - registerSchema (email + password + name)
 - Backend ve web aynı şemaları @crm/shared'dan import eder
-Durum: [ ]
+  Durum: [ ]
 
 Feature 9 — Backend: Fuar Yönetimi Modülü
+
 - Fair CRUD (Controller → Service → Prisma)
 - POST /fairs — fuar oluşturma
 - GET /fairs — fuar listesi (startDate azalan sıralama)
@@ -96,9 +105,10 @@ Feature 9 — Backend: Fuar Yönetimi Modülü
 - PATCH /fairs/:id — fuar güncelleme
 - DELETE /fairs/:id — fuar silme (cascade: müşteriler de silinir)
 - Zod validasyon entegrasyonu
-Durum: [ ]
+  Durum: [ ]
 
 Feature 10 — Backend: Müşteri Yönetimi Modülü
+
 - Customer CRUD (Controller → Service → Prisma)
 - POST /fairs/:fairId/customers — müşteri ekleme
 - GET /fairs/:fairId/customers — müşteri listesi
@@ -107,28 +117,31 @@ Feature 10 — Backend: Müşteri Yönetimi Modülü
 - Arama endpoint'i (isim veya firma, case-insensitive)
 - Dönüşüm oranı filtresi
 - Zod validasyon entegrasyonu
-Durum: [ ]
+  Durum: [ ]
 
 Feature 11 — Backend: Dosya Yükleme Servisi
+
 - Kartvizit fotoğrafı upload endpoint'i (POST /upload/card-image)
 - Geliştirmede local storage, production'da S3/Cloudinary-ready
-- Dosya boyutu ve format validasyonu (sadece image/*)
+- Dosya boyutu ve format validasyonu (sadece image/\*)
 - Upload sonrası URL döndürme
-Durum: [ ]
+  Durum: [ ]
 
 Feature 12 — Shared: Yardımcı Fonksiyonlar (Utils)
+
 - formatDate(iso) → "12 Mar 2025" (Türkçe locale)
 - formatDateTime(iso) → "12 Mar 2025, 14:35"
 - formatBudget(raw) → "1.000.000,00" (Türk sayı formatı)
 - parseBudgetRaw(display) → temizlenmiş ham sayı string'i
 - Dönüşüm oranı label ve renk mapper'ı
-Durum: [ ]
+  Durum: [ ]
 
 ==============================
 WEB FRONTEND (Feature 13–25)
 ==============================
 
 Feature 13 — Web: Next.js Proje Kurulumu & Yapılandırma
+
 - Next.js 14+ (App Router) proje oluşturma (apps/web)
 - TailwindCSS kurulumu
 - shadcn/ui kurulumu
@@ -136,9 +149,10 @@ Feature 13 — Web: Next.js Proje Kurulumu & Yapılandırma
 - TanStack Query provider
 - Zustand store yapısı
 - @crm/shared bağlantısı
-Durum: [ ]
+  Durum: [ ]
 
 Feature 14 — Web: Tasarım Sistemi Kurulumu
+
 - TailwindCSS dark theme renk token'ları:
   bg (#0A0A0F), surface (#12121A), card (#1A1A26), border (#2A2A3E),
   accent (#FF6B35), accentSoft (#FF6B3520), gold (#FFB347), goldSoft (#FFB34715),
@@ -150,9 +164,10 @@ Feature 14 — Web: Tasarım Sistemi Kurulumu
 - Spacing hiyerarşisi (sayfa 36px/24px → kart 20-22px → detay 16-18px → küçük 8-12px)
 - Scrollbar özelleştirmesi (6px genişlik, temalı renkler)
 - Select dropdown özelleştirmesi (option arka planı surface rengi)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 15 — Web: Temel UI Bileşenleri
+
 - Input bileşeni (label: uppercase 12px 700 weight, focus/blur border transition 0.2s)
 - Textarea bileşeni (resize: vertical, minHeight 80px)
 - Badge bileşeni (arka plan: color+"20", border: color+"40", 6px radius)
@@ -160,9 +175,10 @@ Feature 15 — Web: Temel UI Bileşenleri
 - Button bileşeni (primary/secondary/danger varyantları)
 - Select dropdown bileşeni
 - Toggle button / chip bileşeni (seçili: color+"25" arka plan, transition 0.15s)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 16 — Web: Layout & Navigasyon
+
 - Sticky Top Bar (position: sticky, top: 0, z-index: 100)
 - Glassmorphism efekti (backdrop-filter: blur(12px), arka plan #0A0A0FEE)
 - Sol: logo ikonu + "Fuar CRM" (Playfair Display serif, 18px)
@@ -170,17 +186,19 @@ Feature 16 — Web: Layout & Navigasyon
 - Sağ: "+ Yeni Fuar" CTA butonu (sadece ana ekranda görünür)
 - Content wrapper (maxWidth: 960px, margin: 0 auto, padding: 36px 24px)
 - İki katmanlı navigasyon state yönetimi (selectedFair state)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 17 — Web: Authentication Sayfaları & State Yönetimi
+
 - Login sayfası (email + password formu)
 - Auth state (Zustand store: user, token, isAuthenticated)
 - Protected route wrapper (auth yoksa login'e redirect)
 - Axios interceptor (access token ekleme, 401'de refresh token denemesi)
 - Logout işlevi
-Durum: [ ]
+  Durum: [ ]
 
 Feature 18 — Web: Fuar Listesi Sayfası
+
 - Fuar kartları grid (repeat(auto-fill, minmax(280px, 1fr)), gap 14px, responsive 1-3 kolon)
 - FairCard bileşeni:
   Fuar adı (Playfair Display serif, 19px),
@@ -194,9 +212,10 @@ Feature 18 — Web: Fuar Listesi Sayfası
 - Empty state (büyük 🏛 emoji 56px, başlık, açıklama, CTA butonu)
 - "Yeni Fuar Ekle" dashed border kartı (2px dashed, hover'da accent renk)
 - Özet istatistik satırı ("X fuar · Y toplam müşteri kaydı")
-Durum: [ ]
+  Durum: [ ]
 
 Feature 19 — Web: Fuar CRUD İşlemleri (UI)
+
 - FairForm bileşeni:
   Fuar Adı (text input), Adres/Yer (textarea, dikey resize),
   Başlangıç Tarihi + Bitiş Tarihi (date picker, 1fr 1fr grid yan yana)
@@ -207,27 +226,30 @@ Feature 19 — Web: Fuar CRUD İşlemleri (UI)
 - Düzenleme sonrası hem fairs state hem selectedFair güncellenir
 - Form validasyonu (name zorunlu, boşken kaydet butonu çalışmaz)
 - Kaydet (accent, flex:1) + İptal (surface, border) butonları
-Durum: [ ]
+  Durum: [ ]
 
 Feature 20 — Web: Fuar Detay Sayfası — Header & İstatistikler
+
 - ← Fuarlara Dön geri butonu (muted renk, border yok)
 - Fuar adı (Playfair Display, 28px) + 📍 adres + 📅 tarih aralığı
 - Sağ üstte ✏️ Düzenle ve 🗑 Sil butonları yan yana (sil butonu kırmızı tonlarında)
 - İstatistik kartları satırı (yatay scroll edilebilir):
   Toplam müşteri (accent renk, 26px bold sayı),
   Dönüşüm bazlı kartlar (her seviye için ayrı kart, ≥1 müşteri varsa görünür, kendi rengiyle sayı, border %30 opacity)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 21 — Web: Fuar Detay — Toolbar & Filtreleme
+
 - Arama input'u (gerçek zamanlı, toLowerCase() case-insensitive, isim veya firma adı)
 - Dönüşüm oranı <select> filtresi ("Tüm Dönüşümler" + 5 seçenek)
-- + Müşteri Ekle butonu (accent, nowrap)
+- - Müşteri Ekle butonu (accent, nowrap)
 - Arama + filtre kombinasyonu (eş zamanlı çalışır)
 - Toolbar elemanları flexWrap ile responsive
 - Boş arama sonucu mesajı ("Arama sonucu bulunamadı.")
-Durum: [ ]
+  Durum: [ ]
 
 Feature 22 — Web: Müşteri Kartı Bileşeni
+
 - Kapalı hali:
   Kişi adı (700 weight, 15px), firma adı (accent rengi, 600 weight),
   Badge satırı: dönüşüm rozeti (kendi rengi) + ilk 2 ürün rozeti (muted) + "+N" fazla ürün rozeti,
@@ -245,9 +267,10 @@ Feature 22 — Web: Müşteri Kartı Bileşeni
   Alt kısım: ✏️ Düzenle (accent, flex-1) + 🗑 Sil (kırmızı, sabit genişlik)
 - Accordion toggle (tıkla aç/kapat, ok ikonu değişir)
 - Müşteri kartları grid (repeat(auto-fill, minmax(300px, 1fr)), gap 10px)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 23 — Web: Müşteri Formu & CRUD İşlemleri
+
 - CustomerForm bileşeni:
   Firma Adı + Ad Soyad (1fr 1fr grid, yan yana),
   Telefon (type="tel") + E-posta (type="email") (1fr 1fr grid, yan yana),
@@ -255,22 +278,24 @@ Feature 23 — Web: Müşteri Formu & CRUD İşlemleri
   Para birimi dropdown (USD/TL/GBP/EUR, bütçe input'una yapışık birleşik blok: input sağ border yok + borderRadius "10px 0 0 10px", dropdown sol border + borderRadius "0 10px 10px 0", accent bold metin),
   Satışa Dönüşme Tahmini (5 seçenek toggle group: Çok Yüksek 80-100% / Yüksek 60-80% / Orta 40-60% / Düşük 20-40% / Çok Düşük 0-20%, renk kodlu, yüzde opacity 0.7),
   İlgilenilen Ürünler (10 kategori multi-select chip: Endüstriyel Pompalar, Vana Sistemleri, Kompresörler, Filtre Üniteleri, Otomasyon Yazılımı, Sensörler & Ölçüm, Boru & Fitting, Isı Eşanjörleri, Proses Ekipmanları, Kontrol Panelleri — seçili: ✓ prefix + accent, flexWrap),
-  Kartvizit Fotoğrafı (hidden file input, accept="image/*", useRef tetikleme, 2px dashed upload area, hover accent border, seçilince base64 preview maxHeight 160px + ✕ sil butonu #000000AA)
+  Kartvizit Fotoğrafı (hidden file input, accept="image/\*", useRef tetikleme, 2px dashed upload area, hover accent border, seçilince base64 preview maxHeight 160px + ✕ sil butonu #000000AA)
 - Müşteri ekleme modal'ı (fuar detay toolbar'dan + Müşteri Ekle ile açılır, boş form, createdAt otomatik set)
 - Müşteri düzenleme modal'ı (genişletilmiş karttaki ✏️ ile açılır, initial prop ile dolu, bütçe display formatBudget ile yeniden hesaplanır)
 - Müşteri silme (genişletilmiş karttaki 🗑, confirm dialog, onay sonrası listeden çıkarılır)
 - Form validasyonu (company + name zorunlu, boşken kaydet çalışmaz)
 - Kaydet (accent, flex:1) + İptal (surface, border) butonları
-Durum: [ ]
+  Durum: [ ]
 
 Feature 24 — Web: Boş Durumlar & Yükleme Ekranları
+
 - Fuar listesi empty state (🏛 56px emoji, başlık, açıklama, CTA butonu)
 - Müşteri listesi empty state (👥 ikonu + yönlendirme metni)
 - Arama sonuçsuz durumu ("Arama sonucu bulunamadı.")
 - Sayfa yükleme durumu (loaded === false iken tam sayfa ortalı "Yükleniyor..." mesajı)
-Durum: [ ]
+  Durum: [ ]
 
 Feature 25 — Web: Entegrasyon, Test & Son Düzenlemeler
+
 - Backend ↔ Web uçtan uca akış testi (tüm CRUD operasyonları)
 - Fuar oluştur → müşteri ekle → düzenle → sil → fuar sil akışı doğrulama
 - Responsive tasarım kontrolü (1-3 kolon geçişleri)
@@ -279,7 +304,7 @@ Feature 25 — Web: Entegrasyon, Test & Son Düzenlemeler
 - Hata yönetimi (network error, validation error kullanıcı geri bildirimleri)
 - Tüm modal'ların backdrop close davranışı doğrulama
 - Conditional rendering kontrolleri (opsiyonel alanlar boşken gizli mi)
-Durum: [ ]
+  Durum: [ ]
 
 ==============================
 NOTLAR
