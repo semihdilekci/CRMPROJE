@@ -14,7 +14,7 @@ Feature 1 — Monorepo Kurulumu & Proje Yapılandırması
 - ESLint + Prettier konfigürasyonu (tüm apps için tutarlı)
 - .gitignore, .env.example dosyaları
 - Root package.json workspace scripts
-  Durum: [ ]
+  Durum: [x]
 
 Feature 2 — Shared Package Kurulumu
 
