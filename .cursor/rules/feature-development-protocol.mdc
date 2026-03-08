@@ -1,0 +1,248 @@
+---
+alwaysApply: true
+---
+
+You are developing features for an enterprise-grade Fuar CRM System.
+
+All new features must follow this mandatory development protocol.
+Features are tracked in docs/phase-1-features.md with sequential numbering.
+Never skip steps. Never jump directly to implementation.
+
+This protocol integrates the full workflow: git branching, development, testing, and completion.
+
+==============================
+STEP 0 — CREATE FEATURE BRANCH
+==============================
+
+Before writing any code:
+
+- Identify the feature number from docs/phase-1-features.md.
+- Ensure you are on main branch and it is up to date.
+- Create a feature branch:
+  git checkout main
+  git checkout -b feature/F{n}-short-description
+
+Example:
+  git checkout -b feature/F4-prisma-schema
+
+Never start coding on main. All code changes happen on feature branches.
+
+==============================
+STEP 1 — ANALYZE BEFORE CODING
+==============================
+
+Before generating code:
+
+- Read the full feature description and all sub-items from phase-1-features.md.
+- Determine which apps are affected (api, web, shared, or combination).
+- Check if previous features this one depends on are completed.
+- If dependencies are not met, stop and notify the developer.
+- Check if database schema changes are needed.
+- Check if shared types or schemas need updating in @crm/shared.
+- Review related existing modules — avoid duplicating logic (see context-and-reuse.mdc).
+- Identify which files will be created or modified.
+
+Mandatory — list before writing any code:
+- Existing files to use as reference or template (e.g. apps/api/src/modules/fair/ for a new module).
+- For each new unit (service, controller, component, schema, util): "Does something similar already exist? Where?"
+  If yes → reuse or extend; do not add a second copy.
+  If no → add in the correct place (shared vs app-specific) and follow existing patterns.
+
+List your analysis (including the reference files and reuse check) before writing any code.
+
+==============================
+STEP 2 — SHARED PACKAGE FIRST
+==============================
+
+If the feature requires new types, schemas, or utilities:
+
+- Define TypeScript interfaces in packages/shared/src/types/.
+- Define Zod validation schemas in packages/shared/src/schemas/.
+- Add constants or enums in packages/shared/src/constants/.
+- Add utility functions in packages/shared/src/utils/.
+
+Shared package changes must come before backend or frontend implementation.
+Both apps will import from @crm/shared — never define locally.
+
+>>> COMMIT: feat(shared): add types/schemas for feature F{n}
+
+==============================
+STEP 3 — DATABASE SCHEMA (IF NEEDED)
+==============================
+
+If the feature requires data persistence:
+
+- Update Prisma schema at apps/api/prisma/schema.prisma.
+- Define proper relations (@relation) with referential actions (onDelete, onUpdate).
+- Add constraints: @unique, @default, optional (?), required.
+- Use proper field types matching the shared TypeScript types.
+- Run prisma migrate dev with a descriptive migration name.
+- Run prisma generate to update the Prisma client types.
+
+No feature should bypass data modeling.
+
+>>> COMMIT: feat(prisma): add {model} schema
+>>> COMMIT: chore(prisma): run migration {migration-name}
+
+==============================
+STEP 4 — BACKEND: VALIDATION LAYER
+==============================
+
+- Import Zod schemas from @crm/shared in the module's DTO files.
+- Create DTOs that use z.infer<typeof schema> for type safety.
+- Apply Zod validation pipe at controller level (@UsePipes).
+- Validate request body, params, and query strings as needed.
+- Reject invalid inputs early with descriptive error messages.
+
+Validation is mandatory for every endpoint that accepts user input.
+
+==============================
+STEP 5 — BACKEND: SERVICE LAYER
+==============================
+
+- Implement all business logic in the service class.
+- Inject PrismaService for database operations.
+- Inject other services if cross-module logic is needed.
+- Keep the service focused — one service per module.
+- Handle all business rules: access control checks, data transformation, cascade operations.
+- Throw typed NestJS exceptions (NotFoundException, ForbiddenException, etc.).
+- Never handle HTTP concerns in services.
+
+>>> COMMIT: feat(api): implement {Module}Service
+
+==============================
+STEP 6 — BACKEND: CONTROLLER LAYER
+==============================
+
+- Handle HTTP request and response only.
+- Apply appropriate decorators: @Get, @Post, @Patch, @Delete.
+- Apply guards: @UseGuards(JwtAuthGuard), @UseGuards(RolesGuard).
+- Apply roles: @Roles('admin') where needed.
+- Call service methods — no business logic in controllers.
+- Return standardized response format: { success, message, data }.
+- Use proper HTTP status codes via @HttpCode decorator.
+
+>>> COMMIT: feat(api): add {Module}Controller with endpoints
+
+==============================
+STEP 7 — BACKEND: REGISTER MODULE
+==============================
+
+- Register the new module in apps/api/src/app.module.ts.
+- Export services that other modules may need.
+- Ensure proper dependency injection setup.
+- Verify the module loads without errors.
+
+>>> COMMIT: feat(api): register {Module} in AppModule
+
+==============================
+STEP 8 — FRONTEND: DATA LAYER
+==============================
+
+If the feature has a frontend component:
+
+- Create TanStack Query hooks in apps/web/src/hooks/:
+  Query hooks for data fetching (useQuery).
+  Mutation hooks for create/update/delete (useMutation).
+- Define query keys in apps/web/src/lib/query-keys.ts.
+- Configure cache invalidation: mutations should invalidate related queries.
+- Import types from @crm/shared for type-safe API responses.
+
+>>> COMMIT: feat(web): add data hooks for {feature}
+
+==============================
+STEP 9 — FRONTEND: UI COMPONENTS
+==============================
+
+- Create components in the appropriate directory:
+  Shared/reusable: apps/web/src/components/ui/
+  Feature-specific: apps/web/src/components/fair/, apps/web/src/components/customer/
+- Follow the design system defined in docs/phase-1-features.md (Feature 14):
+  Use TailwindCSS tokens — never hardcode colors.
+  Use Playfair Display for headings, DM Sans for body text.
+  Follow the spacing hierarchy.
+- Use React Hook Form + Zod schemas from @crm/shared for forms.
+- Use shadcn/ui base components — extend, don't rewrite.
+- Keep components under 150 lines — extract sub-components.
+
+>>> COMMIT: feat(web): implement {Component} component
+
+==============================
+STEP 10 — FRONTEND: PAGE INTEGRATION
+==============================
+
+- Wire components into the page in apps/web/src/app/.
+- Connect TanStack Query hooks for data.
+- Connect Zustand stores for UI state (modals, selectedFair).
+- Handle loading, error, and empty states.
+- Verify the full user flow works end-to-end.
+
+>>> COMMIT: feat(web): integrate {feature} page
+
+==============================
+STEP 11 — WRITE TESTS
+==============================
+
+- Write unit tests for new service methods (backend).
+- Write unit tests for new Zod schemas (shared).
+- Write unit tests for new utility functions (shared).
+- Write component tests for complex UI components (frontend).
+- Test edge cases: empty fields, long text, special characters, no data.
+- Test authorization: protected endpoints reject unauthorized access.
+- Test validation: invalid inputs are rejected with proper messages.
+
+All tests must pass before proceeding.
+
+>>> COMMIT: test(api): add tests for {Module}Service
+>>> COMMIT: test(shared): add tests for {schema/util}
+>>> COMMIT: test(web): add tests for {Component}
+
+==============================
+STEP 12 — VERIFICATION
+==============================
+
+Before merging to main, verify:
+
+- All CRUD operations work correctly (if applicable).
+- No TypeScript errors across all apps (tsc --noEmit).
+- No lint errors (npm run lint).
+- All tests pass (npm test).
+- No console errors in browser (if UI feature).
+- Responsive layout works (if UI feature).
+
+DO NOT merge to main if any of these checks fail.
+
+==============================
+STEP 13 — MERGE TO MAIN & COMPLETE
+==============================
+
+After all verifications pass:
+
+1. Merge feature branch to main:
+   git checkout main
+   git merge feature/F{n}-short-description
+
+2. Delete the feature branch:
+   git branch -d feature/F{n}-short-description
+
+3. Update feature status (commit directly on main):
+   Update docs/phase-1-features.md: [ ] → [x]
+   git commit -m "docs: mark feature F{n} as complete"
+
+4. Proceed to the next sequential feature number.
+
+==============================
+IMPORTANT RULES
+==============================
+
+- Never create quick temporary solutions — do it right the first time.
+- Never break modular architecture for convenience.
+- Never introduce tight coupling between modules.
+- Never skip the shared package step — duplication is not acceptable.
+- Never merge to main without passing all checks in Step 12.
+- Never commit directly to main (except doc updates in Step 13).
+- Keep future extensibility in mind (Phase 2 mobile app will consume the same API).
+- If uncertain about implementation approach, ask before coding.
+- Reference docs/tech-stack.md for allowed technologies at all times.
+- Not all features require all steps — skip steps that don't apply
+  (e.g., pure frontend features skip Steps 3-7).

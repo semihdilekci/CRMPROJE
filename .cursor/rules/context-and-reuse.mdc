@@ -1,0 +1,102 @@
+---
+alwaysApply: true
+---
+
+You are developing an enterprise-grade Fuar CRM System.
+
+To avoid duplicate code and stay consistent as the project grows, you MUST follow these context and reuse rules.
+When in doubt, search first and reuse — never write new code without checking for existing equivalents.
+
+==============================
+SEARCH BEFORE WRITING
+==============================
+
+Before adding ANY of the following, search the codebase first:
+
+- A new function or utility
+  → Search in packages/shared/src/utils/, apps/api/src/common/, apps/web/src/lib/
+- A new type or interface
+  → Search in packages/shared/src/types/, and in the same module's dto/ or types/
+- A new validation schema
+  → Search in packages/shared/src/schemas/
+- A new constant, enum, or config value
+  → Search in packages/shared/src/constants/, and in module-level constants
+- A new React component (e.g. modal, button variant, form field)
+  → Search in apps/web/src/components/ui/ and in the relevant feature folder (fair/, customer/)
+- A new hook (e.g. useDebounce, useLocalStorage)
+  → Search in apps/web/src/hooks/
+- A new NestJS guard, pipe, or interceptor
+  → Search in apps/api/src/common/
+
+If you find something that does the same or similar:
+- Reuse it (import and use), or
+- Extend it (add a parameter or option), or
+- Refactor once to make it generic and use in both places.
+
+Do NOT add a second copy. Do NOT write a new implementation without referencing the existing one.
+
+==============================
+USE EXISTING MODULES AS TEMPLATES
+==============================
+
+When adding a new domain module (e.g. customer, user, upload):
+
+- Identify an existing similar module (e.g. fair for customer, auth for user-related).
+- Read that module's structure before writing:
+  - Same folder layout (module, controller, service, dto/, etc.)
+  - Same naming (e.g. fair.service.ts → customer.service.ts)
+  - Same patterns (how DTOs are used, how Prisma is called, how responses are shaped)
+- Mirror the structure and patterns. Only the domain logic should differ.
+
+Reference paths (use as templates):
+- Backend module: apps/api/src/modules/fair/ (or auth/ when adding auth-related code)
+- Shared schemas: packages/shared/src/schemas/
+- Frontend feature: apps/web/src/components/fair/ and related hooks in apps/web/src/hooks/
+
+When implementing a new module, list the template files you are following at the start of your implementation.
+
+==============================
+SHARED AND COMMON FIRST
+==============================
+
+- Error messages, success messages, and user-facing strings that may be reused
+  → Prefer constants in packages/shared/src/constants/ or a messages/ file; do not scatter identical strings.
+- Validation logic used in more than one place
+  → Must live in packages/shared (Zod schemas) or in a shared pipe/helper; do not duplicate in each module.
+- Formatting (dates, numbers, currency)
+  → Must use packages/shared/src/utils/ (e.g. formatDate, formatBudget); do not redefine in api or web.
+- API response shape
+  → Use types from @crm/shared; do not redefine equivalent interfaces in api or web.
+
+If you are about to copy-paste a block of code to a second place, stop and move that logic to a shared location instead.
+
+==============================
+SCOPE AND CONTEXT
+==============================
+
+When working on a feature:
+
+- At the start, list the existing files that are relevant (e.g. fair.service.ts, fair.controller.ts, create-fair.schema.ts).
+- For each new file you add, name the existing file(s) it should align with (e.g. "customer.service.ts follows the pattern of fair.service.ts").
+- If the codebase is large and you are unsure whether something already exists, say so and suggest a quick search (e.g. by function name or string) before writing.
+
+This reduces mistakes when the project grows and not all files fit in context.
+
+==============================
+SMALL ADDITIONS
+==============================
+
+Even for small changes (a new helper, a new component, a new constant):
+
+- Run a quick mental/search check: "Is there already something like this?"
+- If yes, reuse or extend. If no, add it in the correct place (shared vs app-specific) and follow existing naming and structure.
+
+Do not add one-off helpers or duplicate strings "just for this file" if they could be shared.
+
+==============================
+IMPORTANT
+==============================
+
+- These rules apply in every conversation, regardless of feature number.
+- Violating these rules (e.g. adding duplicate logic or ignoring an existing util) is not acceptable even if the code "works".
+- When the user asks you to implement something, assume you must search and reuse first unless the user explicitly asks for a new standalone implementation.

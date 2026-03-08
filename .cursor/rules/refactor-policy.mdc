@@ -1,0 +1,98 @@
+---
+alwaysApply: true
+---
+
+You are maintaining an enterprise-grade Fuar CRM System built as a monorepo.
+
+Refactoring must be controlled, safe, and justified.
+Stability is more important than perfection.
+
+==============================
+GENERAL PRINCIPLE
+==============================
+
+Do NOT perform large structural refactors unless explicitly requested by the developer.
+
+Small, incremental improvements are acceptable when they clearly reduce complexity.
+Large architectural changes require explicit approval before implementation.
+
+==============================
+WHEN REFACTORING IS ALLOWED
+==============================
+
+Refactoring is allowed only when:
+
+- Fixing a bug that requires structural change to resolve properly.
+- Reducing clearly duplicated logic (DRY violation across modules).
+- Improving readability without changing external behavior.
+- Improving performance with measurable justification.
+- Extracting shared logic into packages/shared when duplication is found between apps.
+- Aligning code with established patterns when a module deviates from project conventions.
+
+==============================
+WHAT YOU MUST NOT DO
+==============================
+
+- Do not move NestJS modules between folders without explicit request.
+- Do not rename files globally without request.
+- Do not change the monorepo folder structure (apps/, packages/, docs/).
+- Do not replace NestJS patterns with Express patterns.
+- Do not replace Prisma with raw SQL or another ORM.
+- Do not introduce new libraries without approval.
+- Do not rewrite working features completely.
+- Do not change the shared package (@crm/shared) API surface without checking all consumers.
+- Do not alter database schema outside of a planned feature.
+- Do not refactor frontend and backend simultaneously — change one side, verify, then the other.
+
+==============================
+SAFE REFACTOR RULES
+==============================
+
+If refactoring:
+
+- Keep changes minimal and focused on a single concern.
+- Do not change API contracts (request/response shapes).
+- Do not change database schema (Prisma migrations) unless part of a feature.
+- Maintain backward compatibility with existing endpoints.
+- Preserve existing route paths and response formats.
+- If renaming a shared type in @crm/shared, update ALL consumers (api + web) in the same change.
+- Run existing functionality after refactor to verify nothing is broken.
+
+==============================
+MONOREPO-SPECIFIC RULES
+==============================
+
+- Changing packages/shared affects both apps/api and apps/web.
+  Always verify impact on both apps before modifying shared code.
+- Moving a type from a local app to packages/shared is allowed and encouraged (deduplication).
+- Moving a type from packages/shared back to a local app is NOT allowed without approval.
+- When refactoring backend services, verify that API response shapes remain unchanged.
+- When refactoring frontend components, verify that they still conform to the design system.
+
+==============================
+ANALYZE BEFORE MODIFYING
+==============================
+
+Before any refactoring, explain:
+
+1. WHAT will change — list specific files and modules affected.
+2. WHY it is necessary — reference a concrete problem (duplication, bug, performance).
+3. RISK assessment — what could break, which endpoints or pages are affected.
+4. SCOPE — is it contained to one module or does it cross module boundaries?
+
+If risk is high or scope crosses multiple modules, suggest the change and wait for approval.
+
+==============================
+PRIORITY ORDER
+==============================
+
+When making decisions, follow this priority:
+
+1. Stability — working code stays working
+2. Security — never weaken security for cleaner code
+3. Maintainability — code should be easy to understand and modify
+4. Performance — optimize only when measurably needed
+5. Code elegance — nice-to-have, never at the cost of the above
+
+Never sacrifice stability for elegance.
+Never sacrifice security for developer convenience.

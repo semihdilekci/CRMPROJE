@@ -1,0 +1,162 @@
+---
+alwaysApply: true
+---
+
+You are a senior software architect building an enterprise-grade Fuar CRM System.
+
+This is a monorepo project with three apps sharing a common TypeScript codebase.
+Architecture decisions are STRICT and MUST NOT be changed without explicit approval.
+
+==============================
+MONOREPO STRUCTURE
+==============================
+
+CRMProje/
+├── apps/
+│   ├── api/              # NestJS backend
+│   ├── web/              # Next.js admin panel
+│   └── mobile/           # React Native + Expo (Phase 2)
+├── packages/
+│   └── shared/           # Shared types, Zod schemas, utils
+├── docs/                 # Project documentation & rules
+└── package.json          # npm workspaces root
+
+- All apps consume packages/shared via @crm/shared alias.
+- Never duplicate types, schemas, or utilities across apps.
+- Each app has its own tsconfig.json extending root config.
+
+==============================
+GENERAL PRINCIPLES
+==============================
+
+- Follow layered architecture strictly in every app.
+- Maintain clear separation of concerns between layers.
+- Do not mix responsibilities between layers.
+- Prefer scalable and maintainable solutions over quick implementations.
+- Avoid duplication at all costs (DRY principle).
+- Every module must be self-contained and independently testable.
+
+==============================
+BACKEND ARCHITECTURE (NestJS)
+==============================
+
+Backend follows NestJS modular architecture:
+Module → Controller → Service → Prisma (Repository)
+
+Each feature lives in its own NestJS module:
+apps/api/src/modules/auth/
+apps/api/src/modules/user/
+apps/api/src/modules/fair/
+apps/api/src/modules/customer/
+apps/api/src/modules/upload/
+
+Each module folder contains:
+- module file (*.module.ts) — NestJS module declaration
+- controller (*.controller.ts) — HTTP request/response only
+- service (*.service.ts) — business logic
+- dto files (*.dto.ts) — request/response shapes (backed by Zod)
+
+Controller Layer:
+- Handles only HTTP request and response.
+- No business logic allowed.
+- No database queries allowed.
+- Only calls service layer methods.
+- Uses NestJS decorators (@Get, @Post, @Patch, @Delete).
+- Applies guards (@UseGuards) and pipes (@UsePipes) via decorators.
+
+Service Layer:
+- Contains all business logic.
+- Handles application rules and data transformation.
+- Calls Prisma client directly for database operations.
+- Must not handle HTTP concerns (request, response, status codes).
+- May call other services via dependency injection.
+
+Prisma Layer (Repository):
+- Prisma client is injected as a global service (PrismaService).
+- All database operations go through Prisma ORM.
+- No raw SQL anywhere in the codebase.
+- Schema lives at apps/api/prisma/schema.prisma.
+
+Shared Utilities:
+- Cross-cutting concerns (guards, filters, interceptors, pipes) live in apps/api/src/common/.
+- Reusable logic shared with frontend lives in packages/shared/src/.
+
+==============================
+FRONTEND ARCHITECTURE (Next.js)
+==============================
+
+Web app follows Next.js App Router conventions:
+apps/web/src/app/           — pages and layouts (file-based routing)
+apps/web/src/components/    — reusable UI components
+apps/web/src/lib/           — API client, auth helpers, query keys
+apps/web/src/stores/        — Zustand stores
+apps/web/src/hooks/         — custom React hooks
+apps/web/src/types/         — frontend-specific types (import shared from @crm/shared)
+
+Component Architecture:
+- Separate server components and client components explicitly.
+- Use "use client" directive only where interactivity is needed.
+- Keep components small and focused (single responsibility).
+- Extract reusable UI into apps/web/src/components/ui/ (shadcn/ui based).
+- Feature-specific components live alongside their page.
+
+State Management:
+- Server state: TanStack Query (fetching, caching, synchronization).
+- Client state: Zustand (auth, UI state like selectedFair, modals).
+- Do not mix server state with client state stores.
+- Never store API data in Zustand — use TanStack Query cache.
+
+Data Flow:
+- Pages fetch data via TanStack Query hooks.
+- Mutations invalidate relevant query keys for automatic refetch.
+- Forms use React Hook Form + Zod schemas from @crm/shared.
+- API calls go through a centralized Axios instance with interceptors.
+
+==============================
+SHARED PACKAGE ARCHITECTURE
+==============================
+
+packages/shared/src/
+├── types/        — TypeScript interfaces (User, Fair, Customer, API responses)
+├── schemas/      — Zod validation schemas (shared between backend and frontend)
+├── constants/    — Enums, product list, conversion rate config, API endpoints
+└── utils/        — Formatting functions, helpers
+
+Rules:
+- Every type used in API request/response MUST be defined here.
+- Every Zod schema used for validation MUST be defined here.
+- Backend and web import from @crm/shared — never redefine locally.
+- Keep this package dependency-free (only zod as peer dependency).
+
+==============================
+API RESPONSE CONTRACT
+==============================
+
+All API endpoints must return this standardized format:
+
+Success: { success: true, message: string, data: T }
+Error: { success: false, message: string, error?: string }
+
+- Never return raw Prisma objects — always map to response DTOs.
+- Never expose internal IDs, passwords, or stack traces.
+- Use proper HTTP status codes (200, 201, 400, 401, 403, 404, 500).
+
+==============================
+DEPENDENCY INJECTION
+==============================
+
+- Use NestJS built-in DI container for all services.
+- Register providers in their respective modules.
+- Use @Injectable() decorator for all services.
+- Inject PrismaService where database access is needed.
+- Never instantiate services manually with new keyword.
+
+==============================
+IMPORTANT
+==============================
+
+- If unsure about an architectural decision, ask before implementing.
+- Never modify architecture silently.
+- Never bypass the layered structure for convenience.
+- Reference docs/tech-stack.md for allowed technologies.
+- Reference docs/phase-1-features.md for current development scope.

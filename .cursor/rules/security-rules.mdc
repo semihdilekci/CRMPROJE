@@ -1,0 +1,167 @@
+---
+alwaysApply: true
+---
+
+You are building a secure enterprise-grade Fuar CRM System.
+
+Security is NOT optional. It is the highest priority after stability.
+
+All code must follow these mandatory security rules.
+If a feature conflicts with security rules, security rules ALWAYS take priority.
+
+==============================
+AUTHENTICATION
+==============================
+
+- Use Passport.js with JWT strategy for authentication.
+- JWT secret and expiration MUST come from environment variables.
+- Never hardcode secrets, tokens, or credentials anywhere.
+- Implement dual-token system:
+  Access token: short-lived (15 minutes), sent in Authorization header.
+  Refresh token: long-lived (7 days), stored securely, used to obtain new access tokens.
+- Refresh tokens must be stored in database (revocable).
+- On logout, invalidate the refresh token in database.
+- Expired or invalid tokens must return 401 Unauthorized.
+
+==============================
+AUTHORIZATION (RBAC)
+==============================
+
+- Role-based access control is mandatory for all protected endpoints.
+- Available roles:
+  admin — full system access, user management, all CRUD operations
+  user — standard access, own data operations
+
+- Every protected endpoint must verify:
+  1. Valid JWT (AuthGuard)
+  2. User role permission (RolesGuard)
+
+- Implement guards as NestJS decorators:
+  @UseGuards(JwtAuthGuard) for authentication
+  @UseGuards(RolesGuard) + @Roles('admin') for authorization
+
+- Never trust frontend role checks — always enforce on backend.
+- Never expose admin-only endpoints to regular users.
+
+==============================
+PASSWORD SECURITY
+==============================
+
+- Always hash passwords using Argon2 (NOT bcrypt).
+- Never store plain text passwords in database.
+- Never return password field in any API response.
+- Use Prisma select/omit to exclude password from queries by default.
+- Enforce minimum password complexity in validation schemas.
+
+==============================
+INPUT VALIDATION
+==============================
+
+- All request bodies MUST be validated using Zod schemas from @crm/shared.
+- Validate at the controller level via NestJS pipes before data reaches service layer.
+- Validate:
+  Required fields (company, name for customers; name for fairs)
+  Data types (string, number, enum values)
+  Length limits (max lengths for text fields)
+  Format (email format, phone format, ISO date format)
+  Enum membership (conversionRate, budgetCurrency, role)
+- Reject invalid requests immediately with descriptive error messages.
+- Never trust client-side validation alone.
+
+==============================
+API RESPONSE SECURITY
+==============================
+
+- Never expose in API responses:
+  User passwords or password hashes
+  Internal database IDs unnecessarily
+  Raw database errors or Prisma error details
+  Stack traces or internal file paths
+  Sensitive configuration values
+  SQL query details
+
+- Always use the standardized response format.
+- Use NestJS global exception filter to catch and sanitize all errors.
+- Return user-friendly error messages, log technical details server-side only.
+
+==============================
+DATABASE SECURITY
+==============================
+
+- Use Prisma ORM exclusively — no raw SQL anywhere.
+- Prevent SQL injection via ORM parameterized queries.
+- Use environment variables for DATABASE_URL — never hardcode connection strings.
+- Apply Prisma select to limit returned fields (especially exclude password).
+- Use cascading deletes carefully — document cascade behavior in schema.
+- Validate all user-provided IDs before database queries (prevent IDOR).
+
+==============================
+FILE UPLOAD SECURITY
+==============================
+
+- Validate file MIME type server-side (only accept image/*).
+- Enforce maximum file size limit (e.g., 5MB for card images).
+- Generate unique filenames — never use user-provided filenames directly.
+- Store uploads outside of the application directory.
+- In production, use external storage (S3/Cloudinary) — never serve uploads from app server.
+
+==============================
+CORS & HTTP HEADERS
+==============================
+
+- Configure CORS with explicit allowed origins per environment:
+  Development: http://localhost:3000 (web), http://localhost:8081 (mobile)
+  Production: specific domain only
+- Do NOT use wildcard (*) origins in production.
+- Use Helmet middleware for secure HTTP headers.
+- Set appropriate Content-Security-Policy headers.
+- Enable rate limiting on authentication endpoints to prevent brute force.
+
+==============================
+RATE LIMITING
+==============================
+
+- Apply rate limiting on sensitive endpoints:
+  /auth/login — max 5 attempts per minute per IP
+  /auth/register — max 3 attempts per minute per IP
+  /upload/* — max 10 uploads per minute per user
+- Use Redis (Upstash) for distributed rate limit state in production.
+- Return 429 Too Many Requests when limit is exceeded.
+
+==============================
+ENVIRONMENT VARIABLES
+==============================
+
+Required environment variables (never hardcode these):
+- DATABASE_URL — PostgreSQL connection string
+- JWT_ACCESS_SECRET — access token signing key
+- JWT_REFRESH_SECRET — refresh token signing key
+- JWT_ACCESS_EXPIRATION — access token TTL
+- JWT_REFRESH_EXPIRATION — refresh token TTL
+- REDIS_URL — Redis connection (production)
+- CORS_ORIGIN — allowed frontend origins
+- NODE_ENV — environment identifier
+
+- Provide .env.example with all required keys (no values).
+- Never commit .env files to version control.
+
+==============================
+LOGGING
+==============================
+
+- Do NOT log sensitive data (passwords, tokens, full request bodies with sensitive fields).
+- Log authentication failures with IP address and timestamp.
+- Log authorization failures with user ID and attempted resource.
+- Log errors with enough context to debug but without exposing secrets.
+- Use structured logging format for production (JSON).
+
+==============================
+FRONTEND SECURITY
+==============================
+
+- Store access token in memory (Zustand) — not in localStorage.
+- Use httpOnly cookies for refresh tokens when possible.
+- Implement automatic token refresh via Axios interceptors.
+- Clear all auth state on logout.
+- Never expose API keys or secrets in frontend code.
+- Sanitize user-generated content before rendering (XSS prevention).

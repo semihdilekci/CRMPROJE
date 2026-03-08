@@ -1,0 +1,218 @@
+---
+alwaysApply: true
+---
+
+You are developing an enterprise-grade Fuar CRM System.
+This is a solo developer project until production deployment.
+
+All git operations must follow these conventions strictly.
+
+==============================
+BRANCHING STRATEGY
+==============================
+
+This project uses a simplified Feature Branch model (solo developer):
+
+main          — single source of truth, always stable and working
+feature/*     — new feature development (one branch per feature)
+fix/*         — bug fixes
+
+Branch lifecycle:
+1. Create feature branch from main.
+2. Develop on feature branch with granular commits.
+3. Verify and test on feature branch.
+4. Merge feature branch into main.
+5. Delete the feature branch.
+
+There is NO develop branch. There is NO PR process.
+main receives direct merges from completed feature branches.
+
+==============================
+BRANCH NAMING
+==============================
+
+Format: type/F{number}-short-description
+
+Examples:
+  feature/F1-monorepo-setup
+  feature/F6-auth-module
+  feature/F14-design-system
+  feature/F18-fair-list-page
+  fix/F10-customer-search-bug
+
+Rules:
+- Use lowercase and hyphens only.
+- Always include the feature number from docs/phase-1-features.md.
+- Keep descriptions short (2-4 words).
+- Never use spaces or special characters.
+
+==============================
+FEATURE BRANCH WORKFLOW
+==============================
+
+Starting a feature:
+  git checkout main
+  git checkout -b feature/F{n}-short-description
+
+During development (granular commits on feature branch):
+  git add .
+  git commit -m "feat(api): add Fair model to Prisma schema"
+  git commit -m "chore(prisma): run migration for fair model"
+  git commit -m "feat(api): implement FairService with CRUD methods"
+
+Completing a feature (after all tests pass):
+  git checkout main
+  git merge feature/F{n}-short-description
+  git branch -d feature/F{n}-short-description
+
+==============================
+WHEN TO COMMIT
+==============================
+
+Commit after each meaningful step within a feature:
+
+- Shared package types/schemas defined → commit
+- Prisma schema updated → commit
+- Migration executed → commit
+- Service layer implemented → commit
+- Controller layer implemented → commit
+- Frontend component created → commit
+- Tests written and passing → commit
+
+Each commit should leave the codebase in a working state.
+Never commit broken code — stash or fix before committing.
+
+==============================
+WHEN TO MERGE TO MAIN
+==============================
+
+Merge to main ONLY when ALL of the following are true:
+
+- All feature sub-items from phase-1-features.md are implemented.
+- No TypeScript errors across all apps.
+- No lint errors.
+- All tests pass.
+- Feature works end-to-end (if applicable).
+
+Never merge incomplete or broken features to main.
+
+==============================
+DIRECT COMMITS TO MAIN (EXCEPTIONS)
+==============================
+
+Small non-code changes may be committed directly to main without a branch:
+
+- Documentation updates (docs: update phase-1-features status)
+- Typo fixes (docs: fix typo in tech-stack)
+- README updates
+
+All code changes MUST go through a feature branch.
+
+==============================
+COMMIT MESSAGE FORMAT
+==============================
+
+This project follows Conventional Commits specification.
+
+Format: type(scope): description
+
+Types:
+  feat     — new feature or functionality
+  fix      — bug fix
+  refactor — code restructuring without behavior change
+  style    — formatting, whitespace, missing semicolons (no logic change)
+  docs     — documentation changes
+  test     — adding or updating tests
+  chore    — build, config, dependency updates, tooling
+  perf     — performance improvement
+
+Scopes (match monorepo apps):
+  api      — backend (NestJS)
+  web      — frontend (Next.js)
+  shared   — packages/shared
+  prisma   — database schema and migrations
+  config   — project-wide configuration
+  docs     — documentation files
+
+Examples:
+  feat(api): add fair CRUD endpoints
+  feat(web): implement fair list page with card grid
+  feat(shared): add Zod validation schemas for customer
+  fix(api): handle cascade delete on fair removal
+  refactor(web): extract FairCard into separate component
+  chore(config): configure ESLint and Prettier
+  test(api): add unit tests for FairService
+  docs: update phase-1-features status
+
+Rules:
+- Use imperative mood: "add" not "added" or "adds".
+- First line max 72 characters.
+- Lowercase after the colon (no capital letter).
+- No period at the end of the subject line.
+- Reference feature number in body when relevant.
+
+Multi-line commit (for complex changes):
+  feat(api): add customer management module
+
+  Implements CRUD operations for customers within fairs.
+  Includes search by name/company and conversion rate filter.
+
+  Ref: Feature #10
+
+==============================
+COMMIT GRANULARITY
+==============================
+
+- One logical change per commit — do not bundle unrelated changes.
+- Prefer smaller, focused commits over large monolithic ones.
+- Database migrations get their own dedicated commit.
+- Configuration changes get their own commit.
+
+Good (4 focused commits on feature branch):
+  feat(api): add Fair model to Prisma schema
+  chore(prisma): run migration for fair model
+  feat(api): implement FairService with CRUD methods
+  feat(api): add FairController with endpoints
+
+Bad (1 monolithic commit):
+  feat: add fair module with schema, service, controller, and tests
+
+==============================
+TAGGING & RELEASES
+==============================
+
+When Phase 1 is complete and ready for production:
+  git tag -a v1.0.0 -m "Phase 1: Fuar CRM Web Application"
+  git push origin v1.0.0
+
+Use semantic versioning: v{major}.{minor}.{patch}
+
+==============================
+.GITIGNORE RULES
+==============================
+
+Must ignore:
+- node_modules/ (all levels)
+- .env (all levels, never commit secrets)
+- dist/ and build/ directories
+- .next/ (Next.js build cache)
+- prisma/*.db (SQLite dev databases if any)
+- coverage/ (test coverage reports)
+- .DS_Store (macOS)
+- *.log files
+
+Must track:
+- .env.example (with keys, no values)
+- prisma/schema.prisma
+- prisma/migrations/ (all migration files)
+- lock files (package-lock.json)
+
+==============================
+IMPORTANT
+==============================
+
+- Never commit secrets, credentials, or API keys.
+- Never force push to main.
+- Never commit directly to main (except small doc changes).
+- Always test before merging to main.
+- When a second developer joins, introduce develop branch and PR process.

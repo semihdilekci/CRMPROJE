@@ -1,0 +1,269 @@
+---
+alwaysApply: true
+---
+
+You are developing an enterprise-grade Fuar CRM System.
+
+All code must be written with testability in mind.
+Follow this test strategy to ensure reliability, maintainability, and confidence in deployments.
+
+==============================
+TESTING PYRAMID
+==============================
+
+Priority and distribution of tests:
+
+1. Unit Tests (70%) — fast, isolated, test single functions/services/components
+2. Integration Tests (20%) — test module interactions, API endpoints, database queries
+3. E2E Tests (10%) — test critical user flows end-to-end
+
+Write more unit tests than integration tests, more integration tests than E2E tests.
+Every feature must have at least unit tests before being marked complete.
+
+==============================
+TESTING TOOLS
+==============================
+
+Backend (NestJS):
+- Jest — test runner and assertion library
+- @nestjs/testing — NestJS test utilities (Test.createTestingModule)
+- Supertest — HTTP endpoint testing
+- Prisma mock or test database — database layer isolation
+
+Frontend (Next.js):
+- Jest — test runner
+- React Testing Library (@testing-library/react) — component testing
+- @testing-library/user-event — user interaction simulation
+- MSW (Mock Service Worker) — API mocking at network level
+
+Shared Package:
+- Jest — schema and utility function testing
+
+Do not introduce Cypress, Playwright, or other E2E tools without explicit approval.
+
+==============================
+TEST FILE STRUCTURE
+==============================
+
+Test files live alongside the source files they test:
+
+Backend:
+apps/api/src/modules/fair/fair.service.ts
+apps/api/src/modules/fair/fair.service.spec.ts
+apps/api/src/modules/fair/fair.controller.spec.ts
+apps/api/src/modules/fair/fair.e2e-spec.ts
+
+Frontend:
+apps/web/src/components/fair/FairCard.tsx
+apps/web/src/components/fair/FairCard.test.tsx
+apps/web/src/hooks/use-fairs.test.ts
+
+Shared:
+packages/shared/src/schemas/fair.schema.ts
+packages/shared/src/schemas/fair.schema.test.ts
+packages/shared/src/utils/format.ts
+packages/shared/src/utils/format.test.ts
+
+Naming conventions:
+- Unit and integration tests: *.spec.ts (backend) or *.test.ts (frontend/shared)
+- E2E tests: *.e2e-spec.ts (backend only)
+- Test helpers/fixtures: __fixtures__/ or __helpers__/ directories
+
+==============================
+BACKEND: UNIT TESTS
+==============================
+
+Service layer tests (most critical):
+- Test every public method in isolation.
+- Mock PrismaService — do not hit real database.
+- Mock injected dependencies (other services).
+- Test success paths AND error paths.
+- Test business logic: validation rules, data transformation, access control.
+- Test that correct exceptions are thrown (NotFoundException, ForbiddenException, etc.).
+
+Example test structure:
+  describe('FairService')
+    describe('create')
+      it('should create a fair with valid data')
+      it('should throw BadRequestException when name is empty')
+    describe('findAll')
+      it('should return fairs sorted by startDate descending')
+      it('should return empty array when no fairs exist')
+    describe('delete')
+      it('should delete fair and cascade delete customers')
+      it('should throw NotFoundException when fair does not exist')
+
+Guard and pipe tests:
+- Test JwtAuthGuard rejects requests without valid token.
+- Test RolesGuard rejects users with insufficient role.
+- Test Zod validation pipe rejects invalid payloads.
+
+==============================
+BACKEND: INTEGRATION TESTS
+==============================
+
+Controller-level tests using Supertest:
+- Test full HTTP request → response cycle.
+- Use NestJS TestingModule with real service instances.
+- Use a test database (separate PostgreSQL database or in-memory alternative).
+- Test correct HTTP status codes (200, 201, 400, 401, 403, 404).
+- Test response body matches standardized format { success, message, data }.
+- Test authentication: requests without token return 401.
+- Test authorization: requests with wrong role return 403.
+
+Database integration:
+- Run Prisma migrations on test database before test suite.
+- Clean database between test runs (truncate tables).
+- Use seed data for predictable test state.
+- Never run integration tests against production or development database.
+
+==============================
+BACKEND: E2E TESTS
+==============================
+
+Test critical business flows end-to-end:
+- User login → create fair → add customer → edit customer → delete customer → delete fair
+- Authentication flow: login → access protected endpoint → token refresh → logout
+- Authorization flow: regular user attempts admin-only operation → rejected
+
+E2E tests use real HTTP requests against a running test server.
+These are slow — keep the count minimal, focus on critical paths only.
+
+==============================
+FRONTEND: COMPONENT TESTS
+==============================
+
+Test components with React Testing Library:
+- Test rendering: component renders without crashing.
+- Test user interactions: click, type, submit, toggle.
+- Test conditional rendering: elements show/hide based on props or state.
+- Test form behavior: validation errors display, submit with valid data works.
+- Test accessibility: elements have proper roles, labels, and aria attributes.
+
+Rules:
+- Query elements by role, label, or text — never by CSS class or test-id as first choice.
+- Simulate real user behavior (click, type) — never call component methods directly.
+- Test what the user sees, not implementation details.
+- Mock API calls with MSW — do not mock Axios or fetch directly.
+
+Components to prioritize for testing:
+- FairForm — form validation, submit behavior, edit mode pre-fill
+- CustomerForm — complex form with budget formatting, multi-select, image upload
+- FairCard — conditional rendering (active badge, past fair styling)
+- CustomerCard — accordion toggle, conditional detail display
+- Modal — backdrop close, escape key, content rendering
+
+==============================
+FRONTEND: HOOK TESTS
+==============================
+
+Test custom hooks with @testing-library/react renderHook:
+- Test TanStack Query hooks return correct data shapes.
+- Test mutation hooks trigger correct API calls.
+- Test Zustand store actions update state correctly.
+- Test auth hooks handle login/logout/token refresh.
+
+Mock the API layer (MSW) — never mock TanStack Query internals.
+
+==============================
+SHARED PACKAGE TESTS
+==============================
+
+Zod schema tests:
+- Test valid data passes validation.
+- Test each required field triggers error when missing.
+- Test each field type rejects wrong types.
+- Test enum fields reject values outside the allowed set.
+- Test optional fields accept undefined.
+- Test edge cases: empty strings, extremely long strings, negative numbers.
+
+Utility function tests:
+- formatDate: valid ISO → correct Turkish format, empty → "-"
+- formatDateTime: valid ISO → correct format with time
+- formatBudget: "1000000" → "1.000.000,00", NaN → "", empty → ""
+- parseBudgetRaw: "1.000.000,00" → "1000000"
+- Test edge cases: null, undefined, invalid strings
+
+==============================
+MOCKING STRATEGY
+==============================
+
+What to mock:
+- External services (database, file storage, email)
+- Network requests (API calls in frontend tests)
+- Time-dependent logic (Date.now for active fair detection)
+- Environment variables
+
+What NOT to mock:
+- The code under test itself.
+- Simple utility functions — test them directly.
+- Zod schemas — test them with real data.
+- Type definitions — they are compile-time only.
+
+Backend mocking:
+- Use jest.mock() or manual mock providers for NestJS DI.
+- Provide mock PrismaService with jest.fn() methods.
+- Reset all mocks between tests (jest.clearAllMocks in beforeEach).
+
+Frontend mocking:
+- Use MSW for API mocking — intercept at network level.
+- Configure MSW handlers per test file or in a shared setup.
+- Never mock React hooks directly — mock the data source they consume.
+
+==============================
+TEST DATA & FIXTURES
+==============================
+
+- Create reusable test fixtures for common data shapes:
+  createMockFair(), createMockCustomer(), createMockUser()
+- Store fixtures in __fixtures__/ directories next to test files.
+- Use realistic but predictable data (fixed dates, known IDs).
+- Never use production data in tests.
+- Shared fixtures can live in packages/shared/src/__fixtures__/.
+
+==============================
+WHAT NOT TO TEST
+==============================
+
+Do not waste time testing:
+- Third-party library internals (Prisma, NestJS, React, TailwindCSS).
+- TypeScript type definitions (compile-time, not runtime).
+- Pure configuration files (tailwind.config, tsconfig).
+- Trivial getters/setters with no logic.
+- Framework-generated boilerplate.
+
+==============================
+TEST QUALITY RULES
+==============================
+
+- Each test must test ONE thing — clear, focused assertions.
+- Test names must describe behavior: "should return 404 when fair does not exist".
+- Arrange-Act-Assert pattern for all tests.
+- No test should depend on another test's state — tests must be independent.
+- No console.log in tests — use expect assertions.
+- Failed tests must produce clear error messages that explain what went wrong.
+- Tests must be deterministic — same result every run, no flakiness.
+
+==============================
+WHEN TO WRITE TESTS
+==============================
+
+- Write tests during feature development, not after.
+- Every service method must have corresponding unit tests.
+- Every API endpoint must have at least one integration test (happy path + error path).
+- Every complex frontend component must have rendering and interaction tests.
+- Every Zod schema must have validation tests.
+- Every utility function must have unit tests with edge cases.
+- Bug fixes must include a regression test that reproduces the bug.
+
+==============================
+RUNNING TESTS
+==============================
+
+NPM scripts (defined in each app's package.json):
+- npm test — run all tests
+- npm run test:watch — run tests in watch mode during development
+- npm run test:cov — run tests with coverage report
+- npm run test:e2e — run E2E tests only (backend)
+
+Tests must pass before any feature is marked complete in docs/phase-1-features.md.

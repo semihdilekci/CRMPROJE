@@ -1,0 +1,248 @@
+---
+alwaysApply: true
+---
+
+You are implementing error handling for an enterprise-grade Fuar CRM System.
+
+Error handling must be centralized, consistent, and user-friendly.
+Internal details must never leak to clients. Security takes priority over helpfulness.
+
+==============================
+ERROR HANDLING PHILOSOPHY
+==============================
+
+- Fail fast: detect and reject invalid input at the earliest layer.
+- Fail safely: never expose internal details, stack traces, or database errors.
+- Fail consistently: every error follows the same response format.
+- Fail helpfully: provide actionable messages that help the user correct the issue.
+
+==============================
+STANDARDIZED ERROR RESPONSE
+==============================
+
+All errors must return this format:
+
+{
+  "success": false,
+  "message": "Human-readable error description",
+  "error": "ERROR_CODE",
+  "details": []    // optional, only for validation errors
+}
+
+Error codes (ERROR_CODE field):
+  VALIDATION_ERROR      — request body/params failed Zod validation
+  UNAUTHORIZED          — missing or invalid authentication token
+  FORBIDDEN             — valid token but insufficient permissions
+  NOT_FOUND             — requested resource does not exist
+  CONFLICT              — duplicate resource (unique constraint violation)
+  RATE_LIMIT_EXCEEDED   — too many requests
+  FILE_TOO_LARGE        — uploaded file exceeds size limit
+  INVALID_FILE_TYPE     — uploaded file type not allowed
+  INTERNAL_ERROR        — unexpected server error (generic, no details)
+
+==============================
+BACKEND: NESTJS ERROR LAYERS
+==============================
+
+Layer 1 — Validation Pipe (earliest):
+- Zod validation pipe intercepts invalid request bodies.
+- Returns 400 with VALIDATION_ERROR code and field-level details.
+- No business logic is reached for invalid input.
+
+Layer 2 — Guards:
+- JwtAuthGuard: invalid/missing token → 401 UNAUTHORIZED
+- RolesGuard: insufficient role → 403 FORBIDDEN
+- These run before the controller method executes.
+
+Layer 3 — Service Layer:
+- Business logic errors throw typed NestJS exceptions:
+  throw new NotFoundException('Fair not found');
+  throw new BadRequestException('Invalid date range');
+  throw new ConflictException('Email already registered');
+  throw new ForbiddenException('Cannot delete another admin');
+
+Layer 4 — Global Exception Filter (last resort):
+- Catches ALL unhandled exceptions.
+- Maps known exception types to proper HTTP status codes.
+- Catches unknown errors and returns 500 INTERNAL_ERROR.
+- Logs full error details server-side (including stack trace).
+- Returns sanitized response to client (no internal details).
+
+==============================
+BACKEND: EXCEPTION MAPPING
+==============================
+
+NestJS Exception               → HTTP Code  → Error Code
+BadRequestException            → 400        → VALIDATION_ERROR
+UnauthorizedException          → 401        → UNAUTHORIZED
+ForbiddenException             → 403        → FORBIDDEN
+NotFoundException              → 404        → NOT_FOUND
+ConflictException              → 409        → CONFLICT
+ThrottlerException             → 429        → RATE_LIMIT_EXCEEDED
+InternalServerErrorException   → 500        → INTERNAL_ERROR
+
+Prisma Error                   → Mapped To
+P2002 (unique violation)       → ConflictException
+P2025 (record not found)       → NotFoundException
+P2003 (foreign key violation)  → BadRequestException
+Other Prisma errors            → InternalServerErrorException
+
+==============================
+BACKEND: SERVICE LAYER RULES
+==============================
+
+- Always validate resource existence before operating on it:
+  const fair = await this.prisma.fair.findUnique({ where: { id } });
+  if (!fair) throw new NotFoundException('Fair not found');
+
+- Always catch Prisma errors and map to NestJS exceptions:
+  catch (error) {
+    if (error.code === 'P2002') throw new ConflictException('Email already exists');
+    throw error;  // re-throw unknown errors for global filter
+  }
+
+- Never return vague errors. Be specific about what went wrong:
+  Good: "Fair with ID abc123 not found"
+  Bad:  "Resource not found"
+  Good: "Email address is already registered"
+  Bad:  "Duplicate entry"
+
+- Never expose database field names or internal IDs in error messages to the extent
+  that it reveals system architecture.
+
+==============================
+BACKEND: CONTROLLER LAYER RULES
+==============================
+
+- Controllers do NOT catch exceptions — let them bubble to global filter.
+- Controllers do NOT create custom error responses — use service exceptions.
+- Controllers only handle the happy path response:
+  return { success: true, message: '...', data: result };
+
+==============================
+VALIDATION ERROR DETAILS
+==============================
+
+When Zod validation fails, return field-level details:
+
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": "VALIDATION_ERROR",
+  "details": [
+    { "field": "name", "message": "Name is required" },
+    { "field": "email", "message": "Invalid email format" },
+    { "field": "conversionRate", "message": "Must be one of: very_high, high, medium, low, very_low" }
+  ]
+}
+
+Rules:
+- Map Zod issue paths to field names.
+- Use human-readable messages (not Zod internal messages).
+- Include all validation errors, not just the first one.
+
+==============================
+FRONTEND: ERROR HANDLING STRATEGY
+==============================
+
+API Error Handling (Axios Interceptor):
+- 401 → Attempt token refresh; if refresh fails → redirect to login, clear auth state.
+- 403 → Show "Yetkiniz bulunmamaktadır" message.
+- 404 → Show "Kayıt bulunamadı" or redirect to list page.
+- 409 → Show specific conflict message from API response.
+- 429 → Show "Çok fazla istek gönderildi. Lütfen bekleyin." message.
+- 500 → Show "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin." message.
+- Network Error → Show "Sunucuya bağlanılamıyor. İnternet bağlantınızı kontrol edin." with retry.
+
+TanStack Query Error Handling:
+- Use onError callback in useMutation for mutation-specific errors.
+- Use global query client error handler for common errors (401 redirect).
+- Configure retry: 3 retries for GET requests, 0 retries for mutations.
+
+Form Validation Errors:
+- Display validation errors inline next to the relevant form field.
+- Use React Hook Form setError to map API validation details to fields.
+- Highlight error fields with red border (danger color #F87171).
+- Show error message text below the field in small red text.
+
+==============================
+FRONTEND: USER-FACING ERROR MESSAGES
+==============================
+
+All user-facing error messages must be in Türkçe:
+
+API Error Messages (from frontend, not backend):
+  Unauthorized     → "Oturumunuz sona erdi. Lütfen tekrar giriş yapın."
+  Forbidden        → "Bu işlem için yetkiniz bulunmamaktadır."
+  Not Found        → "Aradığınız kayıt bulunamadı."
+  Conflict         → Use API response message directly.
+  Rate Limited     → "Çok fazla istek gönderildi. Lütfen birkaç dakika bekleyin."
+  Server Error     → "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+  Network Error    → "Sunucuya bağlanılamıyor. İnternet bağlantınızı kontrol edin."
+
+Validation Messages (from Zod schemas in @crm/shared):
+  Required field   → "{field} zorunludur"
+  Invalid email    → "Geçerli bir e-posta adresi giriniz"
+  Invalid phone    → "Geçerli bir telefon numarası giriniz"
+  Invalid date     → "Geçerli bir tarih giriniz"
+  Invalid enum     → "Geçersiz seçim"
+
+==============================
+FRONTEND: ERROR DISPLAY METHODS
+==============================
+
+Toast Notifications:
+- Success: green toast, auto-dismiss after 3 seconds.
+- Error: red toast, manual dismiss required.
+- Use for: CRUD success/failure, auth errors, network errors.
+
+Inline Field Errors:
+- Red text below the form field.
+- Use for: form validation errors.
+- Clear error when user starts typing in the field.
+
+Page-Level Errors:
+- Full-width error banner at the top of content area.
+- Use for: permission denied, resource not found.
+- Include a "go back" or "retry" action.
+
+Empty States:
+- Not an error — show helpful guidance and CTA.
+- Use for: no fairs, no customers, no search results.
+
+==============================
+LOGGING LEVELS
+==============================
+
+Backend logging levels:
+
+ERROR  — unexpected failures, unhandled exceptions, database connection loss
+         Always log: timestamp, error message, stack trace, request context (user ID, endpoint)
+         Action: investigate immediately
+
+WARN   — handled but notable: rate limit hit, failed login attempt, validation rejection
+         Always log: timestamp, event type, user IP or ID
+         Action: monitor for patterns
+
+INFO   — normal operations: user login, resource created/updated/deleted
+         Always log: timestamp, action, resource type, resource ID
+         Action: no action needed, useful for audit trail
+
+DEBUG  — detailed execution flow (only in development)
+         Never enable in production.
+
+Rules:
+- Never log: passwords, tokens, full request bodies with sensitive data.
+- Always log: authentication failures with IP address.
+- Always log: authorization failures with user ID.
+- Use structured JSON format for production logs.
+
+==============================
+IMPORTANT
+==============================
+
+- Error handling is a security boundary — treat it as such.
+- Every error path must be intentional, never accidental.
+- If you are unsure how an error should be handled, ask before implementing.
+- Test error paths as thoroughly as success paths.
+- Frontend must gracefully handle every possible API error code.

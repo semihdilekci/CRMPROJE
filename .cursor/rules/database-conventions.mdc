@@ -1,0 +1,212 @@
+---
+alwaysApply: true
+---
+
+You are designing the database layer for an enterprise-grade Fuar CRM System.
+
+All database operations use Prisma ORM exclusively.
+These conventions ensure consistency, safety, and scalability across all models.
+
+==============================
+PRISMA SCHEMA CONVENTIONS
+==============================
+
+Schema location: apps/api/prisma/schema.prisma
+
+Model naming:
+- PascalCase, singular: User, Fair, Customer (not Users, Fairs)
+- Model name maps directly to the TypeScript type in @crm/shared
+
+Field naming:
+- camelCase for all fields: startDate, budgetRaw, conversionRate
+- Foreign keys: {relatedModel}Id in camelCase: fairId, userId
+- Timestamps: createdAt, updatedAt (always present on every model)
+
+==============================
+REQUIRED FIELDS ON EVERY MODEL
+==============================
+
+Every model MUST have:
+
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+Rules:
+- Use cuid() for primary keys (URL-safe, globally unique, sortable).
+- Never use autoincrement integers as primary keys (exposes record count, not URL-safe).
+- Never use UUID v4 (not sortable, less performant for indexing than cuid).
+- createdAt is set automatically on creation.
+- updatedAt is set automatically on every update by Prisma.
+
+==============================
+DATA TYPES
+==============================
+
+Strings:
+- Use String for text fields.
+- Add @db.Text for long content (address, notes) to avoid VARCHAR limit.
+- Use String with enum validation at application level (via Zod), not Prisma enum.
+
+Dates:
+- Use DateTime for timestamps and date-time values.
+- Use String with ISO 8601 format for date-only fields (startDate, endDate)
+  if you want to avoid timezone complications. Or use DateTime and handle timezone in app layer.
+
+Numbers:
+- Use String for budgetRaw (preserve formatting, no floating point issues).
+- Use Int for counters or quantities.
+- Use Float only when decimal precision is acceptable.
+
+Booleans:
+- Use Boolean with explicit @default(false) or @default(true).
+
+Arrays:
+- Use String[] for simple lists (products array).
+- For complex arrays, use a separate related model.
+
+==============================
+RELATIONSHIPS
+==============================
+
+Define relationships explicitly with referential actions:
+
+One-to-Many (Fair → Customer):
+  model Fair {
+    customers Customer[]
+  }
+
+  model Customer {
+    fair   Fair   @relation(fields: [fairId], references: [id], onDelete: Cascade)
+    fairId String
+  }
+
+Rules:
+- Always specify onDelete behavior:
+  Cascade  — child records deleted when parent is deleted (Customer when Fair is deleted)
+  Restrict — prevent deletion if children exist
+  SetNull  — set foreign key to null (only for optional relations)
+- Always specify the @relation directive with fields and references.
+- Use optional relations (?) only when the relationship is truly optional.
+- Index foreign key fields for query performance.
+
+==============================
+INDEXES
+==============================
+
+Add indexes for fields frequently used in:
+- WHERE clauses (filtering)
+- ORDER BY clauses (sorting)
+- JOIN conditions (foreign keys)
+
+  @@index([fairId])              — customers filtered by fair
+  @@index([conversionRate])      — customers filtered by conversion rate
+  @@index([startDate])           — fairs sorted by start date
+  @@index([email])               — user lookup by email
+
+Rules:
+- Every foreign key field must be indexed.
+- Fields used in search/filter must be indexed.
+- Do not over-index — each index has write performance cost.
+- Unique fields get an automatic index via @unique.
+
+==============================
+UNIQUE CONSTRAINTS
+==============================
+
+- User email: @unique (one account per email)
+- Use @@unique([]) for composite uniqueness when needed.
+- Never add unique constraints on fields that are not actually unique.
+
+==============================
+MIGRATION STRATEGY
+==============================
+
+Migration naming convention:
+  npx prisma migrate dev --name descriptive-name
+
+Naming format: action-target
+  add-user-model
+  add-fair-model
+  add-customer-model
+  add-fair-customer-relation
+  add-conversion-rate-to-customer
+  add-index-on-fair-start-date
+
+Rules:
+- One migration per logical change (do not bundle unrelated schema changes).
+- Migration files are immutable — never edit an applied migration.
+- To fix a mistake, create a new corrective migration.
+- Always commit migration files to git (prisma/migrations/ directory).
+- Before creating migration, verify schema is valid: npx prisma validate
+- After migration, regenerate client: npx prisma generate
+
+==============================
+SEED DATA
+==============================
+
+Seed script location: apps/api/prisma/seed.ts
+
+Seed script must:
+- Create admin user (for first login).
+- Be idempotent (safe to run multiple times without duplicating data).
+- Use upsert operations.
+- Not contain production data or real credentials.
+
+Configuration in package.json:
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+
+==============================
+SOFT DELETE VS HARD DELETE
+==============================
+
+Policy for this project: HARD DELETE
+
+- When a resource is deleted, it is permanently removed from database.
+- Fair deletion cascades to all related customers.
+- No deletedAt field, no soft delete pattern.
+
+Rationale: Simplicity for Phase 1. Soft delete can be introduced in a future phase
+if data recovery requirements emerge.
+
+If soft delete is ever introduced:
+- Add deletedAt DateTime? field.
+- Use Prisma middleware to filter soft-deleted records automatically.
+- Never actually remove rows from database.
+
+==============================
+QUERY CONVENTIONS
+==============================
+
+- Always use Prisma client methods — never raw SQL.
+- Use select to limit returned fields (especially omit password):
+  prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true } })
+- Use include for eager loading relations:
+  prisma.fair.findUnique({ where: { id }, include: { customers: true } })
+- Prefer findUnique over findFirst when querying by unique fields.
+- Use transactions (prisma.$transaction) for multi-step operations that must be atomic.
+- Always handle Prisma errors (PrismaClientKnownRequestError) in service layer.
+
+==============================
+PRISMA ERROR HANDLING
+==============================
+
+Common Prisma error codes to handle:
+  P2002 — Unique constraint violation (duplicate email, etc.)  → 409 Conflict
+  P2025 — Record not found (findUniqueOrThrow, update, delete) → 404 Not Found
+  P2003 — Foreign key constraint violation                      → 400 Bad Request
+
+Catch these in service layer and throw appropriate NestJS exceptions.
+Never let raw Prisma errors reach the API response.
+
+==============================
+IMPORTANT
+==============================
+
+- Never bypass Prisma — no raw SQL, no direct PostgreSQL queries.
+- Never store sensitive data unencrypted (passwords must be hashed before storage).
+- Always validate data with Zod before writing to database.
+- Database schema must stay in sync with TypeScript types in @crm/shared.
+- When adding a new model, update both Prisma schema and shared types together.

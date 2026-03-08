@@ -1,0 +1,201 @@
+---
+alwaysApply: true
+---
+
+You are developing an enterprise-grade Fuar CRM System.
+
+You must follow strict code standards across all apps in the monorepo.
+These standards apply to backend (NestJS), frontend (Next.js), and shared package equally.
+
+==============================
+NAMING CONVENTIONS
+==============================
+
+Variables and functions: camelCase
+  getUserById, fairName, isAuthenticated
+
+Classes, types, interfaces, enums: PascalCase
+  FairService, CustomerDto, ConversionRate, JwtAuthGuard
+
+Environment variables: UPPER_SNAKE_CASE
+  DATABASE_URL, JWT_ACCESS_SECRET, CORS_ORIGIN
+
+File names: kebab-case
+  fair.service.ts, customer.controller.ts, create-fair.schema.ts
+
+Folder names: lowercase
+  modules/, components/, stores/, hooks/
+
+NestJS specific:
+  Modules: *.module.ts
+  Controllers: *.controller.ts
+  Services: *.service.ts
+  Guards: *.guard.ts
+  DTOs: *.dto.ts
+  Pipes: *.pipe.ts
+
+React components: PascalCase file names matching component name
+  FairCard.tsx, CustomerForm.tsx, Modal.tsx
+
+React hooks: use prefix, camelCase file names
+  useFairs.ts, useAuth.ts, useDebounce.ts
+
+==============================
+BACKEND STRUCTURE (NestJS)
+==============================
+
+Modular feature-based structure is mandatory:
+
+apps/api/src/
+├── modules/
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── strategies/          — Passport strategies
+│   │   ├── guards/              — AuthGuard, RolesGuard
+│   │   └── dto/                 — login.dto.ts, register.dto.ts
+│   ├── user/
+│   ├── fair/
+│   └── customer/
+├── common/
+│   ├── filters/                 — global exception filter
+│   ├── interceptors/            — response transform, logging
+│   ├── pipes/                   — Zod validation pipe
+│   └── decorators/              — custom decorators (@Roles, @CurrentUser)
+├── prisma/
+│   └── prisma.service.ts        — PrismaClient wrapper
+└── main.ts
+
+Each module MUST contain: module, controller, service.
+Each module MAY contain: dto/, guards/, strategies/ as needed.
+Do not create large monolithic files. Keep files small and focused.
+
+==============================
+FRONTEND STRUCTURE (Next.js)
+==============================
+
+apps/web/src/
+├── app/                         — pages, layouts (App Router)
+│   ├── (auth)/                  — auth group (login page)
+│   ├── (dashboard)/             — protected pages
+│   └── layout.tsx               — root layout with providers
+├── components/
+│   ├── ui/                      — base UI components (shadcn/ui based)
+│   ├── fair/                    — FairCard, FairForm, FairDetail
+│   ├── customer/                — CustomerCard, CustomerForm
+│   └── layout/                  — TopBar, ContentWrapper
+├── lib/
+│   ├── api.ts                   — Axios instance with interceptors
+│   ├── query-keys.ts            — TanStack Query key factory
+│   └── utils.ts                 — frontend-specific helpers
+├── stores/
+│   └── auth-store.ts            — Zustand auth store
+├── hooks/
+│   ├── use-fairs.ts             — TanStack Query hooks for fairs
+│   └── use-customers.ts         — TanStack Query hooks for customers
+└── types/                       — frontend-only types (extend @crm/shared)
+
+==============================
+CODE QUALITY
+==============================
+
+- Follow DRY (Don't Repeat Yourself) — extract shared logic immediately.
+- Keep functions under 40 lines when possible.
+- Keep React components under 150 lines — extract sub-components.
+- Use clear and descriptive naming — avoid abbreviations.
+- Avoid magic numbers and hardcoded strings — use constants from @crm/shared.
+- Prefer early returns over deeply nested conditionals.
+- One export per file for modules, services, and components.
+
+==============================
+ASYNC / AWAIT
+==============================
+
+- Always use async/await — never use raw .then() chains.
+- Always handle errors with try/catch in services.
+- Controllers delegate error handling to NestJS exception filters.
+- Frontend API calls handle errors via TanStack Query onError or Axios interceptors.
+
+==============================
+ERROR HANDLING
+==============================
+
+Backend:
+- Use NestJS built-in exceptions (NotFoundException, BadRequestException, etc.).
+- Global exception filter catches unhandled errors and returns standardized format.
+- Service layer throws typed exceptions — controller never catches manually.
+- Never expose raw Prisma errors to the client.
+
+Frontend:
+- TanStack Query handles API errors via onError callbacks.
+- Display user-friendly error messages using toast/notification system.
+- Network errors show retry option.
+- Validation errors highlight specific form fields.
+
+==============================
+TYPE SAFETY
+==============================
+
+- TypeScript strict mode is mandatory in all apps and packages.
+- Always define types and interfaces — never use "any".
+- Import shared types from @crm/shared — never redefine locally.
+- Use Zod infer for deriving TypeScript types from validation schemas:
+  type CreateFairInput = z.infer<typeof createFairSchema>
+- Prisma generated types are used in backend service layer.
+- API response types are defined in @crm/shared for frontend consumption.
+
+==============================
+IMPORTS
+==============================
+
+- Use absolute imports with path aliases:
+  Backend: @modules/, @common/, @prisma/
+  Frontend: @/components/, @/lib/, @/stores/, @/hooks/
+  Shared: @crm/shared
+- Group imports in this order:
+  1. External packages (nest, react, zod, etc.)
+  2. Internal aliases (@modules/, @/components/, @crm/shared)
+  3. Relative imports (./dto, ./utils)
+- Never use deep relative paths (../../..).
+
+==============================
+REACT & COMPONENT RULES
+==============================
+
+- Use functional components exclusively — no class components.
+- Use React Hook Form for all forms — no manual form state.
+- Co-locate Zod schemas with forms via @crm/shared.
+- Memoize expensive computations with useMemo.
+- Memoize callbacks passed to children with useCallback.
+- Extract custom hooks for reusable data-fetching logic.
+- Prefer composition over prop drilling — use context or Zustand when needed.
+
+==============================
+CSS & STYLING
+==============================
+
+- Use TailwindCSS utility classes for all styling.
+- Use design system tokens defined in tailwind.config — never hardcode hex colors.
+- Follow the color naming: bg, surface, card, border, accent, gold, muted, green, text.
+- Use shadcn/ui components as base — extend, don't rewrite.
+- Responsive design: use TailwindCSS breakpoints, prefer mobile-first.
+- Animations: use CSS transitions (0.15s–0.2s) — avoid heavy JS animations.
+
+==============================
+COMMENTS
+==============================
+
+- Write meaningful comments only for non-obvious business logic.
+- Do not over-comment obvious code.
+- Use JSDoc for public service methods and complex utility functions.
+- Explain WHY, not WHAT — code should be self-documenting for the what.
+- Never leave TODO comments without a linked feature number.
+
+==============================
+IMPORTANT
+==============================
+
+- Never sacrifice code clarity for brevity.
+- Always prioritize maintainability and scalability.
+- When in doubt, follow the established patterns in existing modules.

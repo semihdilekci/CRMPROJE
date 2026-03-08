@@ -1,0 +1,229 @@
+---
+alwaysApply: true
+---
+
+You are designing REST APIs for an enterprise-grade Fuar CRM System.
+
+All API endpoints must follow these conventions.
+Consistency across modules is mandatory — no endpoint should deviate from these patterns.
+
+==============================
+BASE URL & VERSIONING
+==============================
+
+- Base URL: /api/v1
+- All endpoints are prefixed with /api/v1.
+- Versioning allows future breaking changes without affecting existing clients.
+- Example: POST /api/v1/fairs
+
+==============================
+URL STRUCTURE
+==============================
+
+Resource naming rules:
+- Use plural nouns for resources: /fairs, /customers, /users
+- Use kebab-case for multi-word resources: /card-images (if needed)
+- Use nested routes for parent-child relationships:
+  /fairs/:fairId/customers — customers belonging to a specific fair
+- Limit nesting to 2 levels maximum:
+  Good: /fairs/:fairId/customers
+  Bad:  /fairs/:fairId/customers/:customerId/card-images
+
+Standalone resource access (for update/delete without parent context):
+  PATCH /api/v1/customers/:id
+  DELETE /api/v1/customers/:id
+
+==============================
+HTTP METHODS
+==============================
+
+GET     — retrieve resource(s), never modify data
+POST    — create a new resource
+PATCH   — partial update of existing resource (NOT PUT)
+DELETE  — remove a resource
+
+Rules:
+- Always use PATCH for updates, not PUT (partial updates are safer and more flexible).
+- GET requests must be idempotent and safe (no side effects).
+- DELETE requests must be idempotent (deleting twice returns same result).
+- POST is not idempotent — creating twice creates two resources.
+
+==============================
+ENDPOINT PATTERNS
+==============================
+
+Standard CRUD for every resource:
+
+Fairs:
+  POST   /api/v1/fairs              — create fair
+  GET    /api/v1/fairs              — list all fairs
+  GET    /api/v1/fairs/:id          — get fair by ID (with customers)
+  PATCH  /api/v1/fairs/:id          — update fair
+  DELETE /api/v1/fairs/:id          — delete fair (cascade customers)
+
+Customers (nested under fair for creation and listing):
+  POST   /api/v1/fairs/:fairId/customers    — create customer in fair
+  GET    /api/v1/fairs/:fairId/customers    — list customers of fair
+
+Customers (standalone for update and delete):
+  PATCH  /api/v1/customers/:id              — update customer
+  DELETE /api/v1/customers/:id              — delete customer
+
+Auth:
+  POST   /api/v1/auth/login         — authenticate user
+  POST   /api/v1/auth/register      — register new user
+  POST   /api/v1/auth/refresh       — refresh access token
+  POST   /api/v1/auth/logout        — invalidate refresh token
+
+Users (admin only):
+  GET    /api/v1/users              — list users
+  GET    /api/v1/users/:id          — get user
+  PATCH  /api/v1/users/:id          — update user
+  DELETE /api/v1/users/:id          — delete user
+
+Upload:
+  POST   /api/v1/upload/card-image  — upload business card image
+
+==============================
+QUERY PARAMETERS
+==============================
+
+Filtering:
+- Use field names as query params: ?conversionRate=high
+- Multiple values: ?conversionRate=high,medium
+- Example: GET /api/v1/fairs/:fairId/customers?conversionRate=high
+
+Search:
+- Use ?search= for text search across multiple fields.
+- Backend searches name and company fields (case-insensitive).
+- Example: GET /api/v1/fairs/:fairId/customers?search=acme
+
+Sorting:
+- Use ?sortBy= and ?sortOrder= params.
+- sortOrder accepts: asc, desc (default: desc).
+- Example: GET /api/v1/fairs?sortBy=startDate&sortOrder=desc
+- Default sort: fairs by startDate desc, customers by createdAt desc.
+
+Pagination:
+- Use offset-based pagination: ?page= and ?limit=
+- Default: page=1, limit=20
+- Maximum limit: 100 (reject higher values)
+- Response includes pagination metadata:
+  {
+    success: true,
+    message: "...",
+    data: [...],
+    meta: {
+      page: 1,
+      limit: 20,
+      total: 85,
+      totalPages: 5
+    }
+  }
+
+Combining:
+- All query params can be combined:
+  GET /api/v1/fairs/:fairId/customers?search=acme&conversionRate=high&page=1&limit=10&sortBy=createdAt&sortOrder=desc
+
+==============================
+RESPONSE FORMAT
+==============================
+
+All endpoints must return this standardized format:
+
+Success (single resource):
+{
+  "success": true,
+  "message": "Fair created successfully",
+  "data": { ... }
+}
+
+Success (list):
+{
+  "success": true,
+  "message": "Fairs retrieved successfully",
+  "data": [ ... ],
+  "meta": { "page": 1, "limit": 20, "total": 42, "totalPages": 3 }
+}
+
+Error:
+{
+  "success": false,
+  "message": "Fair not found",
+  "error": "NOT_FOUND"
+}
+
+Validation Error:
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": "VALIDATION_ERROR",
+  "details": [
+    { "field": "name", "message": "Name is required" },
+    { "field": "email", "message": "Invalid email format" }
+  ]
+}
+
+==============================
+HTTP STATUS CODES
+==============================
+
+Success:
+  200 OK              — GET, PATCH, DELETE success
+  201 Created          — POST success (resource created)
+
+Client Errors:
+  400 Bad Request      — validation error, malformed request
+  401 Unauthorized     — missing or invalid authentication token
+  403 Forbidden        — valid token but insufficient permissions (wrong role)
+  404 Not Found        — resource does not exist
+  409 Conflict         — duplicate resource (unique constraint violation)
+  429 Too Many Requests — rate limit exceeded
+
+Server Errors:
+  500 Internal Server Error — unexpected server failure (never expose details)
+
+Rules:
+- Never return 200 for errors.
+- Never return 500 for client errors.
+- Always match the status code to the actual situation.
+
+==============================
+REQUEST BODY CONVENTIONS
+==============================
+
+- Use camelCase for all JSON field names: budgetRaw, conversionRate, startDate.
+- Dates must be ISO 8601 format: "2025-03-15" or "2025-03-15T14:30:00.000Z".
+- Enum values must match exactly: "very_high", "USD", "admin".
+- Empty strings are treated as missing — validate accordingly.
+- Arrays are sent as JSON arrays: "products": ["Kompresörler", "Vana Sistemleri"].
+
+==============================
+RESPONSE BODY CONVENTIONS
+==============================
+
+- Never return password or passwordHash fields.
+- Always return id for every resource.
+- Always return createdAt and updatedAt timestamps.
+- Return related resources when appropriate (fair detail includes customers).
+- Use null for absent optional fields, not undefined or empty string.
+- Dates in responses are ISO 8601 strings.
+
+==============================
+AUTHENTICATION HEADERS
+==============================
+
+- Access token is sent in Authorization header:
+  Authorization: Bearer <access_token>
+- Refresh token is sent in request body to /auth/refresh.
+- No tokens in URL query parameters — never.
+
+==============================
+IMPORTANT
+==============================
+
+- Every new endpoint must follow these patterns exactly.
+- If a new resource type is added, follow the same CRUD pattern.
+- Never create custom URL schemes that deviate from REST conventions.
+- API must be stateless — no server-side sessions (JWT only).
+- Design endpoints with future mobile app consumption in mind (Phase 2).
