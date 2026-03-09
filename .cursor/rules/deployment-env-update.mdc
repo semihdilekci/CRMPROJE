@@ -1,0 +1,22 @@
+---
+description: Ortam bağımlı değişikliklerde deployment dokümanının güncellenmesi
+alwaysApply: true
+---
+
+# Deployment ve Ortam Dokümanı Güncellemesi
+
+Ortam bağımlı (DEV / PROD) bir değişiklik yapıldığında **mutlaka** `docs/deployment-and-env-strategy.md` dosyasını güncelle.
+
+## Ne Zaman Güncelle?
+
+- Yeni **ortam değişkeni** (env) eklendiğinde veya mevcut bir env'in DEV/PROD'da farklı kullanıldığında
+- **CORS**, **proxy**, **rewrite**, **log seviyesi**, **feature flag** gibi ortama göre değişen davranış eklendiğinde
+- Kodda `NODE_ENV`, `process.env.NEXT_PUBLIC_*`, `localhost`, port veya CORS ile ilgili özel mantık yazıldığında
+
+## Nasıl Güncelle?
+
+- **Ortam Farkları** tablosuna yeni satır ekle veya ilgili satırı güncelle
+- **Canlıya Geçiş Kontrol Listesi**ne gerekirse yeni madde ekle
+- **Kod Tarafında Referanslar** bölümüne ilgili dosya/yol ekle
+
+Bu kural sayesinde DEV/PROD farkları ve go-live adımları tek yerden takip edilir; canlıya geçerken unutulan ayar riski azalır.
