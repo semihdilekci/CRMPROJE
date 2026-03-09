@@ -105,7 +105,7 @@ Feature 9 — Backend: Fuar Yönetimi Modülü
 - PATCH /fairs/:id — fuar güncelleme
 - DELETE /fairs/:id — fuar silme (cascade: müşteriler de silinir)
 - Zod validasyon entegrasyonu
-  Durum: [ ]
+  Durum: [x]
 
 Feature 10 — Backend: Müşteri Yönetimi Modülü
 
