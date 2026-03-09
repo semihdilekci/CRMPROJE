@@ -44,7 +44,7 @@ Feature 4 — Veritabanı: Prisma Şema Tasarımı & Migration
 - Customer modeli (id, fairId, company, name, phone, email, budgetRaw, budgetCurrency, conversionRate, products, cardImage, createdAt, updatedAt)
 - İlişkiler: Fair → Customer (one-to-many), User → Fair (created-by)
 - İlk migration çalıştırma (prisma migrate dev)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 5 — Shared: Tip Tanımları, Enum'lar & Sabitler
 
