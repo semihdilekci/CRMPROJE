@@ -83,7 +83,7 @@ Feature 7 — Backend: User Yönetimi Modülü
 - DELETE /users/:id — silme (admin only)
 - Parola alanı API yanıtlarından hariç tutma
 - Admin seed script (ilk admin kullanıcısını oluşturma)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 8 — Shared: Zod Validasyon Şemaları
 
