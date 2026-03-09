@@ -2,8 +2,16 @@
 
 import axios from 'axios';
 
+const BACKEND_URL = 'http://localhost:3001/api/v1';
+
+const getBaseURL = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) return envUrl;
+  return BACKEND_URL;
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: getBaseURL(),
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });

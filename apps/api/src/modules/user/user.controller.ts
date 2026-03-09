@@ -33,10 +33,29 @@ export class UserController {
   @Get()
   @Roles('admin')
   async findAll(
-    @Query('search') search?: string,
-    @Query('role') role?: string
+    @Query('search') searchParam?: string | string[],
+    @Query('role') roleParam?: string | string[]
   ): Promise<ApiSuccessResponse<User[]>> {
-    const data = await this.userService.findAll({ search, role });
+    const searchStr =
+      searchParam == null
+        ? ''
+        : typeof searchParam === 'string'
+          ? searchParam.trim()
+          : Array.isArray(searchParam) && searchParam[0] != null
+            ? String(searchParam[0]).trim()
+            : '';
+    const roleStr =
+      roleParam == null
+        ? ''
+        : typeof roleParam === 'string'
+          ? roleParam.trim()
+          : Array.isArray(roleParam) && roleParam[0] != null
+            ? String(roleParam[0]).trim()
+            : '';
+    const data = await this.userService.findAll({
+      search: searchStr.length > 0 ? searchStr : undefined,
+      role: roleStr.length > 0 ? roleStr : undefined,
+    });
     return {
       success: true,
       message: 'Kullanıcılar başarıyla getirildi',

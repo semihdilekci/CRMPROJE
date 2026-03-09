@@ -4,13 +4,19 @@ import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 
 export function useUsers(search?: string, role?: string) {
+  const searchNorm = (typeof search === 'string' ? search.trim() : '') || '';
+  const roleNorm = (typeof role === 'string' ? role.trim() : '') || '';
+
   return useQuery({
-    queryKey: queryKeys.users.list({ search, role }),
-    queryFn: async () => {
+    queryKey: queryKeys.users.list({ search: searchNorm, role: roleNorm }),
+    queryFn: async ({ queryKey }) => {
+      const [, , filters] = queryKey;
+      const { search: s = '', role: r = '' } = (filters as { search?: string; role?: string }) ?? {};
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (role) params.set('role', role);
-      const { data } = await api.get<ApiSuccessResponse<User[]>>(`/users?${params.toString()}`);
+      if (s) params.set('search', s);
+      if (r) params.set('role', r);
+      const url = params.toString() ? `/users?${params.toString()}` : '/users';
+      const { data } = await api.get<ApiSuccessResponse<User[]>>(url);
       return data.data;
     },
   });

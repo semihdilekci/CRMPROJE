@@ -17,7 +17,16 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
 
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || 'http://localhost:3000',
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000']
+        : (origin, cb) => {
+            if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+              cb(null, true);
+              return;
+            }
+            cb(null, false);
+          },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createUserSchema, updateUserSchema } from '@crm/shared';
@@ -23,6 +23,7 @@ type EditFormData = UpdateUserDto & { password?: string };
 
 export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
   const isEdit = !!initial;
+  const [submitError, setSubmitError] = useState('');
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const loading = createUser.isPending || updateUser.isPending;
@@ -34,20 +35,26 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
     reset,
   } = useForm<CreateFormData | EditFormData>({
     resolver: zodResolver(isEdit ? updateUserSchema : createUserSchema),
+    mode: 'onTouched',
     defaultValues: isEdit
       ? { name: initial.name, role: initial.role }
       : { name: '', email: '', password: '', role: 'user' },
   });
 
   useEffect(() => {
-    if (open && initial) {
+    if (!open) {
+      setSubmitError('');
+      return;
+    }
+    if (initial) {
       reset({ name: initial.name, role: initial.role });
-    } else if (open && !initial) {
+    } else {
       reset({ name: '', email: '', password: '', role: 'user' });
     }
   }, [open, initial, reset]);
 
   const onSubmit = async (data: CreateFormData | EditFormData) => {
+    setSubmitError('');
     try {
       if (isEdit && initial) {
         const dto: UpdateUserDto = { name: data.name, role: data.role };
@@ -59,8 +66,11 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
         await createUser.mutateAsync(data as CreateUserDto);
       }
       onClose();
-    } catch {
-      // Error shown by mutation / toast could be added
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Kayıt sırasında bir hata oluştu.';
+      setSubmitError(message);
     }
   };
 
@@ -71,13 +81,25 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
       title={isEdit ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı Ekle'}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {submitError && (
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{submitError}</p>
+        )}
         <Input
           label="Ad Soyad"
           placeholder="Ad soyad"
           {...register('name')}
           error={(errors as Record<string, { message?: string }>).name?.message}
         />
-        {!isEdit && (
+        {isEdit ? (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-muted text-[12px] font-bold uppercase tracking-wider">
+              E-posta
+            </label>
+            <p className="rounded-[10px] border border-border bg-muted/20 px-3 py-2.5 text-[14px] text-muted">
+              {initial?.email}
+            </p>
+          </div>
+        ) : (
           <Input
             label="E-posta"
             type="email"
