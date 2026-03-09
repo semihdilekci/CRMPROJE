@@ -101,16 +101,28 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
       cardImage: cardImage || null,
     } as any;
 
-    if (isEdit && initial) {
-      await updateCustomer.mutateAsync({ id: initial.id, dto });
-    } else {
-      await createCustomer.mutateAsync(dto);
+    try {
+      setSubmitError('');
+      if (isEdit && initial) {
+        await updateCustomer.mutateAsync({ id: initial.id, dto });
+      } else {
+        await createCustomer.mutateAsync(dto);
+      }
+      onClose();
+    } catch {
+      setSubmitError('Kaydetme sırasında bir hata oluştu. Lütfen alanları kontrol edin.');
     }
-
-    onClose();
   };
 
-  const isValid = company.trim().length > 0 && name.trim().length > 0;
+  const [submitError, setSubmitError] = useState('');
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailError =
+    email.trim().length > 0 && !emailRegex.test(email.trim())
+      ? 'Geçerli bir e-posta adresi giriniz (örn: ad@email.com)'
+      : '';
+
+  const isValid = company.trim().length > 0 && name.trim().length > 0 && !emailError;
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Müşteriyi Düzenle' : 'Yeni Müşteri Ekle'}>
@@ -144,6 +156,7 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
             placeholder="ornek@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            error={emailError || undefined}
           />
         </div>
 
@@ -264,6 +277,12 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
             </button>
           )}
         </div>
+
+        {submitError && (
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">
+            {submitError}
+          </p>
+        )}
 
         <div className="mt-2 flex gap-3">
           <Button variant="secondary" className="flex-1" onClick={onClose} disabled={loading}>
