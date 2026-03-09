@@ -212,7 +212,7 @@ Feature 18 — Web: Fuar Listesi Sayfası
 - Empty state (büyük 🏛 emoji 56px, başlık, açıklama, CTA butonu)
 - "Yeni Fuar Ekle" dashed border kartı (2px dashed, hover'da accent renk)
 - Özet istatistik satırı ("X fuar · Y toplam müşteri kaydı")
-  Durum: [ ]
+  Durum: [x]
 
 Feature 19 — Web: Fuar CRUD İşlemleri (UI)
 
@@ -226,7 +226,7 @@ Feature 19 — Web: Fuar CRUD İşlemleri (UI)
 - Düzenleme sonrası hem fairs state hem selectedFair güncellenir
 - Form validasyonu (name zorunlu, boşken kaydet butonu çalışmaz)
 - Kaydet (accent, flex:1) + İptal (surface, border) butonları
-  Durum: [ ]
+  Durum: [x]
 
 Feature 20 — Web: Fuar Detay Sayfası — Header & İstatistikler
 
@@ -236,7 +236,7 @@ Feature 20 — Web: Fuar Detay Sayfası — Header & İstatistikler
 - İstatistik kartları satırı (yatay scroll edilebilir):
   Toplam müşteri (accent renk, 26px bold sayı),
   Dönüşüm bazlı kartlar (her seviye için ayrı kart, ≥1 müşteri varsa görünür, kendi rengiyle sayı, border %30 opacity)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 21 — Web: Fuar Detay — Toolbar & Filtreleme
 
@@ -246,7 +246,7 @@ Feature 21 — Web: Fuar Detay — Toolbar & Filtreleme
 - Arama + filtre kombinasyonu (eş zamanlı çalışır)
 - Toolbar elemanları flexWrap ile responsive
 - Boş arama sonucu mesajı ("Arama sonucu bulunamadı.")
-  Durum: [ ]
+  Durum: [x]
 
 Feature 22 — Web: Müşteri Kartı Bileşeni
 
@@ -267,7 +267,7 @@ Feature 22 — Web: Müşteri Kartı Bileşeni
   Alt kısım: ✏️ Düzenle (accent, flex-1) + 🗑 Sil (kırmızı, sabit genişlik)
 - Accordion toggle (tıkla aç/kapat, ok ikonu değişir)
 - Müşteri kartları grid (repeat(auto-fill, minmax(300px, 1fr)), gap 10px)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 23 — Web: Müşteri Formu & CRUD İşlemleri
 
@@ -284,7 +284,7 @@ Feature 23 — Web: Müşteri Formu & CRUD İşlemleri
 - Müşteri silme (genişletilmiş karttaki 🗑, confirm dialog, onay sonrası listeden çıkarılır)
 - Form validasyonu (company + name zorunlu, boşken kaydet çalışmaz)
 - Kaydet (accent, flex:1) + İptal (surface, border) butonları
-  Durum: [ ]
+  Durum: [x]
 
 Feature 24 — Web: Boş Durumlar & Yükleme Ekranları
 
@@ -292,7 +292,7 @@ Feature 24 — Web: Boş Durumlar & Yükleme Ekranları
 - Müşteri listesi empty state (👥 ikonu + yönlendirme metni)
 - Arama sonuçsuz durumu ("Arama sonucu bulunamadı.")
 - Sayfa yükleme durumu (loaded === false iken tam sayfa ortalı "Yükleniyor..." mesajı)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 25 — Web: Entegrasyon, Test & Son Düzenlemeler
 
@@ -304,7 +304,7 @@ Feature 25 — Web: Entegrasyon, Test & Son Düzenlemeler
 - Hata yönetimi (network error, validation error kullanıcı geri bildirimleri)
 - Tüm modal'ların backdrop close davranışı doğrulama
 - Conditional rendering kontrolleri (opsiyonel alanlar boşken gizli mi)
-  Durum: [ ]
+  Durum: [x]
 
 ==============================
 NOTLAR
