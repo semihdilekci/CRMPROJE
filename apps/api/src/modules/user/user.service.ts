@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
-import { User, UpdateUserDto } from '@crm/shared';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
+import { User, UpdateUserDto, CreateUserDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
+import * as argon2 from 'argon2';
 
 const USER_SELECT = {
   id: true,
@@ -17,13 +24,56 @@ export class UserService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<User[]> {
+  async findAll(filters?: { search?: string; role?: string }): Promise<User[]> {
+    const where: {
+      role?: string;
+      OR?: Array<{
+        name?: { contains: string; mode: 'insensitive' };
+        email?: { contains: string; mode: 'insensitive' };
+      }>;
+    } = {};
+
+    if (filters?.role) {
+      where.role = filters.role;
+    }
+    if (filters?.search?.trim()) {
+      const term = filters.search.trim();
+      where.OR = [
+        { name: { contains: term, mode: 'insensitive' } },
+        { email: { contains: term, mode: 'insensitive' } },
+      ];
+    }
+
     const users = await this.prisma.user.findMany({
+      where: Object.keys(where).length > 0 ? where : undefined,
       select: USER_SELECT,
       orderBy: { createdAt: 'desc' },
     });
 
     return users.map((u) => this.toUserResponse(u));
+  }
+
+  async create(dto: CreateUserDto): Promise<User> {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new ConflictException('Bu e-posta adresi zaten kayıtlı');
+    }
+
+    const hashedPassword = await argon2.hash(dto.password);
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        name: dto.name,
+        role: dto.role ?? 'user',
+      },
+      select: USER_SELECT,
+    });
+
+    this.logger.log(`User created by admin: ${user.email}`);
+    return this.toUserResponse(user);
   }
 
   async findById(id: string): Promise<User> {
@@ -42,9 +92,16 @@ export class UserService {
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     await this.findById(id);
 
+    const updateData: { name?: string; role?: string; password?: string } = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.role !== undefined) updateData.role = dto.role;
+    if (dto.password) {
+      updateData.password = await argon2.hash(dto.password);
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: updateData,
       select: USER_SELECT,
     });
 

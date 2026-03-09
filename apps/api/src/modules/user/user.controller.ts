@@ -1,15 +1,24 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiSuccessResponse, User, updateUserSchema, UpdateUserDto } from '@crm/shared';
+import {
+  ApiSuccessResponse,
+  User,
+  createUserSchema,
+  updateUserSchema,
+  CreateUserDto,
+  UpdateUserDto,
+} from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
@@ -23,11 +32,27 @@ export class UserController {
 
   @Get()
   @Roles('admin')
-  async findAll(): Promise<ApiSuccessResponse<User[]>> {
-    const data = await this.userService.findAll();
+  async findAll(
+    @Query('search') search?: string,
+    @Query('role') role?: string
+  ): Promise<ApiSuccessResponse<User[]>> {
+    const data = await this.userService.findAll({ search, role });
     return {
       success: true,
       message: 'Kullanıcılar başarıyla getirildi',
+      data,
+    };
+  }
+
+  @Post()
+  @Roles('admin')
+  async create(
+    @Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto
+  ): Promise<ApiSuccessResponse<User>> {
+    const data = await this.userService.create(dto);
+    return {
+      success: true,
+      message: 'Kullanıcı başarıyla oluşturuldu',
       data,
     };
   }

@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   loading?: boolean;
+  error?: string;
 }
 
 export function ConfirmDialog({
@@ -21,10 +22,14 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Sil',
   loading = false,
+  error,
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="mb-6 text-muted">{message}</p>
+      {error && (
+        <p className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</p>
+      )}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onClose} disabled={loading}>
           İptal

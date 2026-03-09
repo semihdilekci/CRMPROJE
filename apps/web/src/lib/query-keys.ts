@@ -1,6 +1,8 @@
 export const queryKeys = {
   users: {
     all: ['users'] as const,
+    list: (filters?: { search?: string; role?: string }) =>
+      ['users', 'list', filters ?? {}] as const,
     byId: (id: string) => ['users', id] as const,
   },
   fairs: {
