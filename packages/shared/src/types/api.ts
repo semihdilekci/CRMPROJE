@@ -11,8 +11,14 @@ export interface ApiSuccessResponse<T> {
   data: T;
 }
 
+export interface ValidationDetail {
+  field: string;
+  message: string;
+}
+
 export interface ApiErrorResponse {
   success: false;
   message: string;
   error?: string;
+  details?: ValidationDetail[];
 }
