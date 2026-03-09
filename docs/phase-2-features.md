@@ -41,7 +41,7 @@ Feature 28 — Admin: İlgilenilen Ürünler Master Listesi (CRUD)
   - İsim güncelleme, silme; silme öncesi bu ürünü kullanan müşteri sayısını gösteren uyarı.
 - `CustomerForm` üzerindeki multi-select'in bu dinamik listeden beslenmesi.
 - Var olan müşterilerle geriye dönük uyumluluk için data migration stratejisinin belirlenmesi.
-  Durum: [ ]
+  Durum: [x]
 
 Feature 29 — Admin: Sistem Parametreleri & Sözlük Yönetimi
 
