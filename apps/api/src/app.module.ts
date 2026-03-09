@@ -9,6 +9,8 @@ import { CustomerModule } from '@modules/customer/customer.module';
 import { UploadModule } from '@modules/upload/upload.module';
 import { AdminModule } from '@modules/admin/admin.module';
 import { ProductModule } from '@modules/product/product.module';
+import { AuditModule } from '@modules/audit/audit.module';
+import { SettingsModule } from '@modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { ProductModule } from '@modules/product/product.module';
     UploadModule,
     AdminModule,
     ProductModule,
+    AuditModule,
+    SettingsModule,
   ],
   controllers: [AppController],
 })

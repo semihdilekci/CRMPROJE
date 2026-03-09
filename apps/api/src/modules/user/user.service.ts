@@ -8,6 +8,12 @@ import {
 import { User, UpdateUserDto, CreateUserDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import * as argon2 from 'argon2';
+import { AuditService } from '@modules/audit/audit.service';
+
+export interface AuditUser {
+  id: string;
+  email: string;
+}
 
 const USER_SELECT = {
   id: true,
@@ -22,7 +28,10 @@ const USER_SELECT = {
 export class UserService {
   private readonly logger = new Logger(UserService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService
+  ) {}
 
   async findAll(filters?: { search?: string; role?: string }): Promise<User[]> {
     const where: {
@@ -53,7 +62,7 @@ export class UserService {
     return users.map((u) => this.toUserResponse(u));
   }
 
-  async create(dto: CreateUserDto): Promise<User> {
+  async create(dto: CreateUserDto, auditUser?: AuditUser): Promise<User> {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -71,9 +80,17 @@ export class UserService {
       },
       select: USER_SELECT,
     });
-
+    const result = this.toUserResponse(user);
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'user',
+      entityId: user.id,
+      action: 'create',
+      after: result,
+    });
     this.logger.log(`User created by admin: ${user.email}`);
-    return this.toUserResponse(user);
+    return result;
   }
 
   async findById(id: string): Promise<User> {
@@ -89,8 +106,12 @@ export class UserService {
     return this.toUserResponse(user);
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<User> {
-    await this.findById(id);
+  async update(id: string, dto: UpdateUserDto, auditUser?: AuditUser): Promise<User> {
+    const old = await this.prisma.user.findUnique({
+      where: { id },
+      select: USER_SELECT,
+    });
+    if (!old) throw new NotFoundException('Kullanıcı bulunamadı');
 
     const updateData: { name?: string; role?: string; password?: string } = {};
     if (dto.name !== undefined) updateData.name = dto.name;
@@ -104,15 +125,24 @@ export class UserService {
       data: updateData,
       select: USER_SELECT,
     });
-
+    const result = this.toUserResponse(user);
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'user',
+      entityId: id,
+      action: 'update',
+      before: this.toUserResponse(old),
+      after: result,
+    });
     this.logger.log(`User updated: ${user.email}`);
-    return this.toUserResponse(user);
+    return result;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, auditUser?: AuditUser): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, _count: { select: { fairs: true } } },
+      select: { ...USER_SELECT, _count: { select: { fairs: true } } },
     });
 
     if (!user) {
@@ -122,8 +152,16 @@ export class UserService {
     if (user._count.fairs > 0) {
       throw new ForbiddenException('Bu kullanıcıya ait fuarlar bulunduğu için silinemez');
     }
-
+    const before = this.toUserResponse(user);
     await this.prisma.user.delete({ where: { id } });
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'user',
+      entityId: id,
+      action: 'delete',
+      before,
+    });
     this.logger.log(`User deleted: ${user.email}`);
   }
 

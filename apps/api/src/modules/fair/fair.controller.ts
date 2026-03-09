@@ -32,9 +32,9 @@ export class FairController {
   @Post()
   async create(
     @Body(new ZodValidationPipe(createFairSchema)) dto: CreateFairDto,
-    @CurrentUser('id') userId: string
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Fair>> {
-    const data = await this.fairService.create(dto, userId);
+    const data = await this.fairService.create(dto, user.id, user);
     return { success: true, message: 'Fuar başarıyla oluşturuldu', data };
   }
 
@@ -53,16 +53,20 @@ export class FairController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateFairSchema)) dto: UpdateFairDto
+    @Body(new ZodValidationPipe(updateFairSchema)) dto: UpdateFairDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Fair>> {
-    const data = await this.fairService.update(id, dto);
+    const data = await this.fairService.update(id, dto, user);
     return { success: true, message: 'Fuar başarıyla güncellendi', data };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string): Promise<ApiSuccessResponse<null>> {
-    await this.fairService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string }
+  ): Promise<ApiSuccessResponse<null>> {
+    await this.fairService.remove(id, user);
     return { success: true, message: 'Fuar başarıyla silindi', data: null };
   }
 }

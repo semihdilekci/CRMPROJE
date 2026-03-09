@@ -22,6 +22,7 @@ import {
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { CustomerService } from './customer.service';
 
 @Controller()
@@ -32,9 +33,10 @@ export class CustomerController {
   @Post('fairs/:fairId/customers')
   async create(
     @Param('fairId') fairId: string,
-    @Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto
+    @Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Customer>> {
-    const data = await this.customerService.create(fairId, dto);
+    const data = await this.customerService.create(fairId, dto, user);
     return { success: true, message: 'Müşteri başarıyla eklendi', data };
   }
 
@@ -51,16 +53,20 @@ export class CustomerController {
   @Patch('customers/:id')
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateCustomerSchema)) dto: UpdateCustomerDto
+    @Body(new ZodValidationPipe(updateCustomerSchema)) dto: UpdateCustomerDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Customer>> {
-    const data = await this.customerService.update(id, dto);
+    const data = await this.customerService.update(id, dto, user);
     return { success: true, message: 'Müşteri başarıyla güncellendi', data };
   }
 
   @Delete('customers/:id')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string): Promise<ApiSuccessResponse<null>> {
-    await this.customerService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string }
+  ): Promise<ApiSuccessResponse<null>> {
+    await this.customerService.remove(id, user);
     return { success: true, message: 'Müşteri başarıyla silindi', data: null };
   }
 }

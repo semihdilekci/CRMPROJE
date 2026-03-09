@@ -23,6 +23,7 @@ import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@common/decorators/roles.decorator';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { ProductService } from './product.service';
 
 @Controller('products')
@@ -68,9 +69,10 @@ export class ProductController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   async create(
-    @Body(new ZodValidationPipe(createProductSchema)) dto: CreateProductDto
+    @Body(new ZodValidationPipe(createProductSchema)) dto: CreateProductDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Product>> {
-    const data = await this.productService.create(dto);
+    const data = await this.productService.create(dto, user);
     return {
       success: true,
       message: 'Ürün başarıyla oluşturuldu',
@@ -83,9 +85,10 @@ export class ProductController {
   @Roles('admin')
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateProductSchema)) dto: UpdateProductDto
+    @Body(new ZodValidationPipe(updateProductSchema)) dto: UpdateProductDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<Product>> {
-    const data = await this.productService.update(id, dto);
+    const data = await this.productService.update(id, dto, user);
     return {
       success: true,
       message: 'Ürün başarıyla güncellendi',
@@ -97,8 +100,11 @@ export class ProductController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string): Promise<ApiSuccessResponse<null>> {
-    await this.productService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string }
+  ): Promise<ApiSuccessResponse<null>> {
+    await this.productService.remove(id, user);
     return {
       success: true,
       message: 'Ürün başarıyla silindi',

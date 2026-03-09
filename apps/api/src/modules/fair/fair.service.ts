@@ -1,14 +1,23 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Fair, FairWithCustomers, CreateFairDto, UpdateFairDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
+import { AuditService } from '@modules/audit/audit.service';
+
+export interface AuditUser {
+  id: string;
+  email: string;
+}
 
 @Injectable()
 export class FairService {
   private readonly logger = new Logger(FairService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService
+  ) {}
 
-  async create(dto: CreateFairDto, createdById: string): Promise<Fair> {
+  async create(dto: CreateFairDto, createdById: string, auditUser?: AuditUser): Promise<Fair> {
     const fair = await this.prisma.fair.create({
       data: {
         name: dto.name,
@@ -18,9 +27,17 @@ export class FairService {
         createdById,
       },
     });
-
+    const result = this.toFairResponse(fair);
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'fair',
+      entityId: fair.id,
+      action: 'create',
+      after: result,
+    });
     this.logger.log(`Fair created: ${fair.name}`);
-    return this.toFairResponse(fair);
+    return result;
   }
 
   async findAll(): Promise<(Fair & { _count: { customers: number } })[]> {
@@ -67,8 +84,13 @@ export class FairService {
     };
   }
 
-  async update(id: string, dto: UpdateFairDto): Promise<Fair> {
-    await this.ensureExists(id);
+  async update(
+    id: string,
+    dto: UpdateFairDto,
+    auditUser?: AuditUser
+  ): Promise<Fair> {
+    const old = await this.prisma.fair.findUnique({ where: { id } });
+    if (!old) throw new NotFoundException('Fuar bulunamadı');
 
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data['startDate'] = new Date(dto.startDate);
@@ -78,22 +100,33 @@ export class FairService {
       where: { id },
       data,
     });
-
+    const result = this.toFairResponse(fair);
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'fair',
+      entityId: id,
+      action: 'update',
+      before: this.toFairResponse(old),
+      after: result,
+    });
     this.logger.log(`Fair updated: ${fair.name}`);
-    return this.toFairResponse(fair);
+    return result;
   }
 
-  async remove(id: string): Promise<void> {
-    await this.ensureExists(id);
+  async remove(id: string, auditUser?: AuditUser): Promise<void> {
+    const old = await this.prisma.fair.findUnique({ where: { id } });
+    if (!old) throw new NotFoundException('Fuar bulunamadı');
     await this.prisma.fair.delete({ where: { id } });
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'fair',
+      entityId: id,
+      action: 'delete',
+      before: this.toFairResponse(old),
+    });
     this.logger.log(`Fair deleted: ${id}`);
-  }
-
-  private async ensureExists(id: string): Promise<void> {
-    const fair = await this.prisma.fair.findUnique({ where: { id } });
-    if (!fair) {
-      throw new NotFoundException('Fuar bulunamadı');
-    }
   }
 
   private toFairResponse(fair: {

@@ -66,3 +66,27 @@ model Customer {
   @@index([fairId])
   @@index([conversionRate])
 }
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?  @db.Text
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?  // denormalized for display when user deleted
+  entityType String   // fair | customer | user | product | setting
+  entityId   String?
+  action     String   // create | update | delete
+  before     Json?    // snapshot before change
+  after      Json?    // snapshot after change
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType])
+  @@index([userId])
+}

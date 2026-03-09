@@ -51,7 +51,7 @@ Feature 29 — Admin: Sistem Parametreleri & Sözlük Yönetimi
 - Bu ayarların veritabanında tutulması ve backend üzerinden okunması.
 - Sadece admin rolünün bu ayarları görüp değiştirebilmesi.
 - Yapılan değişikliklerin audit log'a yazılması (bkz. Feature 30).
-  Durum: [ ]
+  Durum: [x]
 
 Feature 30 — Audit Log & İşlem Geçmişi
 
@@ -61,7 +61,7 @@ Feature 30 — Audit Log & İşlem Geçmişi
 - Admin için "İşlem Geçmişi" ekranı:
   - Tarih aralığına, kullanıcıya, kaynak tipine (fair/customer/user/product) göre filtreleme.
   - Sadece okunur görünüm, silme/güncelleme yok.
-  Durum: [ ]
+  Durum: [x]
 
 ==============================
 RAPORLAMA & ANALİZ (Feature 31–35)

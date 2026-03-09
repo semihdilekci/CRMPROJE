@@ -23,6 +23,7 @@ import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@common/decorators/roles.decorator';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserService } from './user.service';
 
 @Controller('users')
@@ -66,9 +67,10 @@ export class UserController {
   @Post()
   @Roles('admin')
   async create(
-    @Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto
+    @Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<User>> {
-    const data = await this.userService.create(dto);
+    const data = await this.userService.create(dto, user);
     return {
       success: true,
       message: 'Kullanıcı başarıyla oluşturuldu',
@@ -90,9 +92,10 @@ export class UserController {
   @Roles('admin')
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateUserSchema)) dto: UpdateUserDto
+    @Body(new ZodValidationPipe(updateUserSchema)) dto: UpdateUserDto,
+    @CurrentUser() user: { id: string; email: string }
   ): Promise<ApiSuccessResponse<User>> {
-    const data = await this.userService.update(id, dto);
+    const data = await this.userService.update(id, dto, user);
     return {
       success: true,
       message: 'Kullanıcı başarıyla güncellendi',
@@ -103,8 +106,11 @@ export class UserController {
   @Delete(':id')
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string): Promise<ApiSuccessResponse<null>> {
-    await this.userService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string }
+  ): Promise<ApiSuccessResponse<null>> {
+    await this.userService.remove(id, user);
     return {
       success: true,
       message: 'Kullanıcı başarıyla silindi',
