@@ -8,6 +8,7 @@ import { FairModule } from '@modules/fair/fair.module';
 import { CustomerModule } from '@modules/customer/customer.module';
 import { UploadModule } from '@modules/upload/upload.module';
 import { AdminModule } from '@modules/admin/admin.module';
+import { ProductModule } from '@modules/product/product.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AdminModule } from '@modules/admin/admin.module';
     CustomerModule,
     UploadModule,
     AdminModule,
+    ProductModule,
   ],
   controllers: [AppController],
 })

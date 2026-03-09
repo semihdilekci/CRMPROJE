@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Customer } from '@crm/shared';
 import {
-  PRODUCTS,
   CURRENCIES,
   CONVERSION_RATES,
   CONVERSION_RATE_LABELS,
@@ -14,6 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ToggleChip } from '@/components/ui/ToggleChip';
 import { useCreateCustomer, useUpdateCustomer } from '@/hooks/use-customers';
+import { useProducts } from '@/hooks/use-products';
 
 interface CustomerFormModalProps {
   open: boolean;
@@ -26,6 +26,7 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
   const isEdit = !!initial;
   const createCustomer = useCreateCustomer(fairId);
   const updateCustomer = useUpdateCustomer(fairId);
+  const { data: productList = [] } = useProducts();
   const loading = createCustomer.isPending || updateCustomer.isPending;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -228,13 +229,13 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
             İlgilenilen Ürünler
           </label>
           <div className="flex flex-wrap gap-2">
-            {PRODUCTS.map((product) => (
+            {productList.map((product) => (
               <ToggleChip
-                key={product}
-                label={product}
-                selected={products.includes(product)}
+                key={product.id}
+                label={product.name}
+                selected={products.includes(product.name)}
                 color="#ff6b35"
-                onClick={() => toggleProduct(product)}
+                onClick={() => toggleProduct(product.name)}
               />
             ))}
           </div>

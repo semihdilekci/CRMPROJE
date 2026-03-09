@@ -11,4 +11,4 @@ export const PRODUCTS = [
   'Kontrol Panelleri',
 ] as const;
 
-export type Product = (typeof PRODUCTS)[number];
+export type ProductName = (typeof PRODUCTS)[number];

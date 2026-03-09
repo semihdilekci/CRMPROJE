@@ -144,6 +144,15 @@ async function main(): Promise<void> {
     'Kontrol Panelleri',
   ];
 
+  for (const name of productPool) {
+    await prisma.product.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+  console.log(`Products seeded: ${productPool.length}`);
+
   const customerTemplates = [
     {
       company: 'Atlas Mühendislik A.Ş.',
