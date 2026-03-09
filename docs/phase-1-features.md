@@ -34,7 +34,7 @@ Feature 3 — Backend: NestJS Proje Kurulumu & Temel Konfigürasyon
 - Standart API response format: { success, message, data? }
 - Logger konfigürasyonu
 - Environment variables yönetimi (@nestjs/config)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 4 — Veritabanı: Prisma Şema Tasarımı & Migration
 
