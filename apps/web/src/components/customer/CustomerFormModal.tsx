@@ -8,7 +8,6 @@ import {
   CONVERSION_RATES,
   CONVERSION_RATE_LABELS,
   CONVERSION_RATE_COLORS,
-  formatBudget,
 } from '@crm/shared';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -34,7 +33,6 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [budgetDisplay, setBudgetDisplay] = useState('');
   const [budgetRaw, setBudgetRaw] = useState('');
   const [budgetCurrency, setBudgetCurrency] = useState('USD');
   const [conversionRate, setConversionRate] = useState('');
@@ -48,7 +46,6 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
       setPhone(initial.phone ?? '');
       setEmail(initial.email ?? '');
       setBudgetRaw(initial.budgetRaw ?? '');
-      setBudgetDisplay(initial.budgetRaw ? formatBudget(initial.budgetRaw) : '');
       setBudgetCurrency(initial.budgetCurrency ?? 'USD');
       setConversionRate(initial.conversionRate ?? '');
       setProducts(initial.products);
@@ -63,7 +60,6 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
     setName('');
     setPhone('');
     setEmail('');
-    setBudgetDisplay('');
     setBudgetRaw('');
     setBudgetCurrency('USD');
     setConversionRate('');
@@ -72,16 +68,11 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
   };
 
   const handleBudgetChange = (value: string) => {
-    const digits = value.replace(/[^0-9]/g, '');
-    if (!digits) {
-      setBudgetDisplay('');
-      setBudgetRaw('');
-      return;
-    }
-    const num = parseInt(digits, 10);
-    setBudgetRaw(num.toString());
-    setBudgetDisplay(num.toLocaleString('tr-TR') + ',00');
+    const raw = value.replace(/[^0-9]/g, '');
+    setBudgetRaw(raw);
   };
+
+  const budgetDisplay = budgetRaw ? parseInt(budgetRaw, 10).toLocaleString('tr-TR') : '';
 
   const toggleProduct = (product: string) => {
     setProducts((prev) =>
