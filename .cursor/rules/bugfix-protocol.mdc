@@ -104,9 +104,13 @@ Before merging, verify comprehensively:
    - Rapid repeated actions (double-click, fast typing)
    - Different data states (no data, partial data, full data)
 
-4. USER TESTING: Ask the developer to verify the fix visually in the browser.
+4. USER TESTING (MANDATORY GATE): Ask the developer to verify the fix visually
+   in the browser. Explain what to test and what the expected behavior should be.
+   WAIT for explicit user approval before proceeding to Step 5.
+   DO NOT merge or push until the user confirms the fix is working.
 
 DO NOT merge if any verification fails.
+DO NOT merge without explicit user approval — this is a hard gate.
 DO NOT skip regression testing — this is where "fixing one thing breaks another" happens.
 
 ==============================
