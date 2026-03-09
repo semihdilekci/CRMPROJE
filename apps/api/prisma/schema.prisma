@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fairs Fair[]
+}
+
+model Fair {
+  id        String   @id @default(cuid())
+  name      String
+  address   String   @db.Text
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+
+  customers Customer[]
+
+  @@index([createdById])
+  @@index([startDate])
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  company        String
+  name           String
+  phone          String?
+  email          String?
+  budgetRaw      String?
+  budgetCurrency String?
+  conversionRate String?
+  products       String[]
+  cardImage      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  fair   Fair   @relation(fields: [fairId], references: [id], onDelete: Cascade)
+  fairId String
+
+  @@index([fairId])
+  @@index([conversionRate])
+}
