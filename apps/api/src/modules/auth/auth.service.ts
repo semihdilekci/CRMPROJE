@@ -1,20 +1,8 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import {
-  LoginDto,
-  RegisterDto,
-  AuthTokens,
-  LoginResponse,
-  User,
-  JwtPayload,
-} from '@crm/shared';
+import { LoginDto, RegisterDto, AuthTokens, LoginResponse, User, JwtPayload } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 
 const USER_SELECT = {
@@ -33,7 +21,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {}
 
   async register(dto: RegisterDto): Promise<LoginResponse> {
@@ -110,10 +98,7 @@ export class AuthService {
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
-    const tokenValid = await argon2.verify(
-      user.hashedRefreshToken,
-      refreshToken,
-    );
+    const tokenValid = await argon2.verify(user.hashedRefreshToken, refreshToken);
 
     if (!tokenValid) {
       throw new UnauthorizedException('Erişim reddedildi');
@@ -134,35 +119,28 @@ export class AuthService {
     this.logger.log(`User logged out: ${userId}`);
   }
 
-  private async generateTokens(
-    userId: string,
-    role: string,
-  ): Promise<AuthTokens> {
-    const accessPayload: JwtPayload = { sub: userId, role };
-    const refreshPayload: Pick<JwtPayload, 'sub'> = { sub: userId };
+  private async generateTokens(userId: string, role: string): Promise<AuthTokens> {
+    const accessPayload = { sub: userId, role };
+    const refreshPayload = { sub: userId };
+
+    const accessExpiration = this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRATION');
+    const refreshExpiration = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRATION');
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>(
-          'JWT_ACCESS_EXPIRATION',
-        ),
+        expiresIn: accessExpiration as any,
       }),
       this.jwtService.signAsync(refreshPayload, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>(
-          'JWT_REFRESH_EXPIRATION',
-        ),
+        expiresIn: refreshExpiration as any,
       }),
     ]);
 
     return { accessToken, refreshToken };
   }
 
-  private async updateRefreshTokenHash(
-    userId: string,
-    refreshToken: string,
-  ): Promise<void> {
+  private async updateRefreshTokenHash(userId: string, refreshToken: string): Promise<void> {
     const hash = await argon2.hash(refreshToken);
     await this.prisma.user.update({
       where: { id: userId },
@@ -183,14 +161,8 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role as User['role'],
-      createdAt:
-        user.createdAt instanceof Date
-          ? user.createdAt.toISOString()
-          : user.createdAt,
-      updatedAt:
-        user.updatedAt instanceof Date
-          ? user.updatedAt.toISOString()
-          : user.updatedAt,
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
     };
   }
 }

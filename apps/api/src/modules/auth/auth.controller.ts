@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-  UsePipes,
-} from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, UsePipes } from '@nestjs/common';
 import {
   ApiSuccessResponse,
   LoginResponse,
@@ -29,9 +21,7 @@ export class AuthController {
 
   @Post('register')
   @UsePipes(new ZodValidationPipe(registerSchema))
-  async register(
-    @Body() dto: RegisterDto,
-  ): Promise<ApiSuccessResponse<LoginResponse>> {
+  async register(@Body() dto: RegisterDto): Promise<ApiSuccessResponse<LoginResponse>> {
     const data = await this.authService.register(dto);
     return {
       success: true,
@@ -43,9 +33,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(loginSchema))
-  async login(
-    @Body() dto: LoginDto,
-  ): Promise<ApiSuccessResponse<LoginResponse>> {
+  async login(@Body() dto: LoginDto): Promise<ApiSuccessResponse<LoginResponse>> {
     const data = await this.authService.login(dto);
     return {
       success: true,
@@ -57,9 +45,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(refreshTokenSchema))
-  async refresh(
-    @Body() dto: RefreshTokenDto,
-  ): Promise<ApiSuccessResponse<AuthTokens>> {
+  async refresh(@Body() dto: RefreshTokenDto): Promise<ApiSuccessResponse<AuthTokens>> {
     const data = await this.authService.refresh(dto.refreshToken);
     return {
       success: true,
@@ -71,9 +57,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async logout(
-    @CurrentUser('id') userId: string,
-  ): Promise<ApiSuccessResponse<null>> {
+  async logout(@CurrentUser('id') userId: string): Promise<ApiSuccessResponse<null>> {
     await this.authService.logout(userId);
     return {
       success: true,

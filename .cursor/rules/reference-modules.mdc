@@ -1,0 +1,153 @@
+---
+alwaysApply: true
+---
+
+You are developing an enterprise-grade Fuar CRM System.
+
+This file is the REFERENCE MODULE REGISTRY.
+It tracks which modules serve as structural templates for new development.
+When creating a new module, you MUST check this registry first to identify the correct template.
+
+This registry is updated as features are completed.
+Consult docs/phase-1-features.md for feature completion status.
+
+==============================
+REFERENCE MODULE REGISTRY
+==============================
+
+Backend Domain CRUD Module (Primary Reference):
+- Template: apps/api/src/modules/fair/
+- Available after: Feature 9
+- Use for: Any new domain module that needs standard CRUD operations
+- Pattern covers:
+  Module registration (fair.module.ts)
+  Controller — HTTP layer, guards, decorators, standardized response (fair.controller.ts)
+  Service — business logic, Prisma queries, error handling, pagination, sorting (fair.service.ts)
+  DTOs — Zod-backed validation, z.infer type derivation (dto/create-fair.dto.ts, dto/update-fair.dto.ts)
+- Modules that MUST follow this template: customer (F10), and any future domain module
+- When implementing F10 (Customer): read every file in apps/api/src/modules/fair/ before writing
+
+Backend Auth & Guard Patterns:
+- Template: apps/api/src/modules/auth/
+- Available after: Feature 6
+- Use for: Authentication strategies, JWT guards, role-based access control
+- Pattern covers: Passport strategy, guard implementation, token management, login/register/refresh/logout flow
+
+Backend Common Utilities:
+- Template: apps/api/src/common/
+- Available after: Feature 3
+- Use for: Global filters, pipes, interceptors, custom decorators
+- Pattern covers: global exception filter, Zod validation pipe, response interceptor, @Roles and @CurrentUser decorators
+
+Shared Package — Zod Schemas:
+- Template: packages/shared/src/schemas/fair.schema.ts
+- Available after: Feature 8
+- Use for: Adding new Zod validation schemas
+- Pattern covers: createSchema + updateSchema (partial), field-level validation, enum validation
+- When adding a new schema: mirror the structure of fair.schema.ts
+
+Shared Package — Type Definitions:
+- Template: packages/shared/src/types/
+- Available after: Feature 5
+- Use for: Adding new TypeScript interfaces for domain entities
+- Pattern covers: entity interface, create/update input types, API response wrappers
+
+Shared Package — Utility Functions:
+- Template: packages/shared/src/utils/
+- Available after: Feature 12
+- Use for: Adding new formatting or helper functions
+- Pattern covers: formatDate, formatBudget, parseBudgetRaw, conversion rate helpers
+
+Frontend Feature Page (Primary Reference):
+- Template: apps/web/src/components/fair/ + apps/web/src/app/(dashboard)/fairs/
+- Available after: Feature 18-19
+- Use for: Any new feature page with list view, detail view, CRUD modals
+- Pattern covers:
+  TanStack Query hooks (apps/web/src/hooks/use-fairs.ts)
+  Card component (FairCard)
+  Form component with React Hook Form + Zod (FairForm)
+  Modal integration (create/edit/delete)
+  Empty state and loading state handling
+- When implementing customer pages (F22-23): read fair page implementation first
+
+Frontend Base UI Components:
+- Template: apps/web/src/components/ui/
+- Available after: Feature 15
+- Use for: Extending or creating new base UI components
+- Pattern covers: shadcn/ui extension, TailwindCSS token usage, design system compliance
+
+Frontend Auth & State:
+- Template: apps/web/src/stores/auth-store.ts + apps/web/src/lib/api.ts
+- Available after: Feature 17
+- Use for: Adding new Zustand stores or Axios interceptor patterns
+
+==============================
+PRE-REFERENCE PHASE (Feature 1–8)
+==============================
+
+During Features 1–8, most template modules DO NOT YET EXIST.
+
+For these features:
+- There is no existing domain module to copy from.
+- Follow docs/tech-stack.md for architectural decisions.
+- Follow .cursor/rules/code-standards.mdc for naming and file structure.
+- Follow .cursor/rules/api-design.mdc for endpoint design.
+- Follow .cursor/rules/project-architecture.mdc for layered architecture.
+- Follow .cursor/rules/error-handling.mdc for exception strategy.
+- Follow .cursor/rules/database-conventions.mdc for Prisma patterns.
+
+Build with EXTRA CARE during this phase — these modules BECOME the templates.
+
+==============================
+FEATURE 9 — TEMPLATE CREATION AWARENESS
+==============================
+
+Feature 9 (Fair Module) is the FIRST standard domain CRUD module in the backend.
+It MUST be designed with the explicit awareness that it will serve as the
+structural template for ALL future domain modules.
+
+When implementing Feature 9:
+- Every pattern must be generalizable (no fair-specific hacks).
+- File naming must follow a pattern that maps 1:1 to any domain entity.
+- Service methods must demonstrate the canonical way to:
+  create, findAll (with pagination/sorting), findOne, update, delete
+- Controller must demonstrate the canonical way to:
+  apply guards, validate input, return standardized responses
+- DTOs must demonstrate the canonical way to:
+  import Zod schemas from @crm/shared, derive TypeScript types
+- Error handling must demonstrate the canonical way to:
+  check resource existence, catch Prisma errors, throw NestJS exceptions
+
+After Feature 9 is merged to main, this module becomes the living reference.
+All subsequent domain modules (F10+) MUST mirror its structure.
+
+==============================
+REGISTRY MAINTENANCE
+==============================
+
+When a template module is completed:
+- Verify the "Available after" status in this registry matches reality.
+
+When a template module is modified:
+- Consider if the change should propagate to modules that followed it.
+- If yes, update all follower modules for consistency.
+- If the change is structural (new file, renamed pattern), update this registry.
+
+When a new category of module emerges that has no template:
+- Add a new entry to this registry with "Available after" status.
+- Build that first instance with template-creation awareness (same as F9 rule).
+
+==============================
+HOW TO USE THIS REGISTRY
+==============================
+
+When starting a new module or feature:
+
+1. Check this registry to find the relevant template(s).
+2. Check docs/phase-1-features.md to verify the template feature is completed [x].
+3. If template is available: read the template module's files BEFORE writing any code.
+4. List the template files in your analysis (Step 1 of feature-development-protocol.mdc).
+5. Mirror the structure exactly — only domain logic should differ.
+6. If the new module needs a pattern not covered by the template,
+   implement it cleanly and note it for potential registry update.
+7. If template is NOT yet available: follow the Pre-Reference Phase rules above.

@@ -39,11 +39,16 @@ Before generating code:
 - If dependencies are not met, stop and notify the developer.
 - Check if database schema changes are needed.
 - Check if shared types or schemas need updating in @crm/shared.
+- Consult .cursor/rules/reference-modules.mdc (Reference Module Registry) to identify
+  template modules for this feature. Verify template availability via feature completion status.
 - Review related existing modules — avoid duplicating logic (see context-and-reuse.mdc).
 - Identify which files will be created or modified.
 
 Mandatory — list before writing any code:
-- Existing files to use as reference or template (e.g. apps/api/src/modules/fair/ for a new module).
+- Template module(s) from reference-modules.mdc that will be used as structural reference.
+  If no template is available yet (Pre-Reference Phase), state this explicitly and list
+  the rule files (.cursor/rules/*) that will guide the implementation instead.
+- Existing files to use as reference or template.
 - For each new unit (service, controller, component, schema, util): "Does something similar already exist? Where?"
   If yes → reuse or extend; do not add a second copy.
   If no → add in the correct place (shared vs app-specific) and follow existing patterns.

@@ -41,17 +41,17 @@ USE EXISTING MODULES AS TEMPLATES
 
 When adding a new domain module (e.g. customer, user, upload):
 
-- Identify an existing similar module (e.g. fair for customer, auth for user-related).
-- Read that module's structure before writing:
+- Consult .cursor/rules/reference-modules.mdc for the REFERENCE MODULE REGISTRY.
+- Identify the correct template module and verify it is available (feature completed).
+- If template is available: read that module's files before writing:
   - Same folder layout (module, controller, service, dto/, etc.)
   - Same naming (e.g. fair.service.ts → customer.service.ts)
   - Same patterns (how DTOs are used, how Prisma is called, how responses are shaped)
+- If template is NOT yet available: follow Pre-Reference Phase rules in reference-modules.mdc.
 - Mirror the structure and patterns. Only the domain logic should differ.
 
-Reference paths (use as templates):
-- Backend module: apps/api/src/modules/fair/ (or auth/ when adding auth-related code)
-- Shared schemas: packages/shared/src/schemas/
-- Frontend feature: apps/web/src/components/fair/ and related hooks in apps/web/src/hooks/
+The reference-modules.mdc registry tracks all template modules with their availability status.
+Always check that registry instead of guessing which module to reference.
 
 When implementing a new module, list the template files you are following at the start of your implementation.
 
