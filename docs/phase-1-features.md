@@ -164,7 +164,7 @@ Feature 14 — Web: Tasarım Sistemi Kurulumu
 - Spacing hiyerarşisi (sayfa 36px/24px → kart 20-22px → detay 16-18px → küçük 8-12px)
 - Scrollbar özelleştirmesi (6px genişlik, temalı renkler)
 - Select dropdown özelleştirmesi (option arka planı surface rengi)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 15 — Web: Temel UI Bileşenleri
 
@@ -175,7 +175,7 @@ Feature 15 — Web: Temel UI Bileşenleri
 - Button bileşeni (primary/secondary/danger varyantları)
 - Select dropdown bileşeni
 - Toggle button / chip bileşeni (seçili: color+"25" arka plan, transition 0.15s)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 16 — Web: Layout & Navigasyon
 
@@ -186,7 +186,7 @@ Feature 16 — Web: Layout & Navigasyon
 - Sağ: "+ Yeni Fuar" CTA butonu (sadece ana ekranda görünür)
 - Content wrapper (maxWidth: 960px, margin: 0 auto, padding: 36px 24px)
 - İki katmanlı navigasyon state yönetimi (selectedFair state)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 17 — Web: Authentication Sayfaları & State Yönetimi
 
@@ -195,7 +195,7 @@ Feature 17 — Web: Authentication Sayfaları & State Yönetimi
 - Protected route wrapper (auth yoksa login'e redirect)
 - Axios interceptor (access token ekleme, 401'de refresh token denemesi)
 - Logout işlevi
-  Durum: [ ]
+  Durum: [x]
 
 Feature 18 — Web: Fuar Listesi Sayfası
 
