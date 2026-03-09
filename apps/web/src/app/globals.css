@@ -5,6 +5,7 @@
   --color-surface: #12121a;
   --color-card: #1a1a26;
   --color-border: #2a2a3e;
+  --color-border-hover: #3a3a5e;
   --color-accent: #ff6b35;
   --color-accent-soft: #ff6b3520;
   --color-gold: #ffb347;
@@ -14,14 +15,40 @@
   --color-green: #4ade80;
   --color-green-soft: #4ade8015;
   --color-danger: #f87171;
+  --color-danger-soft: #f8717120;
+
+  --color-rate-very-high: #4ade80;
+  --color-rate-high: #86efac;
+  --color-rate-medium: #ffb347;
+  --color-rate-low: #fb923c;
+  --color-rate-very-low: #f87171;
 
   --font-sans: var(--font-dm-sans);
   --font-serif: var(--font-playfair);
+
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 20px;
+  --text-3xl: 24px;
+  --text-4xl: 28px;
+  --text-5xl: 34px;
+
+  --spacing-page: 36px;
+  --spacing-page-x: 24px;
+  --spacing-card: 20px;
+  --spacing-detail: 16px;
+  --spacing-sm: 12px;
+  --spacing-xs: 8px;
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 ::-webkit-scrollbar {
@@ -39,4 +66,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
+}
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-muted);
+  opacity: 0.7;
 }
