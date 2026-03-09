@@ -23,13 +23,16 @@ export class FairService {
     return this.toFairResponse(fair);
   }
 
-  async findAll(): Promise<Fair[]> {
+  async findAll(): Promise<(Fair & { _count: { customers: number } })[]> {
     const fairs = await this.prisma.fair.findMany({
       orderBy: { startDate: 'desc' },
       include: { _count: { select: { customers: true } } },
     });
 
-    return fairs.map((f) => this.toFairResponse(f));
+    return fairs.map((f) => ({
+      ...this.toFairResponse(f),
+      _count: f._count,
+    }));
   }
 
   async findById(id: string): Promise<FairWithCustomers> {
