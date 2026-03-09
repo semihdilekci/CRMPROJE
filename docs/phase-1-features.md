@@ -134,7 +134,7 @@ Feature 12 — Shared: Yardımcı Fonksiyonlar (Utils)
 - formatBudget(raw) → "1.000.000,00" (Türk sayı formatı)
 - parseBudgetRaw(display) → temizlenmiş ham sayı string'i
 - Dönüşüm oranı label ve renk mapper'ı
-  Durum: [ ]
+  Durum: [x]
 
 ==============================
 WEB FRONTEND (Feature 13–25)
