@@ -117,7 +117,7 @@ Feature 10 — Backend: Müşteri Yönetimi Modülü
 - Arama endpoint'i (isim veya firma, case-insensitive)
 - Dönüşüm oranı filtresi
 - Zod validasyon entegrasyonu
-  Durum: [ ]
+  Durum: [x]
 
 Feature 11 — Backend: Dosya Yükleme Servisi
 
