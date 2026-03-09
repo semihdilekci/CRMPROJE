@@ -30,7 +30,7 @@ Feature 27 — Admin: Kullanıcı Yönetimi (Web UI)
   - Form validasyonu (Zod + React Hook Form).
 - Kullanıcı silme veya deaktif etme (soft deactivate), rol değişiklikleri için confirm diyalogları.
 - Admin dışında kimsenin bu ekrana erişememesi.
-  Durum: [ ]
+  Durum: [x]
 
 Feature 28 — Admin: İlgilenilen Ürünler Master Listesi (CRUD)
 
