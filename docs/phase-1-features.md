@@ -94,7 +94,7 @@ Feature 8 — Shared: Zod Validasyon Şemaları
 - loginSchema (email + password)
 - registerSchema (email + password + name)
 - Backend ve web aynı şemaları @crm/shared'dan import eder
-  Durum: [ ]
+  Durum: [x]
 
 Feature 9 — Backend: Fuar Yönetimi Modülü
 
