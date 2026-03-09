@@ -55,7 +55,7 @@ Feature 5 — Shared: Tip Tanımları, Enum'lar & Sabitler
 - Product listesi sabiti (10 ürün kategorisi)
 - Dönüşüm oranı renk haritası
 - API endpoint sabitleri
-  Durum: [ ]
+  Durum: [x]
 
 ==============================
 BACKEND MODÜLLERİ (Feature 6–12)
