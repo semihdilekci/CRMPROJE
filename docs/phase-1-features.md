@@ -72,7 +72,7 @@ Feature 6 — Backend: Authentication Modülü
 - Argon2 ile parola hashleme
 - JWT AuthGuard (korumalı endpoint'ler için)
 - Role-based guard (RBAC)
-  Durum: [ ]
+  Durum: [x]
 
 Feature 7 — Backend: User Yönetimi Modülü
 
