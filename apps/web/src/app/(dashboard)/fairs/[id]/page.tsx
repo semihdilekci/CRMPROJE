@@ -80,17 +80,18 @@ export default function FairDetailPage() {
         />
 
         {displayCustomers.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2.5">
+          <div className="columns-1 gap-2.5 sm:columns-2 lg:columns-3">
             {displayCustomers.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                fairId={fairId}
-                onEdit={() => {
-                  setEditingCustomer(customer);
-                  setShowCustomerModal(true);
-                }}
-              />
+              <div key={customer.id} className="mb-2.5 break-inside-avoid">
+                <CustomerCard
+                  customer={customer}
+                  fairId={fairId}
+                  onEdit={() => {
+                    setEditingCustomer(customer);
+                    setShowCustomerModal(true);
+                  }}
+                />
+              </div>
             ))}
           </div>
         ) : search || rateFilter ? (
