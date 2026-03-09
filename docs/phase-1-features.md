@@ -149,7 +149,7 @@ Feature 13 — Web: Next.js Proje Kurulumu & Yapılandırma
 - TanStack Query provider
 - Zustand store yapısı
 - @crm/shared bağlantısı
-  Durum: [ ]
+  Durum: [x]
 
 Feature 14 — Web: Tasarım Sistemi Kurulumu
 
