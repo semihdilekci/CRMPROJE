@@ -22,7 +22,7 @@ Feature 2 — Shared Package Kurulumu
 - Build konfigürasyonu (tsconfig.json, build script)
 - @crm/shared alias tanımı
 - Workspace referanslarını apps/api ve apps/web içine ekleme
-  Durum: [ ]
+  Durum: [x]
 
 Feature 3 — Backend: NestJS Proje Kurulumu & Temel Konfigürasyon
 
