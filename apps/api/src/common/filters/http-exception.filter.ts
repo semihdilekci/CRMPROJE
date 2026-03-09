@@ -46,11 +46,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : (exceptionResponse as Record<string, unknown>).message?.toString() ||
-            exception.message;
+          : (exceptionResponse as Record<string, unknown>).message?.toString() || exception.message;
 
-      const errorCode =
-        HTTP_STATUS_TO_ERROR_CODE[status] || ErrorCode.INTERNAL_ERROR;
+      const errorCode = HTTP_STATUS_TO_ERROR_CODE[status] || ErrorCode.INTERNAL_ERROR;
 
       const body: ApiErrorResponse = {
         success: false,
@@ -76,11 +74,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private logError(
-    exception: unknown,
-    request: Request,
-    status: number,
-  ): void {
+  private logError(exception: unknown, request: Request, status: number): void {
     const context = {
       method: request.method,
       url: request.url,
@@ -92,13 +86,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(
         `${request.method} ${request.url} ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
-        JSON.stringify(context),
+        JSON.stringify(context)
       );
     } else {
       this.logger.warn(
         `${request.method} ${request.url} ${status} — ${
           exception instanceof HttpException ? exception.message : 'Unknown'
-        }`,
+        }`
       );
     }
   }
