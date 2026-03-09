@@ -125,7 +125,7 @@ Feature 11 — Backend: Dosya Yükleme Servisi
 - Geliştirmede local storage, production'da S3/Cloudinary-ready
 - Dosya boyutu ve format validasyonu (sadece image/\*)
 - Upload sonrası URL döndürme
-  Durum: [ ]
+  Durum: [x]
 
 Feature 12 — Shared: Yardımcı Fonksiyonlar (Utils)
 
