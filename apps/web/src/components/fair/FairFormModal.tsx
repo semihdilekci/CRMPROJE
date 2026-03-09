@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -27,9 +27,20 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
   );
   const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : '');
 
-  const isValid = name.trim().length > 0;
+  const dateError = useMemo(() => {
+    if (!startDate || !endDate) return '';
+    if (new Date(endDate) < new Date(startDate)) {
+      return 'Bitiş tarihi başlangıç tarihinden önce olamaz';
+    }
+    return '';
+  }, [startDate, endDate]);
+
+  const isValid =
+    name.trim().length > 0 && startDate.length > 0 && endDate.length > 0 && !dateError;
 
   const handleSubmit = async () => {
+    if (!isValid) return;
+
     const dto = {
       name: name.trim(),
       address: address.trim(),
@@ -68,6 +79,7 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
           placeholder="Fuar adı giriniz"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          error={name.length === 0 ? undefined : undefined}
         />
         <Textarea
           label="Adres / Yer"
@@ -77,18 +89,23 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
         />
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Başlangıç Tarihi"
+            label="Başlangıç Tarihi *"
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            error={!startDate ? undefined : undefined}
           />
           <Input
-            label="Bitiş Tarihi"
+            label="Bitiş Tarihi *"
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            error={!endDate ? undefined : undefined}
           />
         </div>
+        {dateError && (
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{dateError}</p>
+        )}
         <div className="mt-2 flex gap-3">
           <Button variant="secondary" className="flex-1" onClick={resetAndClose} disabled={loading}>
             İptal
