@@ -1,0 +1,141 @@
+---
+alwaysApply: true
+---
+
+You are fixing bugs in an enterprise-grade Fuar CRM System.
+
+Bug fixes require the same rigor as feature development. Careless fixes create
+regression bugs and technical debt. Follow this protocol for every bugfix.
+
+Bug reports are tracked in docs/BugList.md.
+
+==============================
+STEP 0 — CREATE BUGFIX BRANCH
+==============================
+
+Before writing any code:
+
+- Ensure you are on main branch and it is up to date.
+- Create a bugfix branch:
+  git checkout main
+  git checkout -b bugfix/B{n}-short-description
+
+Example:
+  git checkout -b bugfix/B1-budget-input-format
+
+Never fix bugs directly on main.
+
+==============================
+STEP 1 — ROOT CAUSE ANALYSIS
+==============================
+
+Before changing any code, perform a thorough root cause analysis:
+
+1. REPRODUCE: Understand the exact steps that trigger the bug.
+2. LOCATE: Identify the exact file(s), function(s), and line(s) responsible.
+3. UNDERSTAND: Read the surrounding code to understand the original intent.
+4. TRACE: Follow the data flow from input to output to pinpoint where it breaks.
+5. SCOPE: Determine the blast radius — which other features use the same code?
+
+Mandatory outputs before writing any fix:
+- Root cause description (1-2 sentences)
+- Affected file(s) and function(s)
+- List of other features that use the same code paths
+- Risk assessment: what could break if this code is changed?
+
+DO NOT skip analysis. A wrong diagnosis leads to a wrong fix.
+DO NOT assume — verify by reading the actual code.
+
+==============================
+STEP 2 — PLAN THE FIX
+==============================
+
+Design the minimal correct fix:
+
+- MINIMAL: Change only what is necessary. Avoid "while I'm here" refactoring.
+- CORRECT: Fix the root cause, not just the symptom.
+- SAFE: Ensure the fix does not break other features that share the same code.
+- CONSISTENT: Follow existing patterns and conventions in the codebase.
+- VALIDATED: If the bug involves user input, add proper validation.
+
+Before implementing, state:
+- What will be changed (files + specific functions/lines)
+- What will NOT be changed (confirm no unrelated modifications)
+- How other features using the same code will remain unaffected
+
+==============================
+STEP 3 — IMPLEMENT THE FIX
+==============================
+
+Rules for implementation:
+
+- Change ONLY the files identified in Step 2.
+- If shared code is affected (@crm/shared), update shared package first, then consumers.
+- If validation is missing, add it at the correct layer:
+  Frontend: form-level validation (immediate user feedback)
+  Backend: schema/pipe validation (security boundary, never trust frontend)
+- If it's a UI bug, fix it with CSS/layout changes — avoid JS workarounds.
+- If it's a data flow bug, fix at the source — not with downstream patching.
+- Run build after changes to catch type errors early.
+- Run prettier/format to maintain code style.
+
+DO NOT introduce new dependencies for a bugfix unless absolutely necessary.
+DO NOT change function signatures unless the bug requires it.
+DO NOT add TODO comments — fix it completely now.
+
+==============================
+STEP 4 — VERIFY THE FIX
+==============================
+
+Before merging, verify comprehensively:
+
+1. BUILD: All apps and packages build without errors.
+   npm run build -w packages/shared
+   npm run build -w apps/api
+   npm run build -w apps/web
+
+2. REGRESSION: Test related features that share the same code paths.
+   - If you fixed a form component, test ALL forms that use it.
+   - If you fixed a service method, test ALL endpoints that call it.
+   - If you fixed shared code, test ALL consumers.
+
+3. EDGE CASES: Test boundary conditions relevant to the bug:
+   - Empty inputs, very long inputs, special characters
+   - Rapid repeated actions (double-click, fast typing)
+   - Different data states (no data, partial data, full data)
+
+4. USER TESTING: Ask the developer to verify the fix visually in the browser.
+
+DO NOT merge if any verification fails.
+DO NOT skip regression testing — this is where "fixing one thing breaks another" happens.
+
+==============================
+STEP 5 — COMMIT & MERGE
+==============================
+
+Commit with a descriptive bugfix message:
+
+  git commit -m "fix(scope): description of what was fixed
+
+  Root cause: brief explanation
+  Ref: Bug #N from BugList.md"
+
+Merge to main:
+  git checkout main
+  git merge bugfix/B{n}-short-description
+  git branch -d bugfix/B{n}-short-description
+
+Push and update BugList.md (mark as resolved or remove).
+
+==============================
+CRITICAL RULES
+==============================
+
+- Never apply a quick hack. If the proper fix is complex, do it properly anyway.
+- Never suppress errors — fix the source of the error.
+- Never remove validation to "fix" a validation error — fix the input handling.
+- Never change multiple unrelated things in a bugfix branch.
+- Never merge without build verification and user confirmation.
+- If a bugfix reveals a deeper architectural issue, document it separately
+  and address it in a dedicated refactoring task — do not scope-creep the bugfix.
+- Each bug gets its own branch and commit. No bundling unrelated fixes.
