@@ -6,6 +6,7 @@ import { AuthModule } from '@modules/auth/auth.module';
 import { UserModule } from '@modules/user/user.module';
 import { FairModule } from '@modules/fair/fair.module';
 import { CustomerModule } from '@modules/customer/customer.module';
+import { UploadModule } from '@modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CustomerModule } from '@modules/customer/customer.module';
     UserModule,
     FairModule,
     CustomerModule,
+    UploadModule,
   ],
   controllers: [AppController],
 })

@@ -38,6 +38,9 @@ yarn-error.log*
 *.db
 *.db-journal
 
+# Uploads (local dev storage)
+uploads/
+
 # Misc
 .cache/
 .turbo/
