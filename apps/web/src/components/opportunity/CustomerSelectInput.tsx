@@ -1,0 +1,217 @@
+'use client';
+
+import { useState } from 'react';
+import type { Customer, CreateCustomerDto } from '@crm/shared';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { useCustomers, useCreateCustomer } from '@/hooks/use-customers';
+import { useDebounce } from '@/hooks/use-debounce';
+
+interface CustomerSelectInputProps {
+  selectedCustomerId: string | null;
+  selectedCustomer: Customer | null;
+  onSelect: (customer: Customer) => void;
+}
+
+export function CustomerSelectInput({
+  selectedCustomerId,
+  selectedCustomer,
+  onSelect,
+}: CustomerSelectInputProps) {
+  const [searchText, setSearchText] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const debouncedSearch = useDebounce(searchText, 300);
+  const { data: customers = [] } = useCustomers(debouncedSearch || undefined);
+  const createCustomer = useCreateCustomer();
+
+  const [newCompany, setNewCompany] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+
+  const resetCreateForm = () => {
+    setNewCompany('');
+    setNewName('');
+    setNewPhone('');
+    setNewEmail('');
+    setShowCreateForm(false);
+  };
+
+  const handleCreateCustomer = async () => {
+    const dto: CreateCustomerDto = {
+      company: newCompany.trim(),
+      name: newName.trim(),
+      phone: newPhone.trim() || null,
+      email: newEmail.trim() || null,
+    };
+    try {
+      const created = await createCustomer.mutateAsync(dto);
+      onSelect(created);
+      resetCreateForm();
+      setSearchText('');
+      setShowDropdown(false);
+    } catch {
+      // mutation error handled by react-query
+    }
+  };
+
+  const handleSelectCustomer = (customer: Customer) => {
+    onSelect(customer);
+    setSearchText('');
+    setShowDropdown(false);
+    setShowCreateForm(false);
+  };
+
+  const handleClearSelection = () => {
+    onSelect(null as unknown as Customer);
+    setSearchText('');
+    setShowDropdown(false);
+  };
+
+  if (selectedCustomerId && selectedCustomer) {
+    return (
+      <div>
+        <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          Müşteri
+        </label>
+        <div className="flex items-center justify-between rounded-[10px] border border-border bg-surface px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-text">
+              {selectedCustomer.company}
+            </p>
+            <p className="text-[13px] text-muted">
+              {selectedCustomer.name}
+              {selectedCustomer.phone && ` · ${selectedCustomer.phone}`}
+              {selectedCustomer.email && ` · ${selectedCustomer.email}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="ml-3 shrink-0 cursor-pointer text-[13px] font-medium text-accent transition-colors hover:text-accent/80"
+          >
+            Değiştir
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+        Müşteri
+      </label>
+
+      {!showCreateForm ? (
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Müşteri adı veya firma ara..."
+            value={searchText}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-text transition-colors placeholder:text-muted/70 focus:border-accent focus:outline-none"
+          />
+
+          {showDropdown && (searchText.length > 0 || customers.length > 0) && (
+            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-border bg-surface shadow-lg">
+              {customers.length > 0 ? (
+                customers.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleSelectCustomer(c)}
+                    className="flex w-full cursor-pointer flex-col px-4 py-2.5 text-left transition-colors hover:bg-card"
+                  >
+                    <span className="text-[13px] font-semibold text-text">
+                      {c.company}
+                    </span>
+                    <span className="text-[12px] text-muted">
+                      {c.name}
+                      {c.phone && ` · ${c.phone}`}
+                    </span>
+                  </button>
+                ))
+              ) : debouncedSearch.length > 0 ? (
+                <div className="px-4 py-3 text-[13px] text-muted">
+                  Sonuç bulunamadı
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowDropdown(false);
+                setShowCreateForm(true);
+              }}
+              className="cursor-pointer text-[13px] font-medium text-accent transition-colors hover:text-accent/80"
+            >
+              + Yeni Müşteri Ekle
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-[10px] border border-border bg-card p-4">
+          <p className="mb-3 text-[13px] font-semibold text-text">Yeni Müşteri</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Firma Adı"
+              placeholder="Firma adı"
+              value={newCompany}
+              onChange={(e) => setNewCompany(e.target.value)}
+            />
+            <Input
+              label="Ad Soyad"
+              placeholder="Ad soyad"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Input
+              label="Telefon"
+              type="tel"
+              placeholder="+90 555 000 00 00"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+            />
+            <Input
+              label="E-posta"
+              type="email"
+              placeholder="ornek@email.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button
+              variant="secondary"
+              className="text-[13px]"
+              onClick={resetCreateForm}
+            >
+              İptal
+            </Button>
+            <Button
+              className="text-[13px]"
+              onClick={handleCreateCustomer}
+              disabled={
+                !newCompany.trim() || !newName.trim() || createCustomer.isPending
+              }
+            >
+              {createCustomer.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
