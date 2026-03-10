@@ -1,19 +1,19 @@
 'use client';
 
-import type { Customer } from '@crm/shared';
+import type { OpportunityWithCustomer } from '@crm/shared';
 import { CONVERSION_RATES, CONVERSION_RATE_LABELS, CONVERSION_RATE_COLORS } from '@crm/shared';
 import { useDisplayConfig } from '@/hooks/use-display-config';
 
 interface FairStatsProps {
-  customers: Customer[];
+  opportunities: OpportunityWithCustomer[];
 }
 
-export function FairStats({ customers }: FairStatsProps) {
+export function FairStats({ opportunities }: FairStatsProps) {
   const { data: displayConfig } = useDisplayConfig();
   const labels = displayConfig?.conversionRateLabels ?? CONVERSION_RATE_LABELS;
 
   const rateStats = CONVERSION_RATES.map((rate) => {
-    const count = customers.filter((c) => c.conversionRate === rate).length;
+    const count = opportunities.filter((o) => o.conversionRate === rate).length;
     return {
       rate,
       label: labels[rate],
@@ -25,8 +25,8 @@ export function FairStats({ customers }: FairStatsProps) {
   return (
     <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
       <div className="flex shrink-0 flex-col rounded-xl border border-border bg-card px-5 py-3">
-        <span className="text-[26px] font-extrabold text-accent">{customers.length}</span>
-        <span className="text-[12px] text-muted">Toplam Müşteri</span>
+        <span className="text-[26px] font-extrabold text-accent">{opportunities.length}</span>
+        <span className="text-[12px] text-muted">Toplam Fırsat</span>
       </div>
 
       {rateStats.map((stat) => (
