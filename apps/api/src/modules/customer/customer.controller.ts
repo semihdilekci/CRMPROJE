@@ -18,53 +18,57 @@ import {
   updateCustomerSchema,
   CreateCustomerDto,
   UpdateCustomerDto,
-  ConversionRate,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { CustomerService } from './customer.service';
 
-@Controller()
+@Controller('customers')
 @UseGuards(JwtAuthGuard)
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
-  @Post('fairs/:fairId/customers')
+  @Post()
   async create(
-    @Param('fairId') fairId: string,
     @Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<Customer>> {
-    const data = await this.customerService.create(fairId, dto, user);
-    return { success: true, message: 'Müşteri başarıyla eklendi', data };
+    const data = await this.customerService.create(dto, user);
+    return { success: true, message: 'Müşteri başarıyla oluşturuldu', data };
   }
 
-  @Get('fairs/:fairId/customers')
-  async findByFair(
-    @Param('fairId') fairId: string,
+  @Get()
+  async findAll(
     @Query('search') search?: string,
-    @Query('conversionRate') conversionRate?: ConversionRate
   ): Promise<ApiSuccessResponse<Customer[]>> {
-    const data = await this.customerService.findByFair(fairId, search, conversionRate);
+    const data = await this.customerService.findAll(search);
     return { success: true, message: 'Müşteriler başarıyla getirildi', data };
   }
 
-  @Patch('customers/:id')
+  @Get(':id')
+  async findById(
+    @Param('id') id: string,
+  ): Promise<ApiSuccessResponse<Customer>> {
+    const data = await this.customerService.findById(id);
+    return { success: true, message: 'Müşteri başarıyla getirildi', data };
+  }
+
+  @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateCustomerSchema)) dto: UpdateCustomerDto,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<Customer>> {
     const data = await this.customerService.update(id, dto, user);
     return { success: true, message: 'Müşteri başarıyla güncellendi', data };
   }
 
-  @Delete('customers/:id')
+  @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async remove(
     @Param('id') id: string,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<null>> {
     await this.customerService.remove(id, user);
     return { success: true, message: 'Müşteri başarıyla silindi', data: null };

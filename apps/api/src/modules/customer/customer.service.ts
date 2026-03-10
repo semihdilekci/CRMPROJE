@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Customer, CreateCustomerDto, UpdateCustomerDto, ConversionRate } from '@crm/shared';
+import { Customer, CreateCustomerDto, UpdateCustomerDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 
@@ -14,20 +14,13 @@ export class CustomerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
   ) {}
 
-  async create(
-    fairId: string,
-    dto: CreateCustomerDto,
-    auditUser?: AuditUser
-  ): Promise<Customer> {
-    await this.ensureFairExists(fairId);
-
-    const customer = await this.prisma.customer.create({
-      data: { ...dto, fairId },
-    });
+  async create(dto: CreateCustomerDto, auditUser?: AuditUser): Promise<Customer> {
+    const customer = await this.prisma.customer.create({ data: dto });
     const result = this.toCustomerResponse(customer);
+
     await this.auditService.log({
       userId: auditUser?.id,
       userEmail: auditUser?.email,
@@ -36,28 +29,19 @@ export class CustomerService {
       action: 'create',
       after: result,
     });
+
     this.logger.log(`Customer created: ${customer.company} - ${customer.name}`);
     return result;
   }
 
-  async findByFair(
-    fairId: string,
-    search?: string,
-    conversionRate?: ConversionRate
-  ): Promise<Customer[]> {
-    await this.ensureFairExists(fairId);
-
-    const where: Record<string, unknown> = { fairId };
+  async findAll(search?: string): Promise<Customer[]> {
+    const where: Record<string, unknown> = {};
 
     if (search) {
       where['OR'] = [
         { name: { contains: search, mode: 'insensitive' } },
         { company: { contains: search, mode: 'insensitive' } },
       ];
-    }
-
-    if (conversionRate) {
-      where['conversionRate'] = conversionRate;
     }
 
     const customers = await this.prisma.customer.findMany({
@@ -68,11 +52,13 @@ export class CustomerService {
     return customers.map((c) => this.toCustomerResponse(c));
   }
 
-  async update(
-    id: string,
-    dto: UpdateCustomerDto,
-    auditUser?: AuditUser
-  ): Promise<Customer> {
+  async findById(id: string): Promise<Customer> {
+    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    if (!customer) throw new NotFoundException('Müşteri bulunamadı');
+    return this.toCustomerResponse(customer);
+  }
+
+  async update(id: string, dto: UpdateCustomerDto, auditUser?: AuditUser): Promise<Customer> {
     const old = await this.prisma.customer.findUnique({ where: { id } });
     if (!old) throw new NotFoundException('Müşteri bulunamadı');
 
@@ -81,6 +67,7 @@ export class CustomerService {
       data: dto,
     });
     const result = this.toCustomerResponse(customer);
+
     await this.auditService.log({
       userId: auditUser?.id,
       userEmail: auditUser?.email,
@@ -90,17 +77,18 @@ export class CustomerService {
       before: this.toCustomerResponse(old),
       after: result,
     });
+
     this.logger.log(`Customer updated: ${customer.company} - ${customer.name}`);
     return result;
   }
 
   async remove(id: string, auditUser?: AuditUser): Promise<void> {
     const customer = await this.prisma.customer.findUnique({ where: { id } });
-    if (!customer) {
-      throw new NotFoundException('Müşteri bulunamadı');
-    }
+    if (!customer) throw new NotFoundException('Müşteri bulunamadı');
+
     const before = this.toCustomerResponse(customer);
     await this.prisma.customer.delete({ where: { id } });
+
     await this.auditService.log({
       userId: auditUser?.id,
       userEmail: auditUser?.email,
@@ -109,14 +97,8 @@ export class CustomerService {
       action: 'delete',
       before,
     });
-    this.logger.log(`Customer deleted: ${customer.company} - ${customer.name}`);
-  }
 
-  private async ensureFairExists(fairId: string): Promise<void> {
-    const fair = await this.prisma.fair.findUnique({ where: { id: fairId } });
-    if (!fair) {
-      throw new NotFoundException('Fuar bulunamadı');
-    }
+    this.logger.log(`Customer deleted: ${customer.company} - ${customer.name}`);
   }
 
   private toCustomerResponse(customer: {
@@ -125,12 +107,6 @@ export class CustomerService {
     name: string;
     phone: string | null;
     email: string | null;
-    budgetRaw: string | null;
-    budgetCurrency: string | null;
-    conversionRate: string | null;
-    products: string[];
-    cardImage: string | null;
-    fairId: string;
     createdAt: Date;
     updatedAt: Date;
   }): Customer {
@@ -140,12 +116,6 @@ export class CustomerService {
       name: customer.name,
       phone: customer.phone,
       email: customer.email,
-      budgetRaw: customer.budgetRaw,
-      budgetCurrency: customer.budgetCurrency as Customer['budgetCurrency'],
-      conversionRate: customer.conversionRate as Customer['conversionRate'],
-      products: customer.products,
-      cardImage: customer.cardImage,
-      fairId: customer.fairId,
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
     };
