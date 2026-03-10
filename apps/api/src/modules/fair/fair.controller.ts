@@ -13,7 +13,7 @@ import {
 import {
   ApiSuccessResponse,
   Fair,
-  FairWithCustomers,
+  FairWithOpportunities,
   createFairSchema,
   updateFairSchema,
   CreateFairDto,
@@ -32,7 +32,7 @@ export class FairController {
   @Post()
   async create(
     @Body(new ZodValidationPipe(createFairSchema)) dto: CreateFairDto,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<Fair>> {
     const data = await this.fairService.create(dto, user.id, user);
     return { success: true, message: 'Fuar başarıyla oluşturuldu', data };
@@ -45,7 +45,7 @@ export class FairController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<ApiSuccessResponse<FairWithCustomers>> {
+  async findById(@Param('id') id: string): Promise<ApiSuccessResponse<FairWithOpportunities>> {
     const data = await this.fairService.findById(id);
     return { success: true, message: 'Fuar detayı başarıyla getirildi', data };
   }
@@ -54,7 +54,7 @@ export class FairController {
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateFairSchema)) dto: UpdateFairDto,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<Fair>> {
     const data = await this.fairService.update(id, dto, user);
     return { success: true, message: 'Fuar başarıyla güncellendi', data };
@@ -64,7 +64,7 @@ export class FairController {
   @HttpCode(HttpStatus.OK)
   async remove(
     @Param('id') id: string,
-    @CurrentUser() user: { id: string; email: string }
+    @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<null>> {
     await this.fairService.remove(id, user);
     return { success: true, message: 'Fuar başarıyla silindi', data: null };

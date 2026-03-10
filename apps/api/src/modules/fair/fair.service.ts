@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Fair, FairWithCustomers, CreateFairDto, UpdateFairDto } from '@crm/shared';
+import { Fair, FairWithOpportunities, CreateFairDto, UpdateFairDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 
@@ -14,7 +14,7 @@ export class FairService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
   ) {}
 
   async create(dto: CreateFairDto, createdById: string, auditUser?: AuditUser): Promise<Fair> {
@@ -40,10 +40,10 @@ export class FairService {
     return result;
   }
 
-  async findAll(): Promise<(Fair & { _count: { customers: number } })[]> {
+  async findAll(): Promise<(Fair & { _count: { opportunities: number } })[]> {
     const fairs = await this.prisma.fair.findMany({
       orderBy: { startDate: 'desc' },
-      include: { _count: { select: { customers: true } } },
+      include: { _count: { select: { opportunities: true } } },
     });
 
     return fairs.map((f) => ({
@@ -52,11 +52,14 @@ export class FairService {
     }));
   }
 
-  async findById(id: string): Promise<FairWithCustomers> {
+  async findById(id: string): Promise<FairWithOpportunities> {
     const fair = await this.prisma.fair.findUnique({
       where: { id },
       include: {
-        customers: { orderBy: { createdAt: 'desc' } },
+        opportunities: {
+          include: { customer: true },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -66,29 +69,31 @@ export class FairService {
 
     return {
       ...this.toFairResponse(fair),
-      customers: fair.customers.map((c) => ({
-        id: c.id,
-        company: c.company,
-        name: c.name,
-        phone: c.phone,
-        email: c.email,
-        budgetRaw: c.budgetRaw,
-        budgetCurrency: c.budgetCurrency as any,
-        conversionRate: c.conversionRate as any,
-        products: c.products,
-        cardImage: c.cardImage,
-        fairId: c.fairId,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
+      opportunities: fair.opportunities.map((o) => ({
+        id: o.id,
+        fairId: o.fairId,
+        customerId: o.customerId,
+        budgetRaw: o.budgetRaw,
+        budgetCurrency: o.budgetCurrency as any,
+        conversionRate: o.conversionRate as any,
+        products: o.products,
+        cardImage: o.cardImage,
+        createdAt: o.createdAt.toISOString(),
+        updatedAt: o.updatedAt.toISOString(),
+        customer: {
+          id: o.customer.id,
+          company: o.customer.company,
+          name: o.customer.name,
+          phone: o.customer.phone,
+          email: o.customer.email,
+          createdAt: o.customer.createdAt.toISOString(),
+          updatedAt: o.customer.updatedAt.toISOString(),
+        },
       })),
     };
   }
 
-  async update(
-    id: string,
-    dto: UpdateFairDto,
-    auditUser?: AuditUser
-  ): Promise<Fair> {
+  async update(id: string, dto: UpdateFairDto, auditUser?: AuditUser): Promise<Fair> {
     const old = await this.prisma.fair.findUnique({ where: { id } });
     if (!old) throw new NotFoundException('Fuar bulunamadı');
 
