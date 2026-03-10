@@ -10,8 +10,13 @@ export const queryKeys = {
     byId: (id: string) => ['fairs', id] as const,
   },
   customers: {
-    byFair: (fairId: string) => ['customers', 'fair', fairId] as const,
+    all: ['customers'] as const,
+    list: (search?: string) => ['customers', 'list', { search }] as const,
+    byId: (id: string) => ['customers', id] as const,
+  },
+  opportunities: {
+    byFair: (fairId: string) => ['opportunities', 'fair', fairId] as const,
     byFairFiltered: (fairId: string, search?: string, rate?: string) =>
-      ['customers', 'fair', fairId, { search, rate }] as const,
+      ['opportunities', 'fair', fairId, { search, rate }] as const,
   },
 } as const;

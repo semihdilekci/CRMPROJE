@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   ApiSuccessResponse,
   Fair,
-  FairWithCustomers,
+  FairWithOpportunities,
   CreateFairDto,
   UpdateFairDto,
 } from '@crm/shared';
@@ -23,7 +23,7 @@ export function useFairDetail(id: string | null) {
   return useQuery({
     queryKey: queryKeys.fairs.byId(id ?? ''),
     queryFn: async () => {
-      const { data } = await api.get<ApiSuccessResponse<FairWithCustomers>>(`/fairs/${id}`);
+      const { data } = await api.get<ApiSuccessResponse<FairWithOpportunities>>(`/fairs/${id}`);
       return data.data;
     },
     enabled: !!id,

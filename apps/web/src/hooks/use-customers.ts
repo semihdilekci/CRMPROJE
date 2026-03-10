@@ -8,74 +8,61 @@ import type {
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 
-export function useCustomersByFair(fairId: string, search?: string, conversionRate?: string) {
+export function useCustomers(search?: string) {
   return useQuery({
-    queryKey: queryKeys.customers.byFairFiltered(fairId, search, conversionRate),
+    queryKey: queryKeys.customers.list(search),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      if (conversionRate) params.set('conversionRate', conversionRate);
 
       const { data } = await api.get<ApiSuccessResponse<Customer[]>>(
-        `/fairs/${fairId}/customers?${params.toString()}`
+        `/customers?${params.toString()}`,
       );
       return data.data;
     },
-    enabled: !!fairId,
   });
 }
 
-export function useCreateCustomer(fairId: string) {
+export function useCreateCustomer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (dto: CreateCustomerDto) => {
       const { data } = await api.post<ApiSuccessResponse<Customer>>(
-        `/fairs/${fairId}/customers`,
-        dto
+        '/customers',
+        dto,
       );
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.customers.byFair(fairId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.fairs.byId(fairId),
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     },
   });
 }
 
-export function useUpdateCustomer(fairId: string) {
+export function useUpdateCustomer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, dto }: { id: string; dto: UpdateCustomerDto }) => {
-      const { data } = await api.patch<ApiSuccessResponse<Customer>>(`/customers/${id}`, dto);
+      const { data } = await api.patch<ApiSuccessResponse<Customer>>(
+        `/customers/${id}`,
+        dto,
+      );
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.customers.byFair(fairId),
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     },
   });
 }
 
-export function useDeleteCustomer(fairId: string) {
+export function useDeleteCustomer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/customers/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.customers.byFair(fairId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.fairs.byId(fairId),
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     },
   });
 }
