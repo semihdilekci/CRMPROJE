@@ -137,7 +137,7 @@ export default function AdminProductsPage() {
           deleteTarget
             ? `"${deleteTarget.name}" ürününü silmek istediğinize emin misiniz?${
                 customerCount !== undefined && customerCount > 0
-                  ? ` Bu ürün ${customerCount} müşteri tarafından kullanılıyor.`
+                  ? ` Bu ürün ${customerCount} fırsat tarafından kullanılıyor.`
                   : ''
               }`
             : ''

@@ -18,10 +18,10 @@ export function useProducts(search?: string) {
 
 export function useProductCustomerCount(id: string | null) {
   return useQuery({
-    queryKey: ['products', id, 'customer-count'],
+    queryKey: ['products', id, 'usage-count'],
     queryFn: async () => {
       const { data } = await api.get<ApiSuccessResponse<{ count: number }>>(
-        `/products/${id}/customer-count`
+        `/products/${id}/usage-count`
       );
       return data.data.count;
     },

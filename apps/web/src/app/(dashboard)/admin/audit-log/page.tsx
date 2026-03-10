@@ -11,6 +11,7 @@ import type { AuditLogEntry } from '@crm/shared';
 const ENTITY_TYPES = [
   { value: '', label: 'Tümü' },
   { value: 'fair', label: 'Fuar' },
+  { value: 'opportunity', label: 'Fırsat' },
   { value: 'customer', label: 'Müşteri' },
   { value: 'user', label: 'Kullanıcı' },
   { value: 'product', label: 'Ürün' },
@@ -77,7 +78,7 @@ export default function AdminAuditLogPage() {
       <ContentWrapper>
         <h1 className="font-serif text-[22px] font-semibold text-text">İşlem Geçmişi</h1>
         <p className="mt-2 text-[14px] text-muted">
-          Fuar, müşteri, kullanıcı, ürün ve ayar işlemleri. Salt okunur.
+          Fuar, fırsat, müşteri, kullanıcı, ürün ve ayar işlemleri. Salt okunur.
         </p>
 
         <div className="mt-6 flex flex-wrap items-end gap-4 rounded-xl border border-border bg-surface/50 p-4">

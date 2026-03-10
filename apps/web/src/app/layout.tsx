@@ -17,7 +17,7 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: 'Fuar CRM',
-  description: 'Fuar müşteri yönetim paneli',
+  description: 'Fuar fırsat yönetim paneli',
 };
 
 export default function RootLayout({

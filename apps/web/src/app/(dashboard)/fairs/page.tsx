@@ -13,8 +13,8 @@ export default function FairsPage() {
   const { data: fairs, isLoading } = useFairs();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const totalCustomers = useMemo(
-    () => fairs?.reduce((sum, f) => sum + ((f as any)._count?.customers ?? 0), 0) ?? 0,
+  const totalOpportunities = useMemo(
+    () => fairs?.reduce((sum, f) => sum + ((f as any)._count?.opportunities ?? 0), 0) ?? 0,
     [fairs]
   );
 
@@ -33,7 +33,7 @@ export default function FairsPage() {
         {fairs && fairs.length > 0 ? (
           <>
             <p className="mb-5 text-[14px] text-muted">
-              {fairs.length} fuar · {totalCustomers} toplam müşteri kaydı
+              {fairs.length} fuar · {totalOpportunities} toplam fırsat
             </p>
 
             <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3.5">
@@ -61,7 +61,7 @@ export default function FairsPage() {
               Henüz fuar eklenmemiş
             </h2>
             <p className="mt-2 max-w-[320px] text-[14px] text-muted">
-              Müşteri kayıtlarını tutmak için ilk fuarınızı oluşturun
+              Fırsat kayıtlarını tutmak için ilk fuarınızı oluşturun
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
