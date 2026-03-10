@@ -48,7 +48,7 @@ model Fair {
   createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
   createdById String
 
-  customers Customer[]
+  opportunities Opportunity[]
 
   @@index([createdById])
   @@index([startDate])
@@ -63,11 +63,19 @@ model Product {
 }
 
 model Customer {
+  id        String   @id @default(cuid())
+  company   String
+  name      String
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  opportunities Opportunity[]
+}
+
+model Opportunity {
   id             String   @id @default(cuid())
-  company        String
-  name           String
-  phone          String?
-  email          String?
   budgetRaw      String?
   budgetCurrency String?
   conversionRate String?
@@ -76,10 +84,14 @@ model Customer {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  fair   Fair   @relation(fields: [fairId], references: [id], onDelete: Cascade)
-  fairId String
+  fair       Fair     @relation(fields: [fairId], references: [id], onDelete: Cascade)
+  fairId     String
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
 
   @@index([fairId])
+  @@index([customerId])
   @@index([conversionRate])
 }
 
@@ -94,12 +106,12 @@ model SystemSetting {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
-  userEmail  String?  // denormalized for display when user deleted
-  entityType String   // fair | customer | user | product | setting
+  userEmail  String?
+  entityType String   // fair | customer | opportunity | user | product | setting
   entityId   String?
   action     String   // create | update | delete
-  before     Json?    // snapshot before change
-  after      Json?    // snapshot after change
+  before     Json?
+  after      Json?
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
