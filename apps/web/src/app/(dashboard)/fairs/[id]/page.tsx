@@ -3,17 +3,17 @@
 import { useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useFairDetail, useDeleteFair } from '@/hooks/use-fairs';
-import { useCustomersByFair } from '@/hooks/use-customers';
+import { useOpportunitiesByFair } from '@/hooks/use-opportunities';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
 import { FairStats } from '@/components/fair/FairStats';
-import { CustomerToolbar } from '@/components/fair/CustomerToolbar';
+import { OpportunityToolbar } from '@/components/fair/OpportunityToolbar';
 import { FairFormModal } from '@/components/fair/FairFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { CustomerCard } from '@/components/customer/CustomerCard';
-import { CustomerFormModal } from '@/components/customer/CustomerFormModal';
-import type { Customer } from '@crm/shared';
+import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
+import { OpportunityFormModal } from '@/components/opportunity/OpportunityFormModal';
+import type { OpportunityWithCustomer } from '@crm/shared';
 
 export default function FairDetailPage() {
   const router = useRouter();
@@ -27,12 +27,15 @@ export default function FairDetailPage() {
   const [rateFilter, setRateFilter] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showOpportunityModal, setShowOpportunityModal] = useState(false);
+  const [editingOpportunity, setEditingOpportunity] = useState<OpportunityWithCustomer | null>(null);
 
-  const { data: customers } = useCustomersByFair(fairId, search, rateFilter);
+  const { data: opportunities } = useOpportunitiesByFair(fairId, search, rateFilter);
 
-  const allCustomers = useMemo(() => fair?.customers ?? [], [fair?.customers]);
+  const allOpportunities = useMemo(
+    () => fair?.opportunities ?? [],
+    [fair?.opportunities],
+  );
 
   const handleDeleteFair = async () => {
     await deleteFair.mutateAsync(fairId);
@@ -47,7 +50,7 @@ export default function FairDetailPage() {
     );
   }
 
-  const displayCustomers = customers ?? allCustomers;
+  const displayOpportunities = opportunities ?? allOpportunities;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -66,29 +69,29 @@ export default function FairDetailPage() {
           onDelete={() => setShowDeleteDialog(true)}
         />
 
-        <FairStats customers={allCustomers} />
+        <FairStats opportunities={allOpportunities} />
 
-        <CustomerToolbar
+        <OpportunityToolbar
           search={search}
           onSearchChange={setSearch}
           rateFilter={rateFilter}
           onRateFilterChange={setRateFilter}
-          onAddCustomer={() => {
-            setEditingCustomer(null);
-            setShowCustomerModal(true);
+          onAddOpportunity={() => {
+            setEditingOpportunity(null);
+            setShowOpportunityModal(true);
           }}
         />
 
-        {displayCustomers.length > 0 ? (
+        {displayOpportunities.length > 0 ? (
           <div className="columns-1 gap-2.5 sm:columns-2 lg:columns-3">
-            {displayCustomers.map((customer) => (
-              <div key={customer.id} className="mb-2.5 break-inside-avoid">
-                <CustomerCard
-                  customer={customer}
+            {displayOpportunities.map((opp) => (
+              <div key={opp.id} className="mb-2.5 break-inside-avoid">
+                <OpportunityCard
+                  opportunity={opp}
                   fairId={fairId}
                   onEdit={() => {
-                    setEditingCustomer(customer);
-                    setShowCustomerModal(true);
+                    setEditingOpportunity(opp);
+                    setShowOpportunityModal(true);
                   }}
                 />
               </div>
@@ -98,9 +101,9 @@ export default function FairDetailPage() {
           <p className="py-12 text-center text-muted">Arama sonucu bulunamadı.</p>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="text-[48px]">👥</span>
+            <span className="text-[48px]">💼</span>
             <p className="mt-3 text-[14px] text-muted">
-              Henüz müşteri eklenmemiş. Yukarıdaki butonu kullanarak müşteri ekleyin.
+              Henüz fırsat eklenmemiş. Yukarıdaki butonu kullanarak fırsat ekleyin.
             </p>
           </div>
         )}
@@ -113,18 +116,18 @@ export default function FairDetailPage() {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDeleteFair}
         title="Fuarı Sil"
-        message="Fuarı silmek istediğinizden emin misiniz? Bu işlem fuara ait tüm müşteri kayıtlarını da silecektir."
+        message="Fuarı silmek istediğinizden emin misiniz? Bu işlem fuara ait tüm fırsat kayıtlarını da silecektir."
         loading={deleteFair.isPending}
       />
 
-      <CustomerFormModal
-        open={showCustomerModal}
+      <OpportunityFormModal
+        open={showOpportunityModal}
         onClose={() => {
-          setShowCustomerModal(false);
-          setEditingCustomer(null);
+          setShowOpportunityModal(false);
+          setEditingOpportunity(null);
         }}
         fairId={fairId}
-        initial={editingCustomer}
+        initial={editingOpportunity}
       />
     </div>
   );
