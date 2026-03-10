@@ -1,0 +1,217 @@
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  OpportunityWithCustomer,
+  CreateOpportunityDto,
+  UpdateOpportunityDto,
+  ConversionRate,
+} from '@crm/shared';
+import { PrismaService } from '@prisma/prisma.service';
+import { AuditService } from '@modules/audit/audit.service';
+
+export interface AuditUser {
+  id: string;
+  email: string;
+}
+
+@Injectable()
+export class OpportunityService {
+  private readonly logger = new Logger(OpportunityService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async create(
+    fairId: string,
+    dto: CreateOpportunityDto,
+    auditUser?: AuditUser,
+  ): Promise<OpportunityWithCustomer> {
+    await this.ensureFairExists(fairId);
+    await this.ensureCustomerExists(dto.customerId);
+
+    const opportunity = await this.prisma.opportunity.create({
+      data: {
+        fairId,
+        customerId: dto.customerId,
+        budgetRaw: dto.budgetRaw ?? null,
+        budgetCurrency: dto.budgetCurrency ?? null,
+        conversionRate: dto.conversionRate ?? null,
+        products: dto.products ?? [],
+        cardImage: dto.cardImage ?? null,
+      },
+      include: { customer: true },
+    });
+
+    const result = this.toResponse(opportunity);
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'opportunity',
+      entityId: opportunity.id,
+      action: 'create',
+      after: result,
+    });
+
+    this.logger.log(
+      `Opportunity created for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+    );
+    return result;
+  }
+
+  async findByFair(
+    fairId: string,
+    search?: string,
+    conversionRate?: ConversionRate,
+  ): Promise<OpportunityWithCustomer[]> {
+    await this.ensureFairExists(fairId);
+
+    const where: Record<string, unknown> = { fairId };
+
+    if (search) {
+      where['customer'] = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { company: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    if (conversionRate) {
+      where['conversionRate'] = conversionRate;
+    }
+
+    const opportunities = await this.prisma.opportunity.findMany({
+      where,
+      include: { customer: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return opportunities.map((o) => this.toResponse(o));
+  }
+
+  async update(
+    id: string,
+    dto: UpdateOpportunityDto,
+    auditUser?: AuditUser,
+  ): Promise<OpportunityWithCustomer> {
+    const old = await this.prisma.opportunity.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+    if (!old) throw new NotFoundException('Fırsat bulunamadı');
+
+    if (dto.customerId && dto.customerId !== old.customerId) {
+      await this.ensureCustomerExists(dto.customerId);
+    }
+
+    const opportunity = await this.prisma.opportunity.update({
+      where: { id },
+      data: {
+        ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+        ...(dto.budgetRaw !== undefined && { budgetRaw: dto.budgetRaw }),
+        ...(dto.budgetCurrency !== undefined && { budgetCurrency: dto.budgetCurrency }),
+        ...(dto.conversionRate !== undefined && { conversionRate: dto.conversionRate }),
+        ...(dto.products !== undefined && { products: dto.products }),
+        ...(dto.cardImage !== undefined && { cardImage: dto.cardImage }),
+      },
+      include: { customer: true },
+    });
+
+    const result = this.toResponse(opportunity);
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'opportunity',
+      entityId: id,
+      action: 'update',
+      before: this.toResponse(old),
+      after: result,
+    });
+
+    this.logger.log(
+      `Opportunity updated for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+    );
+    return result;
+  }
+
+  async remove(id: string, auditUser?: AuditUser): Promise<void> {
+    const opportunity = await this.prisma.opportunity.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+    if (!opportunity) throw new NotFoundException('Fırsat bulunamadı');
+
+    const before = this.toResponse(opportunity);
+    await this.prisma.opportunity.delete({ where: { id } });
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'opportunity',
+      entityId: id,
+      action: 'delete',
+      before,
+    });
+
+    this.logger.log(
+      `Opportunity deleted for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+    );
+  }
+
+  private async ensureFairExists(fairId: string): Promise<void> {
+    const fair = await this.prisma.fair.findUnique({ where: { id: fairId } });
+    if (!fair) throw new NotFoundException('Fuar bulunamadı');
+  }
+
+  private async ensureCustomerExists(customerId: string): Promise<void> {
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new NotFoundException('Müşteri bulunamadı');
+  }
+
+  private toResponse(opportunity: {
+    id: string;
+    fairId: string;
+    customerId: string;
+    budgetRaw: string | null;
+    budgetCurrency: string | null;
+    conversionRate: string | null;
+    products: string[];
+    cardImage: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    customer: {
+      id: string;
+      company: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+  }): OpportunityWithCustomer {
+    return {
+      id: opportunity.id,
+      fairId: opportunity.fairId,
+      customerId: opportunity.customerId,
+      budgetRaw: opportunity.budgetRaw,
+      budgetCurrency: opportunity.budgetCurrency as OpportunityWithCustomer['budgetCurrency'],
+      conversionRate: opportunity.conversionRate as OpportunityWithCustomer['conversionRate'],
+      products: opportunity.products,
+      cardImage: opportunity.cardImage,
+      createdAt: opportunity.createdAt.toISOString(),
+      updatedAt: opportunity.updatedAt.toISOString(),
+      customer: {
+        id: opportunity.customer.id,
+        company: opportunity.customer.company,
+        name: opportunity.customer.name,
+        phone: opportunity.customer.phone,
+        email: opportunity.customer.email,
+        createdAt: opportunity.customer.createdAt.toISOString(),
+        updatedAt: opportunity.customer.updatedAt.toISOString(),
+      },
+    };
+  }
+}
