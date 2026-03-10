@@ -64,10 +64,116 @@ Feature 30 — Audit Log & İşlem Geçmişi
   Durum: [x]
 
 ==============================
-RAPORLAMA & ANALİZ (Feature 31–35)
+EKİPLER & SATIŞ LEAD YAPISI (Feature 31–33)
 ==============================
 
-Feature 31 — Fuar Detayında “Rapor al” Butonu & Rapor Modalı
+Feature 31 — Ekip Tanımı ve Kullanıcı-Ekip İlişkisi
+
+- Admin panelinde "Ekipler" için ayrı bir menü öğesi:
+  - URL: `/admin/teams`.
+  - Liste ekranı: ekip adı, açıklama (opsiyonel), ekipteki kullanıcı sayısı, oluşturulma tarihi.
+- Ekip CRUD:
+  - Yeni ekip oluşturma (zorunlu: ekip adı, opsiyonel: açıklama, aktif/pasif durumu).
+  - Ekip adını ve açıklamasını güncelleme, ekipleri aktif/pasif yapma.
+  - Ekip silme öncesi, bu ekibe bağlı kullanıcı sayısını gösteren uyarı. Ekip'e dahil kullanıcı varsa ekip silinemez.
+- Kullanıcı ile ekip ilişkisinin tanımlanması:
+  - Kullanıcı oluşturma/düzenleme ekranında "Ekip" alanı (dropdown, zorunlu olmaludur. Her kullanıcı mutlaka bir ekibe dahildir).
+  - Kullanıcı modelinde ekip referansı (her kullanıcının tek bir ekibi olduğu varsayımıyla başlanır).
+- Kullanıcı listesinde:
+  - Ekipe göre filtreleme.
+  - Ekip kolonunun (isim) gösterilmesi.
+  Durum: [x]
+
+Feature 32 — Müşteri Kartı Oluşturan Ekip & Kullanıcı Bilgisi
+
+- Müşteri oluşturma akışında:
+  - Oluşturan kullanıcının bilgisi (user id/email) ve bağlı olduğu ekip otomatik olarak kayıt altına alınır.
+  - Oluşturulma tarihi zaten var ise, ekip ve kullanıcı bilgileriyle birlikte tek bir meta blokta ele alınır.
+- Müşteri detay ekranında:
+  - Kart başlığının altında veya sağ üstte "Oluşturan" bilgisi:
+    - Oluşturan ekip adı.
+    - Oluşturan kullanıcı adı.
+    - Oluşturulma tarihi/saat bilgisi.
+- İleride raporlama ve filtreleme için:
+  - Müşteri listesinde ekip bazlı filtreleme (hangi ekip hangi müşterileri oluşturmuş).
+  - Audit log (Feature 30) ile entegrasyon: ilgili kayıtlar ekip ve kullanıcı bilgisiyle birlikte görüntülenir.
+  Durum: [ ]
+
+Feature 33 — Müşteri Kartında Siparişler Alanı
+
+- Müşteri kartı içinde, mevcut "İlgilenilen Ürünler" alanının altında yeni bir "Siparişler" bölümü:
+  - Başlık: "Siparişler" (opsiyonel açıklama: "Bu müşteriyle ilişkilendirilen potansiyel sipariş lead’leri").
+- Sipariş satırı yapısı:
+  - Ürün seçimi:
+    - İlgilenilen ürünler master listesinden (Feature 28) seçim.
+    - Tek sipariş satırı bir ürüne bağlıdır; aynı müşteri için birden fazla sipariş satırı eklenebilir.
+  - Tutar/bütçe alanı:
+    - Sayısal tutar (ör. para birimi Phase 1/2’deki bütçe para birimi mantığına paralel).
+  - Satışa dönüşme tahmini:
+    - Mevcut satışa dönüşme tahmini seviyeleri sipariş bazlı hale getirilir:
+      - çok yüksek / yüksek / orta / düşük / çok düşük.
+  - Statü alanı:
+    - Ön tanımlı seçenekler:
+      - "Satışa Dönüştü"
+      - "Teklif Verildi"
+      - "Soru Yanıtlandı"
+    - Gerekirse ileride sözlük yönetimi (Feature 29) üzerinden genişletilebilir.
+- UI davranışı:
+  - Bir müşteri kartı için birden fazla sipariş satırı ekleyebilme, düzenleyebilme, silebilme.
+  - Siparişler bölümü boşsa, "Bu müşteri için henüz kayıtlı bir sipariş lead’i yok" şeklinde boş durum mesajı.
+- Raporlama etkisi:
+  - Satışa dönüşme tahmini artık sipariş düzeyinde tutulur; müşteri seviyesindeki özet değer, bu siparişlerden türetilebilir (Phase 2 tasarımında netleştirilecek).
+  Durum: [ ]
+
+==============================
+İŞ AKIŞI & TAKİP (Feature 34–37)
+==============================
+
+Feature 34 — Müşteri Sorumlusu Atama & Filtreleme
+
+- `Customer` üzerinde "sorumlu kullanıcı" alanının eklenmesi (User referansı).
+- Müşteri formunda sorumlu kullanıcı seçimi (multi-tenant olmayacağı varsayımıyla sistem kullanıcıları arasından seçim).
+- Müşteri listesinde:
+  - Sorumluya göre filtreleme.
+  - "Atanmamış" müşteriler için hazır filtre.
+- Admin için, sorumlu dağılımını görebildiği basit bir özet (ör. kişi başı müşteri sayısı).
+  Durum: [ ]
+
+Feature 35 — Görev & Hatırlatıcılar (Follow-up Task’ları)
+
+- Her müşteri için takip görevi oluşturabilme:
+  - Başlık, açıklama/not alanı.
+  - Hedef tarih (due date).
+  - Durum (açık / tamamlandı).
+- "Bugün yapılacaklar" veya "Yaklaşan görevler" listesi:
+  - Giriş yapan kullanıcıya atanmış açık görevleri gösterir.
+- Görevlerin müşteri detayında görünmesi, tamamlandığında işaretlenebilmesi.
+  Durum: [ ]
+
+Feature 36 — Basit Takvim/Toplantı Entegrasyonu
+
+- Müşteri detayında:
+  - "Toplantıyı takvime ekle" aksiyonu:
+    - Google Calendar / Outlook için temel event link’i üretimi (URL tabanlı).
+  - Minimum entegrasyon: mailto + calendar link; gerçek API entegrasyonu ileriki fazlarda.
+- Oluşturulan toplantıların müşteri detayında basit bir listede gösterilmesi (opsiyonel).
+  Durum: [ ]
+
+Feature 37 — Toplu İçeri/Dışa Aktarım (Import/Export Geliştirme)
+
+- Müşteriler için Excel/CSV'den toplu import:
+  - Kolon eşleştirme ekranı (Excel kolonlarını sistem alanlarına map etme).
+  - Temel validation ve duplikasyon uyarısı (aynı e-posta/telefon tekrarları).
+- Var olan müşterilerin toplu export'u:
+  - Seçili fuar veya mevcut filtrelenmiş sonuçlara göre export.
+- Import sürecinin hata raporu: kaç satır başarılı, kaç satır hatalı ve neden.
+  Durum: [ ]
+
+==============================
+RAPORLAMA & ANALİZ (Feature 38–42)
+==============================
+
+Feature 38 — Fuar Detayında “Rapor al” Butonu & Rapor Modalı
 
 - Fuar detay sayfasının en altında, ortalanmış bir `Rapor al` butonu.
 - Butona tıklandığında açılan modal:
@@ -81,7 +187,7 @@ Feature 31 — Fuar Detayında “Rapor al” Butonu & Rapor Modalı
   - Tüm fuarlar için tüm müşterileri getiren rapor üretilir.
   Durum: [ ]
 
-Feature 32 — Rapor Kolon Seçimi & Excel Çıktısı
+Feature 39 — Rapor Kolon Seçimi & Excel Çıktısı
 
 - Aynı rapor modalında açılır-kapanır (accordion) bir "Rapor Kolonları" bölümü:
   - Checkbox ile hangi alanların raporda yer alacağının seçilmesi:
@@ -101,7 +207,7 @@ Feature 32 — Rapor Kolon Seçimi & Excel Çıktısı
   - Kolon başlıklarının Türkçe ve anlamlı olması.
   Durum: [ ]
 
-Feature 33 — Rapor Şablonları (Kaydedilebilir Filtre Setleri)
+Feature 40 — Rapor Şablonları (Kaydedilebilir Filtre Setleri)
 
 - Sık kullanılan rapor kombinasyonlarını "şablon" olarak kaydetme:
   - Örnekler: "Sıcak Lead’ler", "Bütçesi Yüksek Potansiyel Müşteriler".
@@ -113,7 +219,7 @@ Feature 33 — Rapor Şablonları (Kaydedilebilir Filtre Setleri)
 - Şablon yönetimi: listeleme, yeniden adlandırma, silme.
   Durum: [ ]
 
-Feature 34 — Global Dashboard & KPI Kartları
+Feature 41 — Global Dashboard & KPI Kartları
 
 - Ayrı bir "Dashboard" sayfasında genel istatistikler:
   - URL: `/dashboard`.
@@ -127,7 +233,7 @@ Feature 34 — Global Dashboard & KPI Kartları
 - Fuar ekranından (fuar listesi veya detay sayfası) `/dashboard` sayfasına erişim için görünür bir navigasyon öğesi.
   Durum: [ ]
 
-Feature 35 — Çapraz Fuar Müşteri Analizi
+Feature 42 — Çapraz Fuar Müşteri Analizi
 
 - Aynı firmanın birden fazla fuarda yer alması durumunda bunu gösteren çapraz görünüm:
   - Firma bazlı view: firma → katıldığı fuarlar → her fuardaki temas sayısı, bütçe, dönüşüm tahmini.
@@ -137,54 +243,10 @@ Feature 35 — Çapraz Fuar Müşteri Analizi
   Durum: [ ]
 
 ==============================
-İŞ AKIŞI & TAKİP (Feature 36–39)
+VERİ KALİTESİ & SEGMENTASYON (Feature 43–44)
 ==============================
 
-Feature 36 — Müşteri Sorumlusu Atama & Filtreleme
-
-- `Customer` üzerinde "sorumlu kullanıcı" alanının eklenmesi (User referansı).
-- Müşteri formunda sorumlu kullanıcı seçimi (multi-tenant olmayacağı varsayımıyla sistem kullanıcıları arasından seçim).
-- Müşteri listesinde:
-  - Sorumluya göre filtreleme.
-  - "Atanmamış" müşteriler için hazır filtre.
-- Admin için, sorumlu dağılımını görebildiği basit bir özet (ör. kişi başı müşteri sayısı).
-  Durum: [ ]
-
-Feature 37 — Görev & Hatırlatıcılar (Follow-up Task’ları)
-
-- Her müşteri için takip görevi oluşturabilme:
-  - Başlık, açıklama/not alanı.
-  - Hedef tarih (due date).
-  - Durum (açık / tamamlandı).
-- "Bugün yapılacaklar" veya "Yaklaşan görevler" listesi:
-  - Giriş yapan kullanıcıya atanmış açık görevleri gösterir.
-- Görevlerin müşteri detayında görünmesi, tamamlandığında işaretlenebilmesi.
-  Durum: [ ]
-
-Feature 38 — Basit Takvim/Toplantı Entegrasyonu
-
-- Müşteri detayında:
-  - "Toplantıyı takvime ekle" aksiyonu:
-    - Google Calendar / Outlook için temel event link’i üretimi (URL tabanlı).
-  - Minimum entegrasyon: mailto + calendar link; gerçek API entegrasyonu ileriki fazlarda.
-- Oluşturulan toplantıların müşteri detayında basit bir listede gösterilmesi (opsiyonel).
-  Durum: [ ]
-
-Feature 39 — Toplu İçeri/Dışa Aktarım (Import/Export Geliştirme)
-
-- Müşteriler için Excel/CSV'den toplu import:
-  - Kolon eşleştirme ekranı (Excel kolonlarını sistem alanlarına map etme).
-  - Temel validation ve duplikasyon uyarısı (aynı e-posta/telefon tekrarları).
-- Var olan müşterilerin toplu export'u:
-  - Seçili fuar veya mevcut filtrelenmiş sonuçlara göre export.
-- Import sürecinin hata raporu: kaç satır başarılı, kaç satır hatalı ve neden.
-  Durum: [ ]
-
-==============================
-VERİ KALİTESİ & SEGMENTASYON (Feature 40–41)
-==============================
-
-Feature 40 — Gelişmiş Global Arama
+Feature 43 — Gelişmiş Global Arama
 
 - Tüm fuar ve müşterilerde arama yapabilen global arama barı:
   - Firma adı, kişi adı, e-posta, telefon gibi alanlarda arama.
@@ -193,7 +255,7 @@ Feature 40 — Gelişmiş Global Arama
   - Bulunan kayıtların tipine göre gruplanmış görünüm (fuar sonuçları, müşteri sonuçları).
   Durum: [ ]
 
-Feature 41 — Etiketleme (Tagging) ve Segmentler
+Feature 44 — Etiketleme (Tagging) ve Segmentler
 
 - Müşterilere serbest etiket ekleme:
   - Örnek: "VIP", "Rakip Firma", "Sıcak Lead", "Teklif Gönderildi".
@@ -207,8 +269,8 @@ Feature 41 — Etiketleme (Tagging) ve Segmentler
 NOTLAR
 ==============================
 
-- Toplam: 16 feature (26–41)
-- Kapsam: Admin & yönetim, raporlama & analiz, iş akışı & takip, veri kalitesi & segmentasyon.
+- Toplam: 19 feature (26–44)
+- Kapsam: Admin & yönetim, ekipler & satış lead yapısı, iş akışı & takip, raporlama & analiz, veri kalitesi & segmentasyon.
 - Mobil uygulama ve mobil entegrasyonlar bu fazın kapsamı dışındadır (ayrı bir Phase 3'te ele alınacaktır).
-- Sıralama: Admin & konfigürasyon (26–30) → Raporlama & analiz (31–35) → İş akışı & takip (36–39) → Veri kalitesi & segmentasyon (40–41).
+- Sıralama: Admin & konfigürasyon (26–30) → Ekipler & satış lead yapısı (31–33) → İş akışı & takip (34–37) → Raporlama & analiz (38–42) → Veri kalitesi & segmentasyon (43–44).
 - Her feature tamamlandığında Durum alanı [x] olarak işaretlenir.

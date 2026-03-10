@@ -23,6 +23,7 @@ export function useSetSetting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SETTINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'config'] });
     },
   });
 }

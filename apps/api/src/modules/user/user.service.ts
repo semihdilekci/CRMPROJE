@@ -20,6 +20,8 @@ const USER_SELECT = {
   email: true,
   name: true,
   role: true,
+  teamId: true,
+  team: { select: { id: true, name: true } },
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -33,21 +35,18 @@ export class UserService {
     private readonly auditService: AuditService
   ) {}
 
-  async findAll(filters?: { search?: string; role?: string }): Promise<User[]> {
-    const where: {
-      role?: string;
-      OR?: Array<{
-        name?: { contains: string; mode: 'insensitive' };
-        email?: { contains: string; mode: 'insensitive' };
-      }>;
-    } = {};
+  async findAll(filters?: { search?: string; role?: string; teamId?: string }): Promise<User[]> {
+    const where: Record<string, unknown> = {};
 
     if (filters?.role) {
-      where.role = filters.role;
+      where['role'] = filters.role;
+    }
+    if (filters?.teamId) {
+      where['teamId'] = filters.teamId;
     }
     if (filters?.search?.trim()) {
       const term = filters.search.trim();
-      where.OR = [
+      where['OR'] = [
         { name: { contains: term, mode: 'insensitive' } },
         { email: { contains: term, mode: 'insensitive' } },
       ];
@@ -77,6 +76,7 @@ export class UserService {
         password: hashedPassword,
         name: dto.name,
         role: dto.role ?? 'user',
+        teamId: dto.teamId,
       },
       select: USER_SELECT,
     });
@@ -113,11 +113,12 @@ export class UserService {
     });
     if (!old) throw new NotFoundException('Kullanıcı bulunamadı');
 
-    const updateData: { name?: string; role?: string; password?: string } = {};
-    if (dto.name !== undefined) updateData.name = dto.name;
-    if (dto.role !== undefined) updateData.role = dto.role;
+    const updateData: Record<string, unknown> = {};
+    if (dto.name !== undefined) updateData['name'] = dto.name;
+    if (dto.role !== undefined) updateData['role'] = dto.role;
+    if (dto.teamId !== undefined) updateData['teamId'] = dto.teamId;
     if (dto.password) {
-      updateData.password = await argon2.hash(dto.password);
+      updateData['password'] = await argon2.hash(dto.password);
     }
 
     const user = await this.prisma.user.update({
@@ -170,6 +171,8 @@ export class UserService {
     email: string;
     name: string;
     role: string;
+    teamId: string | null;
+    team: { id: string; name: string } | null;
     createdAt: Date | string;
     updatedAt: Date | string;
   }): User {
@@ -178,6 +181,8 @@ export class UserService {
       email: user.email,
       name: user.name,
       role: user.role as User['role'],
+      teamId: user.teamId,
+      teamName: user.team?.name ?? null,
       createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
       updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
     };

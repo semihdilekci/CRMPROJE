@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
-import type { SystemSetting } from '@crm/shared';
+import type { SystemSetting, DisplayConfig } from '@crm/shared';
+import { CONVERSION_RATES } from '@crm/shared';
 
 const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
   { key: 'DEFAULT_CURRENCY', value: 'TRY', description: 'Varsayılan para birimi' },
@@ -33,11 +34,26 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
 ];
 
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureDefaults();
+      this.logger.log('Varsayılan sistem ayarları kontrol edildi / oluşturuldu.');
+    } catch (err) {
+      this.logger.error(
+        'Varsayılan ayarlar oluşturulurken hata. Veritabanı migration\'ı uygulandı mı?',
+        err
+      );
+      throw err;
+    }
+  }
 
   async ensureDefaults(): Promise<void> {
     for (const d of DEFAULTS) {
@@ -67,6 +83,17 @@ export class SettingsService {
       where: { key },
     });
     return s?.value ?? null;
+  }
+
+  /** Giriş yapmış her kullanıcının okuyabildiği görüntü ayarları (para birimi, etiket metinleri). */
+  async getDisplayConfig(): Promise<DisplayConfig> {
+    const defaultCurrency = (await this.get('DEFAULT_CURRENCY')) ?? 'TRY';
+    const conversionRateLabels: Record<string, string> = {};
+    for (const rate of CONVERSION_RATES) {
+      const value = await this.get(`CONVERSION_RATE_LABEL_${rate}`);
+      conversionRateLabels[rate] = value ?? rate;
+    }
+    return { defaultCurrency, conversionRateLabels };
   }
 
   async set(

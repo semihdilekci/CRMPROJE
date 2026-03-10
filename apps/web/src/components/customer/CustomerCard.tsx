@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeleteCustomer } from '@/hooks/use-customers';
+import { useDisplayConfig } from '@/hooks/use-display-config';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -23,9 +24,14 @@ export function CustomerCard({ customer, fairId, onEdit }: CustomerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const deleteCustomer = useDeleteCustomer(fairId);
+  const { data: displayConfig } = useDisplayConfig();
 
   const rateColor = getConversionRateColor(customer.conversionRate);
-  const rateLabel = getConversionRateLabel(customer.conversionRate);
+  const rateLabel =
+    customer.conversionRate && displayConfig?.conversionRateLabels
+      ? displayConfig.conversionRateLabels[customer.conversionRate] ??
+        getConversionRateLabel(customer.conversionRate)
+      : getConversionRateLabel(customer.conversionRate);
 
   const handleDelete = async () => {
     await deleteCustomer.mutateAsync(customer.id);

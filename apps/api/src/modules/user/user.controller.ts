@@ -35,27 +35,24 @@ export class UserController {
   @Roles('admin')
   async findAll(
     @Query('search') searchParam?: string | string[],
-    @Query('role') roleParam?: string | string[]
+    @Query('role') roleParam?: string | string[],
+    @Query('teamId') teamIdParam?: string | string[]
   ): Promise<ApiSuccessResponse<User[]>> {
-    const searchStr =
-      searchParam == null
+    const norm = (p: string | string[] | undefined) =>
+      p == null
         ? ''
-        : typeof searchParam === 'string'
-          ? searchParam.trim()
-          : Array.isArray(searchParam) && searchParam[0] != null
-            ? String(searchParam[0]).trim()
+        : typeof p === 'string'
+          ? p.trim()
+          : Array.isArray(p) && p[0] != null
+            ? String(p[0]).trim()
             : '';
-    const roleStr =
-      roleParam == null
-        ? ''
-        : typeof roleParam === 'string'
-          ? roleParam.trim()
-          : Array.isArray(roleParam) && roleParam[0] != null
-            ? String(roleParam[0]).trim()
-            : '';
+    const searchStr = norm(searchParam);
+    const roleStr = norm(roleParam);
+    const teamIdStr = norm(teamIdParam);
     const data = await this.userService.findAll({
       search: searchStr.length > 0 ? searchStr : undefined,
       role: roleStr.length > 0 ? roleStr : undefined,
+      teamId: teamIdStr.length > 0 ? teamIdStr : undefined,
     });
     return {
       success: true,

@@ -5,6 +5,12 @@ export interface SystemSetting {
   updatedAt: string;
 }
 
+/** Admin panelde değiştirilebilen, uygulama genelinde kullanılan görüntü ayarları. */
+export interface DisplayConfig {
+  defaultCurrency: string;
+  conversionRateLabels: Record<string, string>;
+}
+
 export interface AuditLogEntry {
   id: string;
   userId: string | null;

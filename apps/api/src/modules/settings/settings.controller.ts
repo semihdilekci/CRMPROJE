@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiSuccessResponse } from '@crm/shared';
-import type { SystemSetting } from '@crm/shared';
+import type { SystemSetting, DisplayConfig } from '@crm/shared';
 import { SetSettingDto, setSettingSchema } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
@@ -13,6 +13,13 @@ import { SettingsService } from './settings.service';
 @UseGuards(JwtAuthGuard)
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
+
+  /** Giriş yapmış herkesin okuyabildiği görüntü config (varsayılan para birimi, dönüşüm oranı etiketleri). */
+  @Get('config')
+  async getDisplayConfig(): Promise<ApiSuccessResponse<DisplayConfig>> {
+    const data = await this.settingsService.getDisplayConfig();
+    return { success: true, message: 'Config getirildi', data };
+  }
 
   @Get()
   @UseGuards(RolesGuard)

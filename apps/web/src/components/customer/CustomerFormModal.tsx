@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { ToggleChip } from '@/components/ui/ToggleChip';
 import { useCreateCustomer, useUpdateCustomer } from '@/hooks/use-customers';
 import { useProducts } from '@/hooks/use-products';
+import { useDisplayConfig } from '@/hooks/use-display-config';
 
 interface CustomerFormModalProps {
   open: boolean;
@@ -27,15 +28,19 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
   const createCustomer = useCreateCustomer(fairId);
   const updateCustomer = useUpdateCustomer(fairId);
   const { data: productList = [] } = useProducts();
+  const { data: displayConfig } = useDisplayConfig();
   const loading = createCustomer.isPending || updateCustomer.isPending;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultCurrency = displayConfig?.defaultCurrency ?? 'TRY';
+  const conversionRateLabels = displayConfig?.conversionRateLabels ?? CONVERSION_RATE_LABELS;
 
   const [company, setCompany] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [budgetRaw, setBudgetRaw] = useState('');
-  const [budgetCurrency, setBudgetCurrency] = useState('USD');
+  const [budgetCurrency, setBudgetCurrency] = useState(defaultCurrency);
   const [conversionRate, setConversionRate] = useState('');
   const [products, setProducts] = useState<string[]>([]);
   const [cardImage, setCardImage] = useState('');
@@ -47,14 +52,14 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
       setPhone(initial.phone ?? '');
       setEmail(initial.email ?? '');
       setBudgetRaw(initial.budgetRaw ?? '');
-      setBudgetCurrency(initial.budgetCurrency ?? 'USD');
+      setBudgetCurrency(initial.budgetCurrency ?? defaultCurrency);
       setConversionRate(initial.conversionRate ?? '');
       setProducts(initial.products);
       setCardImage(initial.cardImage ?? '');
     } else if (open) {
       resetForm();
     }
-  }, [open, initial]);
+  }, [open, initial, defaultCurrency]);
 
   const resetForm = () => {
     setCompany('');
@@ -62,7 +67,7 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
     setPhone('');
     setEmail('');
     setBudgetRaw('');
-    setBudgetCurrency('USD');
+    setBudgetCurrency(defaultCurrency);
     setConversionRate('');
     setProducts([]);
     setCardImage('');
@@ -211,7 +216,7 @@ export function CustomerFormModal({ open, onClose, fairId, initial }: CustomerFo
                       }
                 }
               >
-                {CONVERSION_RATE_LABELS[rate]}
+                {conversionRateLabels[rate] ?? CONVERSION_RATE_LABELS[rate]}
                 <span className="ml-1 opacity-70">
                   {rate === 'very_high' && '80-100%'}
                   {rate === 'high' && '60-80%'}

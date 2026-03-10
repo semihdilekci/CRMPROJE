@@ -11,6 +11,7 @@ import { AdminModule } from '@modules/admin/admin.module';
 import { ProductModule } from '@modules/product/product.module';
 import { AuditModule } from '@modules/audit/audit.module';
 import { SettingsModule } from '@modules/settings/settings.module';
+import { TeamModule } from '@modules/team/team.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
     ProductModule,
     AuditModule,
     SettingsModule,
+    TeamModule,
   ],
   controllers: [AppController],
 })

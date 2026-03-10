@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UserFormModal } from '@/components/user/UserFormModal';
 import { useUsers, useDeleteUser } from '@/hooks/use-users';
+import { useTeams } from '@/hooks/use-teams';
 import type { User } from '@crm/shared';
 
 function formatDate(iso: string) {
@@ -25,11 +26,17 @@ function formatDate(iso: string) {
 export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [teamFilter, setTeamFilter] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
-  const { data: users, isLoading } = useUsers(search.trim() || undefined, roleFilter || undefined);
+  const { data: users, isLoading } = useUsers(
+    search.trim() || undefined,
+    roleFilter || undefined,
+    teamFilter || undefined
+  );
+  const { data: teams } = useTeams(undefined, true);
   const deleteUser = useDeleteUser();
 
   const handleEdit = (user: User) => {
@@ -82,18 +89,31 @@ export default function AdminUsersPage() {
             <option value="admin">Admin</option>
             <option value="user">Kullanıcı</option>
           </select>
+          <select
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            className="max-w-[200px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-[14px] text-text focus:border-accent focus:outline-none"
+          >
+            <option value="">Tüm ekipler</option>
+            {teams?.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {isLoading ? (
           <p className="text-muted">Yükleniyor...</p>
         ) : users && users.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full min-w-[600px] text-left text-[14px]">
+            <table className="w-full min-w-[700px] text-left text-[14px]">
               <thead>
                 <tr className="border-b border-border bg-surface">
                   <th className="px-4 py-3 font-semibold text-text">Ad Soyad</th>
                   <th className="px-4 py-3 font-semibold text-text">E-posta</th>
                   <th className="px-4 py-3 font-semibold text-text">Rol</th>
+                  <th className="px-4 py-3 font-semibold text-text">Ekip</th>
                   <th className="px-4 py-3 font-semibold text-text">Oluşturulma</th>
                   <th className="px-4 py-3 font-semibold text-text">İşlem</th>
                 </tr>
@@ -114,6 +134,7 @@ export default function AdminUsersPage() {
                         {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-text">{user.teamName || '—'}</td>
                     <td className="px-4 py-3 text-muted">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -141,11 +162,11 @@ export default function AdminUsersPage() {
         ) : (
           <div className="rounded-xl border border-dashed border-border py-16 text-center">
             <p className="text-muted">
-              {search || roleFilter
+              {search || roleFilter || teamFilter
                 ? 'Arama kriterlerine uygun kullanıcı yok.'
                 : 'Henüz kullanıcı yok.'}
             </p>
-            {!search && !roleFilter && (
+            {!search && !roleFilter && !teamFilter && (
               <Button onClick={handleAdd} className="mt-4">
                 + İlk Kullanıcıyı Ekle
               </Button>

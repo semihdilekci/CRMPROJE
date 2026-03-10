@@ -5,3 +5,4 @@ export * from './fair';
 export * from './customer';
 export * from './product';
 export * from './setting';
+export * from './team';

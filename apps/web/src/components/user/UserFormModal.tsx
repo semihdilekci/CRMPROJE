@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreateUser, useUpdateUser } from '@/hooks/use-users';
+import { useTeams } from '@/hooks/use-teams';
 
 interface UserFormModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
   const [submitError, setSubmitError] = useState('');
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const { data: teams } = useTeams(undefined, true);
   const loading = createUser.isPending || updateUser.isPending;
 
   const {
@@ -37,8 +39,8 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
     resolver: zodResolver(isEdit ? updateUserSchema : createUserSchema),
     mode: 'onTouched',
     defaultValues: isEdit
-      ? { name: initial.name, role: initial.role }
-      : { name: '', email: '', password: '', role: 'user' },
+      ? { name: initial.name, role: initial.role, teamId: initial.teamId ?? '' }
+      : { name: '', email: '', password: '', role: 'user', teamId: '' },
   });
 
   useEffect(() => {
@@ -47,9 +49,9 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
       return;
     }
     if (initial) {
-      reset({ name: initial.name, role: initial.role });
+      reset({ name: initial.name, role: initial.role, teamId: initial.teamId ?? '' });
     } else {
-      reset({ name: '', email: '', password: '', role: 'user' });
+      reset({ name: '', email: '', password: '', role: 'user', teamId: '' });
     }
   }, [open, initial, reset]);
 
@@ -60,6 +62,9 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
         const dto: UpdateUserDto = { name: data.name, role: data.role };
         if ((data as EditFormData).password?.trim()) {
           dto.password = (data as EditFormData).password;
+        }
+        if ((data as EditFormData).teamId) {
+          dto.teamId = (data as EditFormData).teamId;
         }
         await updateUser.mutateAsync({ id: initial.id, dto });
       } else {
@@ -139,6 +144,31 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+            Ekip
+          </label>
+          <select
+            className={`w-full rounded-[10px] border bg-surface px-3 py-2.5 text-text focus:border-accent focus:outline-none ${
+              (errors as Record<string, { message?: string }>).teamId?.message
+                ? 'border-danger'
+                : 'border-border'
+            }`}
+            {...register('teamId')}
+          >
+            <option value="">Ekip seçiniz</option>
+            {teams?.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          {(errors as Record<string, { message?: string }>).teamId?.message && (
+            <p className="mt-1 text-[12px] text-danger">
+              {(errors as Record<string, { message?: string }>).teamId?.message}
+            </p>
+          )}
         </div>
         <div className="mt-2 flex gap-3">
           <Button

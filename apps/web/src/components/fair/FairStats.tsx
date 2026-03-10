@@ -2,17 +2,21 @@
 
 import type { Customer } from '@crm/shared';
 import { CONVERSION_RATES, CONVERSION_RATE_LABELS, CONVERSION_RATE_COLORS } from '@crm/shared';
+import { useDisplayConfig } from '@/hooks/use-display-config';
 
 interface FairStatsProps {
   customers: Customer[];
 }
 
 export function FairStats({ customers }: FairStatsProps) {
+  const { data: displayConfig } = useDisplayConfig();
+  const labels = displayConfig?.conversionRateLabels ?? CONVERSION_RATE_LABELS;
+
   const rateStats = CONVERSION_RATES.map((rate) => {
     const count = customers.filter((c) => c.conversionRate === rate).length;
     return {
       rate,
-      label: CONVERSION_RATE_LABELS[rate],
+      label: labels[rate],
       color: CONVERSION_RATE_COLORS[rate],
       count,
     };
