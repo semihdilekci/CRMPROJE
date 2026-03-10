@@ -2,10 +2,10 @@
 
 import { formatDate } from '@crm/shared';
 import { Button } from '@/components/ui/Button';
-import type { FairWithCustomers } from '@crm/shared';
+import type { FairWithOpportunities } from '@crm/shared';
 
 interface FairDetailHeaderProps {
-  fair: FairWithCustomers;
+  fair: FairWithOpportunities;
   onEdit: () => void;
   onDelete: () => void;
 }

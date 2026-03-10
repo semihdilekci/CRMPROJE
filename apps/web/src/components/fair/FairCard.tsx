@@ -4,7 +4,7 @@ import type { Fair } from '@crm/shared';
 import { formatDate } from '@crm/shared';
 
 interface FairCardProps {
-  fair: Fair & { _count?: { customers: number } };
+  fair: Fair & { _count?: { opportunities: number } };
   onClick: () => void;
 }
 
@@ -14,7 +14,7 @@ export function FairCard({ fair, onClick }: FairCardProps) {
   const end = new Date(fair.endDate);
   const isActive = now >= start && now <= end;
   const isPast = now > end;
-  const customerCount = (fair as any)._count?.customers ?? 0;
+  const opportunityCount = (fair as any)._count?.opportunities ?? 0;
 
   return (
     <button
@@ -39,8 +39,8 @@ export function FairCard({ fair, onClick }: FairCardProps) {
 
       <div className="mt-4 flex items-end justify-between">
         <div>
-          <span className="text-[20px] font-extrabold text-accent">{customerCount}</span>
-          <span className="ml-1.5 text-[13px] text-muted">müşteri kaydı</span>
+          <span className="text-[20px] font-extrabold text-accent">{opportunityCount}</span>
+          <span className="ml-1.5 text-[13px] text-muted">fırsat</span>
         </div>
         <span className="text-accent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           →
