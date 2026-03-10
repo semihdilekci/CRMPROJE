@@ -96,6 +96,18 @@ export default function FairDetailPage() {
                 />
               </div>
             ))}
+            <div className="mb-2.5 break-inside-avoid">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingOpportunity(null);
+                  setShowOpportunityModal(true);
+                }}
+                className="flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border p-4 py-8 text-muted transition-colors duration-200 hover:border-accent hover:text-accent"
+              >
+                <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
+              </button>
+            </div>
           </div>
         ) : search || rateFilter ? (
           <p className="py-12 text-center text-muted">Arama sonucu bulunamadı.</p>

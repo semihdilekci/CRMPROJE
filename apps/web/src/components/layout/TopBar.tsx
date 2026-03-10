@@ -11,9 +11,11 @@ interface TopBarProps {
   breadcrumb?: string;
   showNewFairButton?: boolean;
   onNewFair?: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair }: TopBarProps) {
+export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair, actionLabel, onAction }: TopBarProps) {
   const { user, logout } = useAuthStore();
   const pathname = usePathname();
   const [adminOpen, setAdminOpen] = useState(false);
@@ -108,6 +110,11 @@ export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair }: Top
           {showNewFairButton && onNewFair && (
             <Button onClick={onNewFair} className="text-[13px]">
               + Yeni Fuar
+            </Button>
+          )}
+          {actionLabel && onAction && (
+            <Button onClick={onAction} className="text-[13px]">
+              {actionLabel}
             </Button>
           )}
           <button
