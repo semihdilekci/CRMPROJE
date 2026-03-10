@@ -12,10 +12,14 @@ export const API_ENDPOINTS = {
   FAIRS: {
     BASE: '/fairs',
     BY_ID: (id: string) => `/fairs/${id}`,
-    CUSTOMERS: (fairId: string) => `/fairs/${fairId}/customers`,
+    OPPORTUNITIES: (fairId: string) => `/fairs/${fairId}/opportunities`,
   },
   CUSTOMERS: {
+    BASE: '/customers',
     BY_ID: (id: string) => `/customers/${id}`,
+  },
+  OPPORTUNITIES: {
+    BY_ID: (id: string) => `/opportunities/${id}`,
   },
   UPLOAD: {
     CARD_IMAGE: '/upload/card-image',
