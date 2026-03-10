@@ -34,8 +34,8 @@ export class ProductService {
     return this.toResponse(p);
   }
 
-  async countCustomersByProductName(productName: string): Promise<number> {
-    return this.prisma.customer.count({
+  async countOpportunitiesByProductName(productName: string): Promise<number> {
+    return this.prisma.opportunity.count({
       where: { products: { has: productName } },
     });
   }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@prisma/prisma.service';
 
-export type EntityType = 'fair' | 'customer' | 'user' | 'product' | 'setting';
+export type EntityType = 'fair' | 'customer' | 'opportunity' | 'user' | 'product' | 'setting';
 export type AuditAction = 'create' | 'update' | 'delete';
 
 export interface AuditLogPayload {

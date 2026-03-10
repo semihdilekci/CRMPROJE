@@ -12,6 +12,7 @@ import { ProductModule } from '@modules/product/product.module';
 import { AuditModule } from '@modules/audit/audit.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { TeamModule } from '@modules/team/team.module';
+import { OpportunityModule } from '@modules/opportunity/opportunity.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TeamModule } from '@modules/team/team.module';
     UserModule,
     FairModule,
     CustomerModule,
+    OpportunityModule,
     UploadModule,
     AdminModule,
     ProductModule,

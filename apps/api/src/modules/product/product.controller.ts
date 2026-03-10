@@ -42,15 +42,15 @@ export class ProductController {
     };
   }
 
-  @Get(':id/customer-count')
+  @Get(':id/usage-count')
   @UseGuards(RolesGuard)
   @Roles('admin')
-  async getCustomerCount(@Param('id') id: string): Promise<ApiSuccessResponse<{ count: number }>> {
+  async getUsageCount(@Param('id') id: string): Promise<ApiSuccessResponse<{ count: number }>> {
     const product = await this.productService.findById(id);
-    const count = await this.productService.countCustomersByProductName(product.name);
+    const count = await this.productService.countOpportunitiesByProductName(product.name);
     return {
       success: true,
-      message: 'Müşteri sayısı getirildi',
+      message: 'Kullanım sayısı getirildi',
       data: { count },
     };
   }
