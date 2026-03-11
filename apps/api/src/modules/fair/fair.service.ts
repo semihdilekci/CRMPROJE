@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Fair, FairWithOpportunities, CreateFairDto, UpdateFairDto } from '@crm/shared';
+import { Fair, FairWithOpportunities, CreateFairDto, UpdateFairDto, Currency, ConversionRate } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 
@@ -57,7 +57,10 @@ export class FairService {
       where: { id },
       include: {
         opportunities: {
-          include: { customer: true },
+          include: {
+            customer: true,
+            opportunityProducts: { include: { product: true } },
+          },
           orderBy: { createdAt: 'desc' },
         },
       },
@@ -74,8 +77,8 @@ export class FairService {
         fairId: o.fairId,
         customerId: o.customerId,
         budgetRaw: o.budgetRaw,
-        budgetCurrency: o.budgetCurrency as any,
-        conversionRate: o.conversionRate as any,
+        budgetCurrency: o.budgetCurrency as Currency,
+        conversionRate: o.conversionRate as ConversionRate,
         products: o.products,
         cardImage: o.cardImage,
         createdAt: o.createdAt.toISOString(),
@@ -89,6 +92,17 @@ export class FairService {
           createdAt: o.customer.createdAt.toISOString(),
           updatedAt: o.customer.updatedAt.toISOString(),
         },
+        opportunityProducts: o.opportunityProducts.map((op) => ({
+          id: op.id,
+          opportunityId: o.id,
+          productId: op.productId,
+          productName: op.product.name,
+          quantity: op.quantity,
+          unit: op.unit,
+          note: op.note,
+          createdAt: op.createdAt.toISOString(),
+          updatedAt: op.updatedAt.toISOString(),
+        })),
       })),
     };
   }

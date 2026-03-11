@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import {
-  OpportunityWithCustomer,
+  OpportunityWithDetails,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
@@ -26,7 +26,7 @@ export class OpportunityService {
     fairId: string,
     dto: CreateOpportunityDto,
     auditUser?: AuditUser,
-  ): Promise<OpportunityWithCustomer> {
+  ): Promise<OpportunityWithDetails> {
     await this.ensureFairExists(fairId);
     await this.ensureCustomerExists(dto.customerId);
 
@@ -39,8 +39,23 @@ export class OpportunityService {
         conversionRate: dto.conversionRate ?? null,
         products: dto.products ?? [],
         cardImage: dto.cardImage ?? null,
+        opportunityProducts: dto.opportunityProducts
+          ? {
+              create: dto.opportunityProducts.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity ?? null,
+                unit: item.unit ?? 'ton',
+                note: item.note ?? null,
+              })),
+            }
+          : undefined,
       },
-      include: { customer: true },
+      include: {
+        customer: true,
+        opportunityProducts: {
+          include: { product: true },
+        },
+      },
     });
 
     const result = this.toResponse(opportunity);
@@ -64,7 +79,7 @@ export class OpportunityService {
     fairId: string,
     search?: string,
     conversionRate?: ConversionRate,
-  ): Promise<OpportunityWithCustomer[]> {
+  ): Promise<OpportunityWithDetails[]> {
     await this.ensureFairExists(fairId);
 
     const where: Record<string, unknown> = { fairId };
@@ -84,7 +99,12 @@ export class OpportunityService {
 
     const opportunities = await this.prisma.opportunity.findMany({
       where,
-      include: { customer: true },
+      include: {
+        customer: true,
+        opportunityProducts: {
+          include: { product: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -95,10 +115,15 @@ export class OpportunityService {
     id: string,
     dto: UpdateOpportunityDto,
     auditUser?: AuditUser,
-  ): Promise<OpportunityWithCustomer> {
+  ): Promise<OpportunityWithDetails> {
     const old = await this.prisma.opportunity.findUnique({
       where: { id },
-      include: { customer: true },
+      include: {
+        customer: true,
+        opportunityProducts: {
+          include: { product: true },
+        },
+      },
     });
     if (!old) throw new NotFoundException('Fırsat bulunamadı');
 
@@ -106,17 +131,49 @@ export class OpportunityService {
       await this.ensureCustomerExists(dto.customerId);
     }
 
-    const opportunity = await this.prisma.opportunity.update({
-      where: { id },
-      data: {
-        ...(dto.customerId !== undefined && { customerId: dto.customerId }),
-        ...(dto.budgetRaw !== undefined && { budgetRaw: dto.budgetRaw }),
-        ...(dto.budgetCurrency !== undefined && { budgetCurrency: dto.budgetCurrency }),
-        ...(dto.conversionRate !== undefined && { conversionRate: dto.conversionRate }),
-        ...(dto.products !== undefined && { products: dto.products }),
-        ...(dto.cardImage !== undefined && { cardImage: dto.cardImage }),
-      },
-      include: { customer: true },
+    const opportunity = await this.prisma.$transaction(async (tx) => {
+      await tx.opportunity.update({
+        where: { id },
+        data: {
+          ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+          ...(dto.budgetRaw !== undefined && { budgetRaw: dto.budgetRaw }),
+          ...(dto.budgetCurrency !== undefined && { budgetCurrency: dto.budgetCurrency }),
+          ...(dto.conversionRate !== undefined && { conversionRate: dto.conversionRate }),
+          ...(dto.products !== undefined && { products: dto.products }),
+          ...(dto.cardImage !== undefined && { cardImage: dto.cardImage }),
+        },
+        include: {
+          customer: true,
+        },
+      });
+
+      if (dto.opportunityProducts) {
+        await tx.opportunityProduct.deleteMany({
+          where: { opportunityId: id },
+        });
+
+        if (dto.opportunityProducts.length > 0) {
+          await tx.opportunityProduct.createMany({
+            data: dto.opportunityProducts.map((item) => ({
+              opportunityId: id,
+              productId: item.productId,
+              quantity: item.quantity ?? null,
+              unit: item.unit ?? 'ton',
+              note: item.note ?? null,
+            })),
+          });
+        }
+      }
+
+      return tx.opportunity.findUniqueOrThrow({
+        where: { id },
+        include: {
+          customer: true,
+          opportunityProducts: {
+            include: { product: true },
+          },
+        },
+      });
     });
 
     const result = this.toResponse(opportunity);
@@ -140,7 +197,12 @@ export class OpportunityService {
   async remove(id: string, auditUser?: AuditUser): Promise<void> {
     const opportunity = await this.prisma.opportunity.findUnique({
       where: { id },
-      include: { customer: true },
+      include: {
+        customer: true,
+        opportunityProducts: {
+          include: { product: true },
+        },
+      },
     });
     if (!opportunity) throw new NotFoundException('Fırsat bulunamadı');
 
@@ -191,14 +253,29 @@ export class OpportunityService {
       createdAt: Date;
       updatedAt: Date;
     };
-  }): OpportunityWithCustomer {
+    opportunityProducts: Array<{
+      id: string;
+      quantity: number | null;
+      unit: string;
+      note: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      product: {
+        id: string;
+        name: string;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      };
+    }>;
+  }): OpportunityWithDetails {
     return {
       id: opportunity.id,
       fairId: opportunity.fairId,
       customerId: opportunity.customerId,
       budgetRaw: opportunity.budgetRaw,
-      budgetCurrency: opportunity.budgetCurrency as OpportunityWithCustomer['budgetCurrency'],
-      conversionRate: opportunity.conversionRate as OpportunityWithCustomer['conversionRate'],
+      budgetCurrency: opportunity.budgetCurrency as OpportunityWithDetails['budgetCurrency'],
+      conversionRate: opportunity.conversionRate as OpportunityWithDetails['conversionRate'],
       products: opportunity.products,
       cardImage: opportunity.cardImage,
       createdAt: opportunity.createdAt.toISOString(),
@@ -212,6 +289,17 @@ export class OpportunityService {
         createdAt: opportunity.customer.createdAt.toISOString(),
         updatedAt: opportunity.customer.updatedAt.toISOString(),
       },
+      opportunityProducts: opportunity.opportunityProducts.map((item) => ({
+        id: item.id,
+        opportunityId: opportunity.id,
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        note: item.note,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      })),
     };
   }
 }

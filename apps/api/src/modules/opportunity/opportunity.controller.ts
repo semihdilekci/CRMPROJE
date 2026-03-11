@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiSuccessResponse,
-  OpportunityWithCustomer,
+  OpportunityWithDetails,
   createOpportunitySchema,
   updateOpportunitySchema,
   CreateOpportunityDto,
@@ -35,7 +35,7 @@ export class OpportunityController {
     @Param('fairId') fairId: string,
     @Body(new ZodValidationPipe(createOpportunitySchema)) dto: CreateOpportunityDto,
     @CurrentUser() user: { id: string; email: string },
-  ): Promise<ApiSuccessResponse<OpportunityWithCustomer>> {
+  ): Promise<ApiSuccessResponse<OpportunityWithDetails>> {
     const data = await this.opportunityService.create(fairId, dto, user);
     return { success: true, message: 'Fırsat başarıyla oluşturuldu', data };
   }
@@ -45,7 +45,7 @@ export class OpportunityController {
     @Param('fairId') fairId: string,
     @Query('search') search?: string,
     @Query('conversionRate') conversionRate?: ConversionRate,
-  ): Promise<ApiSuccessResponse<OpportunityWithCustomer[]>> {
+  ): Promise<ApiSuccessResponse<OpportunityWithDetails[]>> {
     const data = await this.opportunityService.findByFair(fairId, search, conversionRate);
     return { success: true, message: 'Fırsatlar başarıyla getirildi', data };
   }
@@ -55,7 +55,7 @@ export class OpportunityController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateOpportunitySchema)) dto: UpdateOpportunityDto,
     @CurrentUser() user: { id: string; email: string },
-  ): Promise<ApiSuccessResponse<OpportunityWithCustomer>> {
+  ): Promise<ApiSuccessResponse<OpportunityWithDetails>> {
     const data = await this.opportunityService.update(id, dto, user);
     return { success: true, message: 'Fırsat başarıyla güncellendi', data };
   }

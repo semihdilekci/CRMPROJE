@@ -74,7 +74,8 @@ export class AuthService {
 
     this.logger.log(`User logged in: ${user.email}`);
 
-    const { password: _, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- password excluded from response
+    const { password: _pw, ...userWithoutPassword } = user;
     return { user: this.toUserResponse(userWithoutPassword), tokens };
   }
 
@@ -129,10 +130,12 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JWT signAsync expiresIn expects ms.StringValue, config returns string
         expiresIn: accessExpiration as any,
       }),
       this.jwtService.signAsync(refreshPayload, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JWT signAsync expiresIn expects ms.StringValue, config returns string
         expiresIn: refreshExpiration as any,
       }),
     ]);
