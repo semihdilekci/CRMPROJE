@@ -289,7 +289,7 @@ export class OpportunityService {
         createdAt: opportunity.customer.createdAt.toISOString(),
         updatedAt: opportunity.customer.updatedAt.toISOString(),
       },
-      opportunityProducts: opportunity.opportunityProducts.map((item) => ({
+      opportunityProducts: (opportunity.opportunityProducts ?? []).map((item) => ({
         id: item.id,
         opportunityId: opportunity.id,
         productId: item.product.id,

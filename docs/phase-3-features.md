@@ -606,7 +606,7 @@ Commit: feat(web): integrate product tonnage in OpportunityFormModal and Card
 Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 2: PİPELINE (STATÜ YÖNETİMİ)                   ║
+║  BRANCH 2: PİPELINE (STATÜ YÖNETİMİ)                     ║
 ║  Branch: feature/F34-F36-pipeline                        ║
 ║  Bağımlılık: Yok                                         ║
 ╚══════════════════════════════════════════════════════════╝
