@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 import type { Product } from '@crm/shared';
-import { ToggleChip } from '@/components/ui/ToggleChip';
 import { cn } from '@/lib/utils';
 
 export interface SelectedProductRow {
@@ -39,40 +38,37 @@ function formatTotalSummary(rows: SelectedProductRow[]): string {
   return parts.length > 0 ? `Toplam: ${parts.join(', ')}` : '';
 }
 
+/** Diğer satırlarda seçilmemiş ürünler + bu satırın mevcut ürünü */
+function getProductOptionsForRow(
+  row: SelectedProductRow,
+  allRows: SelectedProductRow[],
+  availableProducts: Product[],
+): Product[] {
+  const otherRowsProductIds = new Set(
+    allRows.filter((r) => r.productId && r.productId !== row.productId).map((r) => r.productId),
+  );
+  return availableProducts.filter(
+    (p) => p.id === row.productId || !otherRowsProductIds.has(p.id),
+  );
+}
+
 export function ProductQuantityList({
   selectedProducts,
   availableProducts,
   onChange,
 }: ProductQuantityListProps) {
-  const addProduct = useCallback(
-    (product: Product) => {
-      if (selectedProducts.some((p) => p.productId === product.id)) return;
-      onChange([
-        ...selectedProducts,
-        {
-          productId: product.id,
-          productName: product.name,
-          quantity: null,
-          unit: 'ton',
-          note: null,
-        },
-      ]);
-    },
-    [selectedProducts, onChange],
-  );
-
   const removeProduct = useCallback(
-    (productId: string) => {
-      onChange(selectedProducts.filter((p) => p.productId !== productId));
+    (rowIndex: number) => {
+      onChange(selectedProducts.filter((_, i) => i !== rowIndex));
     },
     [selectedProducts, onChange],
   );
 
   const updateRow = useCallback(
-    (productId: string, patch: Partial<SelectedProductRow>) => {
+    (rowIndex: number, patch: Partial<SelectedProductRow>) => {
       onChange(
-        selectedProducts.map((p) =>
-          p.productId === productId ? { ...p, ...patch } : p,
+        selectedProducts.map((p, i) =>
+          i === rowIndex ? { ...p, ...patch } : p,
         ),
       );
     },
@@ -83,32 +79,38 @@ export function ProductQuantityList({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        {availableProducts.map((product) => (
-          <ToggleChip
-            key={product.id}
-            label={product.name}
-            selected={selectedProducts.some((p) => p.productId === product.id)}
-            color="#ff6b35"
-            onClick={() => addProduct(product)}
-          />
-        ))}
-      </div>
-
       {selectedProducts.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-2">
-            {selectedProducts.map((row) => (
-              <div
-                key={row.productId}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2',
-                  'transition-all duration-150 ease-out',
-                )}
-              >
-                <span className="min-w-0 flex-1 text-[14px] text-muted">
-                  {row.productName}
-                </span>
+            {selectedProducts.map((row, index) => {
+              const options = getProductOptionsForRow(row, selectedProducts, availableProducts);
+              return (
+                <div
+                  key={row.productId || `row-${index}`}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2',
+                    'transition-all duration-150 ease-out',
+                  )}
+                >
+                  <select
+                    value={row.productId || ''}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const product = availableProducts.find((p) => p.id === id);
+                      updateRow(index, {
+                        productId: id,
+                        productName: product?.name ?? '',
+                      });
+                    }}
+                    className="min-w-0 flex-1 rounded border border-border bg-card px-2 py-1.5 text-[14px] text-text focus:border-accent focus:outline-none"
+                  >
+                    <option value="">Ürün seçin</option>
+                    {options.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                 <input
                   type="number"
                   min={0}
@@ -118,7 +120,7 @@ export function ProductQuantityList({
                   onChange={(e) => {
                     const v = e.target.value;
                     const num = v === '' ? null : Number.parseFloat(v);
-                    updateRow(row.productId, {
+                    updateRow(index, {
                       quantity: num != null && !Number.isNaN(num) ? num : null,
                     });
                   }}
@@ -126,9 +128,7 @@ export function ProductQuantityList({
                 />
                 <select
                   value={row.unit}
-                  onChange={(e) =>
-                    updateRow(row.productId, { unit: e.target.value })
-                  }
+                  onChange={(e) => updateRow(index, { unit: e.target.value })}
                   className="w-[70px] rounded border border-border bg-card px-2 py-1.5 text-[13px] text-text focus:border-accent focus:outline-none"
                 >
                   {UNITS.map((u) => (
@@ -139,14 +139,15 @@ export function ProductQuantityList({
                 </select>
                 <button
                   type="button"
-                  onClick={() => removeProduct(row.productId)}
+                  onClick={() => removeProduct(index)}
                   className="shrink-0 rounded p-1 text-muted transition-colors hover:bg-danger-soft hover:text-danger"
                   aria-label="Kaldır"
                 >
                   ×
                 </button>
               </div>
-            ))}
+            );
+            })}
           </div>
           {summary && (
             <p className="text-[12px] text-muted">{summary}</p>

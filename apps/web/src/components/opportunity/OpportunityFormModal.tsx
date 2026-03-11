@@ -129,7 +129,9 @@ export function OpportunityFormModal({
       budgetCurrency: budgetRaw ? (budgetCurrency as Currency) : null,
       conversionRate: (conversionRate || null) as ConversionRate | null,
       products: [] as string[],
-      opportunityProducts: opportunityProducts.map((p) => ({
+      opportunityProducts: opportunityProducts
+        .filter((p) => p.productId)
+        .map((p) => ({
         productId: p.productId,
         quantity: p.quantity,
         unit: p.unit as 'ton' | 'kg' | 'adet',
@@ -234,9 +236,29 @@ export function OpportunityFormModal({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
-            İlgilenilen Ürünler
-          </label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              İlgilenilen Ürünler
+            </label>
+            <button
+              type="button"
+              onClick={() =>
+                setOpportunityProducts([
+                  ...opportunityProducts,
+                  {
+                    productId: '',
+                    productName: '',
+                    quantity: null,
+                    unit: 'ton',
+                    note: null,
+                  },
+                ])
+              }
+              className="cursor-pointer rounded-[8px] border border-border px-2.5 py-1 text-[12px] font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            >
+              Ürün Ekle
+            </button>
+          </div>
           <ProductQuantityList
             selectedProducts={opportunityProducts}
             availableProducts={productList}
