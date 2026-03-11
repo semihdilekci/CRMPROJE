@@ -603,7 +603,7 @@ Bağımlılık: F32 (backend + DB hazır)
 Commit: feat(web): add ProductQuantityList component
 Commit: feat(web): integrate product tonnage in OpportunityFormModal and Card
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 2: PİPELINE (STATÜ YÖNETİMİ)                   ║
