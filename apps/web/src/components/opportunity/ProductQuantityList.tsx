@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 import type { Product } from '@crm/shared';
-import { cn } from '@/lib/utils';
 
 export interface SelectedProductRow {
   productId: string;
@@ -81,16 +80,13 @@ export function ProductQuantityList({
     <div className="flex flex-col gap-2">
       {selectedProducts.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2">
             {selectedProducts.map((row, index) => {
               const options = getProductOptionsForRow(row, selectedProducts, availableProducts);
               return (
                 <div
                   key={row.productId || `row-${index}`}
-                  className={cn(
-                    'flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2',
-                    'transition-all duration-150 ease-out',
-                  )}
+                  className="flex items-center gap-2 transition-all duration-150 ease-out"
                 >
                   <select
                     value={row.productId || ''}
