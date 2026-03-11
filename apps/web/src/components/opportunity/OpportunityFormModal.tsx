@@ -8,10 +8,14 @@ import {
   CONVERSION_RATE_LABELS,
   CONVERSION_RATE_COLORS,
 } from '@crm/shared';
+import type { Currency, ConversionRate } from '@crm/shared';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { ToggleChip } from '@/components/ui/ToggleChip';
 import { CustomerSelectInput } from '@/components/opportunity/CustomerSelectInput';
+import {
+  ProductQuantityList,
+  type SelectedProductRow,
+} from '@/components/opportunity/ProductQuantityList';
 import {
   useCreateOpportunity,
   useUpdateOpportunity,
@@ -48,7 +52,7 @@ export function OpportunityFormModal({
   const [budgetRaw, setBudgetRaw] = useState('');
   const [budgetCurrency, setBudgetCurrency] = useState(defaultCurrency);
   const [conversionRate, setConversionRate] = useState('');
-  const [products, setProducts] = useState<string[]>([]);
+  const [opportunityProducts, setOpportunityProducts] = useState<SelectedProductRow[]>([]);
   const [cardImage, setCardImage] = useState('');
   const [submitError, setSubmitError] = useState('');
 
@@ -58,20 +62,43 @@ export function OpportunityFormModal({
       setBudgetRaw(initial.budgetRaw ?? '');
       setBudgetCurrency(initial.budgetCurrency ?? defaultCurrency);
       setConversionRate(initial.conversionRate ?? '');
-      setProducts(initial.products);
       setCardImage(initial.cardImage ?? '');
       setSubmitError('');
+      if (initial.opportunityProducts && initial.opportunityProducts.length > 0) {
+        setOpportunityProducts(
+          initial.opportunityProducts.map((op) => ({
+            productId: op.productId,
+            productName: op.productName,
+            quantity: op.quantity,
+            unit: op.unit ?? 'ton',
+            note: op.note,
+          })),
+        );
+      } else {
+        setOpportunityProducts(
+          (initial.products ?? []).map((name) => {
+            const product = productList.find((p) => p.name === name);
+            return {
+              productId: product?.id ?? '',
+              productName: name,
+              quantity: null,
+              unit: 'ton' as const,
+              note: null,
+            };
+          }).filter((p) => p.productId),
+        );
+      }
     } else if (open) {
       resetForm();
     }
-  }, [open, initial, defaultCurrency]);
+  }, [open, initial, defaultCurrency, productList]);
 
   const resetForm = () => {
     setSelectedCustomer(null);
     setBudgetRaw('');
     setBudgetCurrency(defaultCurrency);
     setConversionRate('');
-    setProducts([]);
+    setOpportunityProducts([]);
     setCardImage('');
     setSubmitError('');
   };
@@ -84,14 +111,6 @@ export function OpportunityFormModal({
   const budgetDisplay = budgetRaw
     ? parseInt(budgetRaw, 10).toLocaleString('tr-TR')
     : '';
-
-  const toggleProduct = (product: string) => {
-    setProducts((prev) =>
-      prev.includes(product)
-        ? prev.filter((p) => p !== product)
-        : [...prev, product],
-    );
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -107,11 +126,17 @@ export function OpportunityFormModal({
     const dto = {
       customerId: selectedCustomer.id,
       budgetRaw: budgetRaw || null,
-      budgetCurrency: budgetRaw ? (budgetCurrency as any) : null,
-      conversionRate: conversionRate || null,
-      products,
+      budgetCurrency: budgetRaw ? (budgetCurrency as Currency) : null,
+      conversionRate: (conversionRate || null) as ConversionRate | null,
+      products: [] as string[],
+      opportunityProducts: opportunityProducts.map((p) => ({
+        productId: p.productId,
+        quantity: p.quantity,
+        unit: p.unit as 'ton' | 'kg' | 'adet',
+        note: p.note,
+      })),
       cardImage: cardImage || null,
-    } as any;
+    };
 
     try {
       setSubmitError('');
@@ -212,17 +237,11 @@ export function OpportunityFormModal({
           <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
             İlgilenilen Ürünler
           </label>
-          <div className="flex flex-wrap gap-2">
-            {productList.map((product) => (
-              <ToggleChip
-                key={product.id}
-                label={product.name}
-                selected={products.includes(product.name)}
-                color="#ff6b35"
-                onClick={() => toggleProduct(product.name)}
-              />
-            ))}
-          </div>
+          <ProductQuantityList
+            selectedProducts={opportunityProducts}
+            availableProducts={productList}
+            onChange={setOpportunityProducts}
+          />
         </div>
 
         <div>

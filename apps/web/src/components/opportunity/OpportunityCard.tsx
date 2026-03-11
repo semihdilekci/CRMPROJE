@@ -14,6 +14,19 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeleteOpportunity } from '@/hooks/use-opportunities';
 import { useDisplayConfig } from '@/hooks/use-display-config';
 
+function formatTonnageShort(quantity: number | null, unit: string): string {
+  if (quantity == null || quantity === 0) return '';
+  if (unit === 'ton') return `${quantity}t`;
+  if (unit === 'kg') return `${quantity} kg`;
+  return `${quantity} ${unit}`;
+}
+
+function formatTonnageLine(quantity: number | null, unit: string): string {
+  if (quantity == null || quantity === 0) return '';
+  const u = unit === 'ton' ? 'ton' : unit === 'kg' ? 'kg' : unit;
+  return `${Number(quantity).toLocaleString('tr-TR')} ${u}`;
+}
+
 interface OpportunityCardProps {
   opportunity: OpportunityWithCustomer;
   fairId: string;
@@ -43,6 +56,19 @@ export function OpportunityCard({
   };
 
   const { customer } = opportunity;
+  const hasProducts = (opportunity.opportunityProducts?.length ?? 0) > 0 || (opportunity.products?.length ?? 0) > 0;
+  const displayProducts: { productName: string; quantity: number | null; unit: string }[] =
+    opportunity.opportunityProducts?.length
+      ? opportunity.opportunityProducts.map((op) => ({
+          productName: op.productName,
+          quantity: op.quantity,
+          unit: op.unit ?? 'ton',
+        }))
+      : (opportunity.products ?? []).map((name) => ({
+          productName: name,
+          quantity: null as number | null,
+          unit: 'ton',
+        }));
 
   return (
     <>
@@ -61,11 +87,15 @@ export function OpportunityCard({
               {opportunity.conversionRate && (
                 <Badge color={rateColor}>{rateLabel}</Badge>
               )}
-              {opportunity.products.slice(0, 1).map((p) => (
-                <Badge key={p}>{p}</Badge>
+              {displayProducts.slice(0, 2).map((p, i) => (
+                <Badge key={`${p.productName}-${i}`}>
+                  {p.quantity != null && p.quantity > 0
+                    ? `${p.productName} (${formatTonnageShort(p.quantity, p.unit)})`
+                    : p.productName}
+                </Badge>
               ))}
-              {opportunity.products.length > 1 && (
-                <Badge>+{opportunity.products.length - 1}</Badge>
+              {displayProducts.length > 2 && (
+                <Badge>+{displayProducts.length - 2}</Badge>
               )}
             </div>
           </div>
@@ -121,15 +151,21 @@ export function OpportunityCard({
                 </div>
               )}
 
-              {opportunity.products.length > 0 && (
+              {hasProducts && (
                 <div className="mt-1">
                   <p className="mb-1.5 text-muted">İlgilenilen Ürünler:</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {opportunity.products.map((p) => (
-                      <Badge key={p} color="#ff6b35">
-                        {p}
-                      </Badge>
-                    ))}
+                    {displayProducts.map((p, i) => {
+                      const line =
+                        p.quantity != null && p.quantity > 0
+                          ? `${p.productName} — ${formatTonnageLine(p.quantity, p.unit)}`
+                          : p.productName;
+                      return (
+                        <Badge key={`${p.productName}-${i}`} color="#ff6b35">
+                          {line}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
