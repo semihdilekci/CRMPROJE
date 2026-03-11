@@ -55,6 +55,10 @@ export class OpportunityService {
         opportunityProducts: {
           include: { product: true },
         },
+        stageLogs: {
+          include: { changedBy: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
@@ -104,6 +108,10 @@ export class OpportunityService {
         opportunityProducts: {
           include: { product: true },
         },
+        stageLogs: {
+          include: { changedBy: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -122,6 +130,10 @@ export class OpportunityService {
         customer: true,
         opportunityProducts: {
           include: { product: true },
+        },
+        stageLogs: {
+          include: { changedBy: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
@@ -172,6 +184,10 @@ export class OpportunityService {
           opportunityProducts: {
             include: { product: true },
           },
+          stageLogs: {
+            include: { changedBy: { select: { id: true, name: true, email: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
         },
       });
     });
@@ -201,6 +217,10 @@ export class OpportunityService {
         customer: true,
         opportunityProducts: {
           include: { product: true },
+        },
+        stageLogs: {
+          include: { changedBy: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
@@ -242,6 +262,8 @@ export class OpportunityService {
     conversionRate: string | null;
     products: string[];
     cardImage: string | null;
+    currentStage: string;
+    lossReason: string | null;
     createdAt: Date;
     updatedAt: Date;
     customer: {
@@ -268,6 +290,14 @@ export class OpportunityService {
         updatedAt: Date;
       };
     }>;
+    stageLogs?: Array<{
+      id: string;
+      stage: string;
+      note: string | null;
+      lossReason: string | null;
+      createdAt: Date;
+      changedBy: { id: string; name: string; email: string };
+    }>;
   }): OpportunityWithDetails {
     return {
       id: opportunity.id,
@@ -278,6 +308,8 @@ export class OpportunityService {
       conversionRate: opportunity.conversionRate as OpportunityWithDetails['conversionRate'],
       products: opportunity.products,
       cardImage: opportunity.cardImage,
+      currentStage: opportunity.currentStage,
+      lossReason: opportunity.lossReason,
       createdAt: opportunity.createdAt.toISOString(),
       updatedAt: opportunity.updatedAt.toISOString(),
       customer: {
@@ -299,6 +331,19 @@ export class OpportunityService {
         note: item.note,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
+      })),
+      stageLogs: (opportunity.stageLogs ?? []).map((log) => ({
+        id: log.id,
+        opportunityId: opportunity.id,
+        stage: log.stage,
+        note: log.note,
+        lossReason: log.lossReason,
+        createdAt: log.createdAt.toISOString(),
+        changedBy: {
+          id: log.changedBy.id,
+          name: log.changedBy.name,
+          email: log.changedBy.email,
+        },
       })),
     };
   }

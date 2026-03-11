@@ -20,7 +20,8 @@ model User {
   team   Team?  @relation(fields: [teamId], references: [id], onDelete: Restrict)
   teamId String?
 
-  fairs Fair[]
+  fairs       Fair[]
+  stageLogs   OpportunityStageLog[] @relation("StageLogChangedBy")
 }
 
 model Team {
@@ -83,6 +84,8 @@ model Opportunity {
   conversionRate String?
   products       String[]
   cardImage      String?
+  currentStage   String   @default("tanisma")
+  lossReason     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -93,10 +96,29 @@ model Opportunity {
   customerId String
 
   opportunityProducts OpportunityProduct[]
+  stageLogs          OpportunityStageLog[]
 
   @@index([fairId])
   @@index([customerId])
   @@index([conversionRate])
+  @@index([currentStage])
+}
+
+model OpportunityStageLog {
+  id             String   @id @default(cuid())
+  stage          String
+  note           String?  @db.Text
+  lossReason     String?
+  createdAt      DateTime @default(now())
+
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunityId String
+
+  changedBy   User   @relation("StageLogChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+  changedById String
+
+  @@index([opportunityId])
+  @@index([changedById])
 }
 
 model OpportunityProduct {

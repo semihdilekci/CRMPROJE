@@ -60,6 +60,10 @@ export class FairService {
           include: {
             customer: true,
             opportunityProducts: { include: { product: true } },
+            stageLogs: {
+              include: { changedBy: { select: { id: true, name: true, email: true } } },
+              orderBy: { createdAt: 'asc' },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -81,6 +85,8 @@ export class FairService {
         conversionRate: o.conversionRate as ConversionRate,
         products: o.products,
         cardImage: o.cardImage,
+        currentStage: o.currentStage,
+        lossReason: o.lossReason,
         createdAt: o.createdAt.toISOString(),
         updatedAt: o.updatedAt.toISOString(),
         customer: {
@@ -102,6 +108,19 @@ export class FairService {
           note: op.note,
           createdAt: op.createdAt.toISOString(),
           updatedAt: op.updatedAt.toISOString(),
+        })),
+        stageLogs: (o.stageLogs ?? []).map((log) => ({
+          id: log.id,
+          opportunityId: o.id,
+          stage: log.stage,
+          note: log.note,
+          lossReason: log.lossReason,
+          createdAt: log.createdAt.toISOString(),
+          changedBy: {
+            id: log.changedBy.id,
+            name: log.changedBy.name,
+            email: log.changedBy.email,
+          },
         })),
       })),
     };
