@@ -16,9 +16,11 @@ import {
   OpportunityWithDetails,
   createOpportunitySchema,
   updateOpportunitySchema,
+  stageTransitionSchema,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
+  type StageTransitionInput,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
@@ -48,6 +50,36 @@ export class OpportunityController {
   ): Promise<ApiSuccessResponse<OpportunityWithDetails[]>> {
     const data = await this.opportunityService.findByFair(fairId, search, conversionRate);
     return { success: true, message: 'Fırsatlar başarıyla getirildi', data };
+  }
+
+  @Post('opportunities/:id/transition')
+  async transitionStage(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(stageTransitionSchema)) dto: StageTransitionInput,
+    @CurrentUser() user: { id: string; email: string },
+  ): Promise<ApiSuccessResponse<OpportunityWithDetails>> {
+    const data = await this.opportunityService.transitionStage(id, dto, user);
+    return { success: true, message: 'Aşama güncellendi', data };
+  }
+
+  @Get('opportunities/:id/stages')
+  async getStageHistory(
+    @Param('id') id: string,
+  ): Promise<
+    ApiSuccessResponse<
+      Array<{
+        id: string;
+        opportunityId: string;
+        stage: string;
+        note: string | null;
+        lossReason: string | null;
+        createdAt: string;
+        changedBy: { id: string; name: string; email: string };
+      }>
+    >
+  > {
+    const data = await this.opportunityService.getStageHistory(id);
+    return { success: true, message: 'Aşama geçmişi getirildi', data };
   }
 
   @Patch('opportunities/:id')

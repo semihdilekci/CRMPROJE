@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import {
   OpportunityWithDetails,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
+  getStageOrder,
+  isTerminalStage,
+  type StageTransitionInput,
 } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
@@ -29,37 +32,55 @@ export class OpportunityService {
   ): Promise<OpportunityWithDetails> {
     await this.ensureFairExists(fairId);
     await this.ensureCustomerExists(dto.customerId);
+    if (!auditUser) {
+      throw new BadRequestException('Fırsat oluşturmak için giriş yapmanız gerekiyor');
+    }
 
-    const opportunity = await this.prisma.opportunity.create({
-      data: {
-        fairId,
-        customerId: dto.customerId,
-        budgetRaw: dto.budgetRaw ?? null,
-        budgetCurrency: dto.budgetCurrency ?? null,
-        conversionRate: dto.conversionRate ?? null,
-        products: dto.products ?? [],
-        cardImage: dto.cardImage ?? null,
-        opportunityProducts: dto.opportunityProducts
-          ? {
-              create: dto.opportunityProducts.map((item) => ({
-                productId: item.productId,
-                quantity: item.quantity ?? null,
-                unit: item.unit ?? 'ton',
-                note: item.note ?? null,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        customer: true,
-        opportunityProducts: {
-          include: { product: true },
+    const opportunity = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.opportunity.create({
+        data: {
+          fairId,
+          customerId: dto.customerId,
+          budgetRaw: dto.budgetRaw ?? null,
+          budgetCurrency: dto.budgetCurrency ?? null,
+          conversionRate: dto.conversionRate ?? null,
+          products: dto.products ?? [],
+          cardImage: dto.cardImage ?? null,
+          currentStage: 'tanisma',
+          opportunityProducts: dto.opportunityProducts
+            ? {
+                create: dto.opportunityProducts.map((item) => ({
+                  productId: item.productId,
+                  quantity: item.quantity ?? null,
+                  unit: item.unit ?? 'ton',
+                  note: item.note ?? null,
+                })),
+              }
+            : undefined,
         },
-        stageLogs: {
-          include: { changedBy: { select: { id: true, name: true, email: true } } },
-          orderBy: { createdAt: 'asc' },
+      });
+
+      await tx.opportunityStageLog.create({
+        data: {
+          opportunityId: created.id,
+          stage: 'tanisma',
+          changedById: auditUser.id,
         },
-      },
+      });
+
+      return tx.opportunity.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          customer: true,
+          opportunityProducts: {
+            include: { product: true },
+          },
+          stageLogs: {
+            include: { changedBy: { select: { id: true, name: true, email: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
     });
 
     const result = this.toResponse(opportunity);
@@ -243,9 +264,130 @@ export class OpportunityService {
     );
   }
 
+  async transitionStage(
+    id: string,
+    dto: StageTransitionInput,
+    auditUser?: AuditUser,
+  ): Promise<OpportunityWithDetails> {
+    const opportunity = await this.prisma.opportunity.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        opportunityProducts: {
+          include: { product: true },
+        },
+        stageLogs: {
+          include: { changedBy: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!opportunity) throw new NotFoundException('Fırsat bulunamadı');
+
+    const currentOrder = getStageOrder(opportunity.currentStage);
+    const targetOrder = getStageOrder(dto.stage);
+    const targetTerminal = isTerminalStage(dto.stage);
+
+    if (isTerminalStage(opportunity.currentStage)) {
+      throw new BadRequestException(
+        'Terminal aşamadaki (Satışa Dönüştü / Olumsuz) fırsatta aşama değiştirilemez',
+      );
+    }
+
+    const allowedForward = targetOrder > currentOrder;
+    const allowedTerminal = targetTerminal;
+    const isOlumsuz = dto.stage === 'olumsuz';
+    if (!allowedForward && !allowedTerminal) {
+      throw new BadRequestException(
+        'Hedef aşama mevcut aşamadan ileri veya terminal (Satışa Dönüştü / Olumsuz) olmalıdır',
+      );
+    }
+    if (isOlumsuz && (dto.lossReason == null || dto.lossReason === '')) {
+      throw new BadRequestException('Olumsuz aşamada kayıp nedeni zorunludur');
+    }
+
+    if (!auditUser) {
+      throw new BadRequestException('Aşama değişikliği için giriş yapmanız gerekiyor');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.opportunityStageLog.create({
+        data: {
+          opportunityId: id,
+          stage: dto.stage,
+          note: dto.note ?? null,
+          lossReason: dto.lossReason ?? null,
+          changedById: auditUser.id,
+        },
+      });
+
+      const opp = await tx.opportunity.update({
+        where: { id },
+        data: {
+          currentStage: dto.stage,
+          ...(isOlumsuz && dto.lossReason != null && { lossReason: dto.lossReason }),
+        },
+        include: {
+          customer: true,
+          opportunityProducts: {
+            include: { product: true },
+          },
+          stageLogs: {
+            include: { changedBy: { select: { id: true, name: true, email: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+      return opp;
+    });
+
+    const result = this.toResponse(updated);
+    await this.auditService.log({
+      userId: auditUser.id,
+      userEmail: auditUser.email,
+      entityType: 'opportunity',
+      entityId: id,
+      action: 'update',
+      after: result,
+    });
+    this.logger.log(
+      `Opportunity ${id} stage transition to ${dto.stage} by ${auditUser.email}`,
+    );
+    return result;
+  }
+
+  async getStageHistory(opportunityId: string) {
+    await this.ensureOpportunityExists(opportunityId);
+    const logs = await this.prisma.opportunityStageLog.findMany({
+      where: { opportunityId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        changedBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+    return logs.map((log) => ({
+      id: log.id,
+      opportunityId: log.opportunityId,
+      stage: log.stage,
+      note: log.note,
+      lossReason: log.lossReason,
+      createdAt: log.createdAt.toISOString(),
+      changedBy: {
+        id: log.changedBy.id,
+        name: log.changedBy.name,
+        email: log.changedBy.email,
+      },
+    }));
+  }
+
   private async ensureFairExists(fairId: string): Promise<void> {
     const fair = await this.prisma.fair.findUnique({ where: { id: fairId } });
     if (!fair) throw new NotFoundException('Fuar bulunamadı');
+  }
+
+  private async ensureOpportunityExists(opportunityId: string): Promise<void> {
+    const opp = await this.prisma.opportunity.findUnique({ where: { id: opportunityId } });
+    if (!opp) throw new NotFoundException('Fırsat bulunamadı');
   }
 
   private async ensureCustomerExists(customerId: string): Promise<void> {
