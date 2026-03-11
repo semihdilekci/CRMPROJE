@@ -1,4 +1,4 @@
-import { OpportunityWithCustomer } from './opportunity';
+import { OpportunityWithDetails } from './opportunity';
 
 export interface Fair {
   id: string;
@@ -12,5 +12,5 @@ export interface Fair {
 }
 
 export interface FairWithOpportunities extends Fair {
-  opportunities: OpportunityWithCustomer[];
+  opportunities: OpportunityWithDetails[];
 }
