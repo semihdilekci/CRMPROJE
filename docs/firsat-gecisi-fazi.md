@@ -199,7 +199,7 @@ Etkilenen dosyalar:
 Bağımlılık: Yok (ilk adım)
 Commit: feat(shared): add Opportunity types/schemas, simplify Customer
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-2 — Veritabanı: Opportunity Modeli, Schema Değişikliği & Migration
@@ -272,7 +272,7 @@ Bağımlılık: FG-1 (shared types mevcut olmalı)
 Commit: feat(prisma): add Opportunity model and simplify Customer
 Commit: chore(prisma): run firsat-gecisi migration with data transfer
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-3 — Backend: Customer Modülünü Bağımsız CRUD'a Dönüştür
@@ -319,7 +319,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-2 (DB migration tamamlanmış olmalı)
 Commit: refactor(api): convert Customer module to standalone CRUD
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-4 — Backend: Opportunity Modülü Oluştur
@@ -376,7 +376,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-2 (DB), FG-1 (shared schemas)
 Commit: feat(api): add Opportunity module with CRUD endpoints
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-5 — Backend: Fair Modülünü Güncelle
@@ -411,7 +411,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-2 (DB), FG-1 (shared types)
 Commit: refactor(api): update Fair module to use Opportunities
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-6 — Backend: Module Kaydı & Entegrasyon Kontrolü
@@ -448,7 +448,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-3, FG-4, FG-5
 Commit: feat(api): register OpportunityModule in AppModule
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-7 — Frontend: Hooks & Query Keys Güncelle
@@ -503,7 +503,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-6 (backend endpoint'leri hazır olmalı)
 Commit: feat(web): add Opportunity hooks, simplify Customer hooks
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-8 — Frontend: CustomerSelectInput Bileşeni (Yeni)
@@ -557,7 +557,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-7 (useCustomers hook'u hazır olmalı)
 Commit: feat(web): add CustomerSelectInput component
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-9 — Frontend: OpportunityFormModal (CustomerFormModal'dan Dönüşüm)
@@ -625,7 +625,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-7 (hooks), FG-8 (CustomerSelectInput)
 Commit: feat(web): add OpportunityFormModal component
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-10 — Frontend: OpportunityCard (CustomerCard'dan Dönüşüm)
@@ -670,7 +670,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-7 (hooks)
 Commit: feat(web): add OpportunityCard component
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-11 — Frontend: Toolbar & FairStats Güncelleme
@@ -706,7 +706,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-1 (shared types)
 Commit: refactor(web): rename CustomerToolbar to OpportunityToolbar, update FairStats
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-12 — Frontend: Fuar Detay Sayfası Entegrasyon
@@ -759,7 +759,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-7, FG-9, FG-10, FG-11
 Commit: refactor(web): integrate Opportunity components in Fair detail page
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-13 — Frontend: FairCard Güncelle
@@ -784,7 +784,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-5 (backend fairs endpoint güncellenmiş olmalı)
 Commit: refactor(web): update FairCard to show opportunity count
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-14 — Temizlik: Eski Customer Yapılarını Kaldır
@@ -831,7 +831,7 @@ Etkilenen dosyalar:
 Bağımlılık: FG-12, FG-13 (tüm yeni bileşenler entegre olmalı)
 Commit: chore(web): remove deprecated Customer components and clean up
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 FG-15 — Test & Doğrulama
@@ -887,7 +887,7 @@ Build kontrolü:
 Bağımlılık: FG-1 — FG-14 tamamlanmış olmalı
 Commit: test: verify Opportunity transition end-to-end
 
-Durum: [ ]
+Durum: [x]
 
 ==============================
 ÖZET — İŞ SIRASI
