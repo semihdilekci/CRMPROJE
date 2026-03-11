@@ -5,6 +5,7 @@ export * from './fair';
 export * from './customer';
 export * from './opportunity';
 export * from './opportunity-product';
+export * from './opportunity-stage';
 export * from './product';
 export * from './setting';
 export * from './team';
