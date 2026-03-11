@@ -57,15 +57,15 @@ export function OpportunityCard({
             <p className="text-[13px] font-semibold text-accent">
               {customer.company}
             </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex gap-1.5 overflow-hidden">
               {opportunity.conversionRate && (
                 <Badge color={rateColor}>{rateLabel}</Badge>
               )}
-              {opportunity.products.slice(0, 2).map((p) => (
+              {opportunity.products.slice(0, 1).map((p) => (
                 <Badge key={p}>{p}</Badge>
               ))}
-              {opportunity.products.length > 2 && (
-                <Badge>+{opportunity.products.length - 2}</Badge>
+              {opportunity.products.length > 1 && (
+                <Badge>+{opportunity.products.length - 1}</Badge>
               )}
             </div>
           </div>

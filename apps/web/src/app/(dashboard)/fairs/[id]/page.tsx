@@ -83,7 +83,7 @@ export default function FairDetailPage() {
         />
 
         {displayOpportunities.length > 0 ? (
-          <div className="columns-1 gap-2.5 sm:columns-2 lg:columns-3">
+          <div className="columns-1 gap-2.5 sm:columns-2">
             {displayOpportunities.map((opp) => (
               <div key={opp.id} className="mb-2.5 break-inside-avoid">
                 <OpportunityCard
@@ -103,7 +103,7 @@ export default function FairDetailPage() {
                   setEditingOpportunity(null);
                   setShowOpportunityModal(true);
                 }}
-                className="flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border p-4 py-8 text-muted transition-colors duration-200 hover:border-accent hover:text-accent"
+                className="flex min-h-[110px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-muted transition-colors duration-200 hover:border-accent hover:text-accent"
               >
                 <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
               </button>
