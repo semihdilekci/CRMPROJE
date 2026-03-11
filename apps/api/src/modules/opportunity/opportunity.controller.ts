@@ -47,9 +47,30 @@ export class OpportunityController {
     @Param('fairId') fairId: string,
     @Query('search') search?: string,
     @Query('conversionRate') conversionRate?: ConversionRate,
+    @Query('currentStage') currentStage?: string,
   ): Promise<ApiSuccessResponse<OpportunityWithDetails[]>> {
-    const data = await this.opportunityService.findByFair(fairId, search, conversionRate);
+    const data = await this.opportunityService.findByFair(
+      fairId,
+      search,
+      conversionRate,
+      currentStage,
+    );
     return { success: true, message: 'Fırsatlar başarıyla getirildi', data };
+  }
+
+  @Get('fairs/:fairId/pipeline-stats')
+  async getPipelineStats(
+    @Param('fairId') fairId: string,
+  ): Promise<
+    ApiSuccessResponse<{
+      byStage: Record<string, number>;
+      openTotal: number;
+      wonCount: number;
+      lostCount: number;
+    }>
+  > {
+    const data = await this.opportunityService.getPipelineStats(fairId);
+    return { success: true, message: 'Pipeline istatistikleri getirildi', data };
   }
 
   @Post('opportunities/:id/transition')

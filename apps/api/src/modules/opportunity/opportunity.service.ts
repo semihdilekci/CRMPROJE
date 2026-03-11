@@ -4,6 +4,7 @@ import {
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
+  PIPELINE_STAGES,
   getStageOrder,
   isTerminalStage,
   type StageTransitionInput,
@@ -104,6 +105,7 @@ export class OpportunityService {
     fairId: string,
     search?: string,
     conversionRate?: ConversionRate,
+    currentStage?: string,
   ): Promise<OpportunityWithDetails[]> {
     await this.ensureFairExists(fairId);
 
@@ -120,6 +122,10 @@ export class OpportunityService {
 
     if (conversionRate) {
       where['conversionRate'] = conversionRate;
+    }
+
+    if (currentStage) {
+      where['currentStage'] = currentStage;
     }
 
     const opportunities = await this.prisma.opportunity.findMany({
@@ -378,6 +384,42 @@ export class OpportunityService {
         email: log.changedBy.email,
       },
     }));
+  }
+
+  async getPipelineStats(fairId: string) {
+    await this.ensureFairExists(fairId);
+
+    const stages = await this.prisma.opportunity.groupBy({
+      by: ['currentStage'],
+      where: { fairId },
+      _count: { id: true },
+    });
+
+    const byStage: Record<string, number> = {};
+    let openTotal = 0;
+    let wonCount = 0;
+    let lostCount = 0;
+
+    const terminalStages = PIPELINE_STAGES.filter((s) => s.terminal).map(
+      (s) => s.value as string,
+    );
+
+    for (const row of stages) {
+      byStage[row.currentStage] = row._count.id;
+      if (terminalStages.includes(row.currentStage)) {
+        if (row.currentStage === 'satisa_donustu') wonCount += row._count.id;
+        else if (row.currentStage === 'olumsuz') lostCount += row._count.id;
+      } else {
+        openTotal += row._count.id;
+      }
+    }
+
+    return {
+      byStage,
+      openTotal,
+      wonCount,
+      lostCount,
+    };
   }
 
   private async ensureFairExists(fairId: string): Promise<void> {
