@@ -743,7 +743,7 @@ Bağımlılık: F34 (shared + DB hazır)
 Commit: feat(api): add pipeline stage transition and history endpoints
 Commit: feat(api): add pipeline stats and stage filtering
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 F36 — Pipeline: Frontend
