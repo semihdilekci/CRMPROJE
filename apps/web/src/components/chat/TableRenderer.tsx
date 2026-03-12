@@ -10,14 +10,14 @@ export function TableRenderer({ table }: TableRendererProps) {
   const { columns, rows } = table;
 
   return (
-    <div className="max-h-[320px] w-full overflow-auto rounded-xl border border-border bg-surface shadow-sm">
-      <table className="w-full min-w-[200px] border-collapse text-[13px]">
+    <div className="w-full overflow-visible rounded-xl border border-border bg-surface p-4 shadow-sm">
+      <table className="w-full min-w-full border-collapse text-[14px]">
         <thead>
-          <tr className="border-b border-border bg-surface">
+          <tr className="border-b-2 border-border bg-surface">
             {columns.map((col, i) => (
               <th
                 key={i}
-                className="px-3 py-2.5 text-left font-semibold text-text"
+                className="px-4 py-3 text-left font-semibold text-text"
               >
                 {col}
               </th>
@@ -35,7 +35,7 @@ export function TableRenderer({ table }: TableRendererProps) {
               {row.map((cell, ci) => (
                 <td
                   key={ci}
-                  className="max-w-[200px] truncate px-3 py-2 text-muted"
+                  className="break-words px-4 py-2.5 text-muted"
                   title={String(cell)}
                 >
                   {String(cell)}

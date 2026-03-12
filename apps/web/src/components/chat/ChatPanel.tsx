@@ -100,7 +100,7 @@ export function ChatPanel() {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="mx-auto flex max-w-[960px] flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
           {messages.length === 0 && (
             <div className="py-12 text-center text-muted">
               <p className="text-[14px]">
@@ -122,7 +122,7 @@ export function ChatPanel() {
       </div>
 
       <div className="border-t border-border/50 px-6 py-4">
-        <div className="mx-auto flex max-w-[720px] gap-3">
+        <div className="mx-auto flex w-full max-w-[1600px] gap-3">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}

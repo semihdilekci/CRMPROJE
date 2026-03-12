@@ -90,30 +90,42 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
         });
       })();
 
+  const chartMargin = { top: 16, right: 24, left: 24, bottom: 40 };
+  const axisStyle = { fontSize: 13, fill: 'currentColor' };
+  const legendStyle = { fontSize: 13, wrapperStyle: { paddingTop: 12 } };
+
   const renderChart = () => {
     switch (chartType) {
       case 'bar':
         return (
-          <BarChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-          >
+          <BarChart data={chartData} margin={chartMargin}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" />
-            <YAxis tick={{ fontSize: 11 }} stroke="currentColor" />
+            <XAxis
+              dataKey="name"
+              tick={axisStyle}
+              stroke="currentColor"
+              angle={-25}
+              textAnchor="end"
+              height={50}
+            />
+            <YAxis tick={axisStyle} stroke="currentColor" width={50} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
           </BarChart>
         );
       case 'line':
         return (
-          <LineChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-          >
+          <LineChart data={chartData} margin={chartMargin}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" />
-            <YAxis tick={{ fontSize: 11 }} stroke="currentColor" />
+            <XAxis
+              dataKey="name"
+              tick={axisStyle}
+              stroke="currentColor"
+              angle={-25}
+              textAnchor="end"
+              height={50}
+            />
+            <YAxis tick={axisStyle} stroke="currentColor" width={50} />
             <Tooltip content={<CustomTooltip />} />
             <Line
               type="monotone"
@@ -127,15 +139,15 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
       case 'pie':
       case 'donut':
         return (
-          <PieChart>
+          <PieChart margin={{ top: 16, right: 24, left: 24, bottom: 16 }}>
             <Pie
               data={chartData}
               dataKey="value"
               nameKey="name"
               cx="50%"
               cy="50%"
-              innerRadius={chartType === 'donut' ? 60 : 0}
-              outerRadius={80}
+              innerRadius={chartType === 'donut' ? 70 : 0}
+              outerRadius={100}
               paddingAngle={2}
               label={({ name, percent }) =>
                 `${name} ${(percent * 100).toFixed(0)}%`
@@ -150,10 +162,7 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
         );
       case 'area':
         return (
-          <AreaChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-          >
+          <AreaChart data={chartData} margin={chartMargin}>
             <defs>
               <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.4} />
@@ -161,8 +170,15 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" />
-            <YAxis tick={{ fontSize: 11 }} stroke="currentColor" />
+            <XAxis
+              dataKey="name"
+              tick={axisStyle}
+              stroke="currentColor"
+              angle={-25}
+              textAnchor="end"
+              height={50}
+            />
+            <YAxis tick={axisStyle} stroke="currentColor" width={50} />
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
@@ -179,15 +195,25 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
             ? Object.keys(chartData[0] ?? {}).filter((k) => k !== 'name')
             : [];
         return (
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-          >
+          <ComposedChart data={chartData} margin={chartMargin}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" />
-            <YAxis tick={{ fontSize: 11 }} stroke="currentColor" />
+            <XAxis
+              dataKey="name"
+              tick={axisStyle}
+              stroke="currentColor"
+              angle={-25}
+              textAnchor="end"
+              height={50}
+            />
+            <YAxis tick={axisStyle} stroke="currentColor" width={50} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Legend
+              wrapperStyle={legendStyle.wrapperStyle}
+              iconSize={14}
+              iconType="square"
+              layout="horizontal"
+              verticalAlign="bottom"
+            />
             {barKeys.map((key, i) => (
               <Bar
                 key={key}
@@ -202,13 +228,17 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
       }
       default:
         return (
-          <BarChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-          >
+          <BarChart data={chartData} margin={chartMargin}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" />
-            <YAxis tick={{ fontSize: 11 }} stroke="currentColor" />
+            <XAxis
+              dataKey="name"
+              tick={axisStyle}
+              stroke="currentColor"
+              angle={-25}
+              textAnchor="end"
+              height={50}
+            />
+            <YAxis tick={axisStyle} stroke="currentColor" width={50} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -218,8 +248,8 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
 
   return (
     <div className="w-full max-w-full overflow-hidden rounded-xl border border-border bg-surface p-4">
-      <h4 className="mb-3 text-[14px] font-semibold text-text">{title}</h4>
-      <div className="h-[240px] w-full">
+      <h4 className="mb-3 text-[15px] font-semibold text-text">{title}</h4>
+      <div className="h-[280px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
