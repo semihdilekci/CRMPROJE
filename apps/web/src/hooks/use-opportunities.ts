@@ -12,13 +12,20 @@ export function useOpportunitiesByFair(
   fairId: string,
   search?: string,
   conversionRate?: string,
+  currentStage?: string,
 ) {
   return useQuery({
-    queryKey: queryKeys.opportunities.byFairFiltered(fairId, search, conversionRate),
+    queryKey: queryKeys.opportunities.byFairFiltered(
+      fairId,
+      search,
+      conversionRate,
+      currentStage,
+    ),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (conversionRate) params.set('conversionRate', conversionRate);
+      if (currentStage) params.set('currentStage', currentStage);
 
       const { data } = await api.get<ApiSuccessResponse<OpportunityWithDetails[]>>(
         `/fairs/${fairId}/opportunities?${params.toString()}`,
@@ -43,9 +50,15 @@ export function useCreateOpportunity(fairId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.opportunities.byFair(fairId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.byFairFiltered(fairId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
       queryClient.invalidateQueries({
         queryKey: queryKeys.fairs.byId(fairId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fairs.pipelineStats(fairId),
       });
     },
   });
@@ -65,9 +78,15 @@ export function useUpdateOpportunity(fairId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.opportunities.byFair(fairId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.byFairFiltered(fairId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
       queryClient.invalidateQueries({
         queryKey: queryKeys.fairs.byId(fairId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fairs.pipelineStats(fairId),
       });
     },
   });
@@ -83,9 +102,15 @@ export function useDeleteOpportunity(fairId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.opportunities.byFair(fairId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.byFairFiltered(fairId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
       queryClient.invalidateQueries({
         queryKey: queryKeys.fairs.byId(fairId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fairs.pipelineStats(fairId),
       });
     },
   });

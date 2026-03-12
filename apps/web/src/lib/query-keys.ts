@@ -8,6 +8,7 @@ export const queryKeys = {
   fairs: {
     all: ['fairs'] as const,
     byId: (id: string) => ['fairs', id] as const,
+    pipelineStats: (fairId: string) => ['fairs', fairId, 'pipeline-stats'] as const,
   },
   customers: {
     all: ['customers'] as const,
@@ -16,7 +17,13 @@ export const queryKeys = {
   },
   opportunities: {
     byFair: (fairId: string) => ['opportunities', 'fair', fairId] as const,
-    byFairFiltered: (fairId: string, search?: string, rate?: string) =>
-      ['opportunities', 'fair', fairId, { search, rate }] as const,
+    byFairFiltered: (
+      fairId: string,
+      search?: string,
+      rate?: string,
+      currentStage?: string,
+    ) => ['opportunities', 'fair', fairId, { search, rate, currentStage }] as const,
+    stageHistory: (opportunityId: string) =>
+      ['opportunities', opportunityId, 'stages'] as const,
   },
 } as const;
