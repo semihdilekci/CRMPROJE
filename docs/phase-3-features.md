@@ -684,7 +684,7 @@ Bağımlılık: Yok
 Commit: feat(shared): add pipeline stage types, schemas and constants
 Commit: feat(prisma): add OpportunityStageLog model and currentStage field
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 F35 — Pipeline: Backend
@@ -840,7 +840,7 @@ Bağımlılık: F35 (backend hazır)
 Commit: feat(web): add PipelineProgressBar and StageTransitionModal
 Commit: feat(web): add StageHistory and integrate pipeline in Card/Toolbar
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 3: FIRSAT NOTLARI                                ║
