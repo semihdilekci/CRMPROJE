@@ -12,6 +12,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 | **API CORS** | Tüm `http(s)://localhost:*` origin’lere izin verilir | Sadece `CORS_ORIGIN` ile belirtilen origin(ler) kabul edilir |
 | **Next.js rewrites** | `/api/v1/*` → `http://localhost:3001/api/v1/*` (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
+| **GEMINI_API_KEY** | AI Chat için opsiyonel (yoksa chat hata verir) | **Zorunlu (chat kullanılacaksa):** aistudio.google.com'dan API key alınmalı |
 
 ---
 
@@ -24,6 +25,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - [ ] **DATABASE_URL** production veritabanına işaret ediyor.
 - [ ] **JWT_ACCESS_SECRET**, **JWT_REFRESH_SECRET** güçlü ve production’a özel değerler.
 - [ ] **PORT** (veya host) production ortamına uygun.
+- [ ] **GEMINI_API_KEY** (AI Analiz Chat kullanılacaksa) aistudio.google.com'dan alınan API key set edildi.
 
 ### Frontend (Web)
 
@@ -42,6 +44,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 
 - **API base URL (web):** `apps/web/src/lib/api.ts` — `BACKEND_URL` sadece fallback (DEV); prod’da `NEXT_PUBLIC_API_URL` kullanılmalı.
 - **CORS:** `apps/api/src/main.ts` — `NODE_ENV === 'production'` iken `CORS_ORIGIN` kullanılır.
+- **GEMINI_API_KEY:** `apps/api/src/modules/chat/chat.service.ts` — AI analiz için Google Gemini API key.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez.
 
 ---

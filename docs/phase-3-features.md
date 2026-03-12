@@ -842,6 +842,180 @@ Commit: feat(web): add StageHistory and integrate pipeline in Card/Toolbar
 
 Durum: [x]
 
+
+╔══════════════════════════════════════════════════════════╗
+║  BRANCH 2.5: AI ANALİTİK CHATBOT                         ║
+║  Branch: feature/F46-F47-ai-chatbot                      ║
+║  Bağımlılık: Branch 1 + Branch 2                        ║
+╚══════════════════════════════════════════════════════════╝
+
+----------------------------------------------------------------------
+F46 — AI Chatbot: Backend (Gemini Entegrasyonu)
+----------------------------------------------------------------------
+
+Amaç: Kullanıcının doğal dilde sorduğu sorulara, Fuar/Müşteri/Fırsat
+verilerine dayalı analiz üreten AI endpoint'i.
+
+Yapılacaklar:
+
+1. Ortam değişkeni: GEMINI_API_KEY (aistudio.google.com'dan alınır)
+
+2. modules/chat/ modülü oluştur:
+   - chat.module.ts
+   - chat.service.ts: Gemini API çağrısı, veri toplama, prompt oluşturma
+   - chat.controller.ts: POST /chat/query
+
+3. Veri toplama (auth user'a göre):
+   - Fair listesi (id, name, startDate, endDate, targetBudget, targetTonnage)
+   - Opportunity özeti (fair bazında sayı, bütçe toplamı, aşama dağılımı)
+   - Customer özeti (firma sayısı, ürün bazlı ilgi)
+   - StageLog özeti (aşama geçiş istatistikleri)
+
+4. Request body: { message: string, messages?: { role, content }[] }
+   - messages: Opsiyonel. Frontend'den gelen konuşma geçmişi (son N mesaj).
+     Kullanıcı çıktı üzerine yorum yaparak düzenleme istediğinde ("bunu
+     Excel'e aktar", "grafiği değiştir" vb.) context için kullanılır.
+   - Backend messages'ı Gemini'ye context olarak iletir. DB'de saklanmaz.
+
+5. System prompt (Gemini'ye gönderilecek):
+
+   Sen bir Fuar CRM Kıdemli Analisti olarak çalışıyorsun. Görevin,
+   kullanıcının sorduğu soruyu yanıtlamak ve verilen JSON veriyi
+   kullanarak zengin, eyleme geçirilebilir analiz sunmaktır.
+
+   Yanıt stratejin:
+   a) Özet: Soruyu kısa bir cümleyle özetle, neyi analiz ettiğini belirt.
+   b) Metin yorumu: Veriyi yorumlayarak ana bulguları, trendleri ve
+      dikkat çeken noktaları açık, anlaşılır Türkçe ile yaz. Sayıları
+      ve oranları vurgula. "Örneğin...", "Bu da şu anlama gelir...",
+      "Dikkat edilmesi gereken..." gibi ifadelerle yorumunu zenginleştir.
+   c) Grafik önerisi: Soruya uygun tüm grafik türlerini düşün, mümkünse
+      birden fazla grafik öner: bar, line, pie, donut, stackedBar,
+      tablo, heatmap. Her grafik için JSON: chartType, title, labels,
+      data, açıklama metni ("Bu grafik şunu gösterir...").
+   d) Proaktif öneriler: Kullanıcının sormadığı ama faydalı olabilecek
+      ek analizleri öner (örn. "Ayrıca X fuarının dönüşüm oranını da
+      inceleyebilirsiniz").
+   e) Excel export: Sadece kullanıcı açıkça Excel/indirme/dışa aktarma
+      istediğinde (excel, xlsx, indir, export, dışa aktar vb.) response'a
+      exportId ve exportDescription ekle. İstek yoksa Excel üretme.
+
+6. Response formatı:
+   { text: string, charts?: ChartData[], tables?: TableData[],
+     exportId?: string, exportDescription?: string }
+
+7. Excel export (sadece kullanıcı istediğinde):
+   - Kullanıcı mesajında excel/xlsx/indir/export/dışa aktar geçiyorsa
+     backend Excel oluşturur (exceljs).
+   - Geçici dosya veya signed URL ile indirme sağlanır.
+   - GET /chat/export/:exportId — Excel dosyası indirilir.
+
+Etkilenen dosyalar:
+  YENİ: modules/chat/*, lib/gemini.ts
+  DEĞİŞEN: app.module.ts, .env.example
+
+Bağımlılık: Branch 1 + Branch 2
+Commit: feat(api): add Gemini-powered chat analytics endpoint
+
+Durum: [x]
+
+----------------------------------------------------------------------
+F47 — AI Chatbot: Frontend
+----------------------------------------------------------------------
+
+Amaç: Chat UI, grafik/tablo render, Excel indirme.
+
+Konuşma geçmişi stratejisi:
+- Mevcut oturumda: Frontend mesaj listesini state'te tutar. Her API
+  çağrısında son 10 mesaj (user + assistant) backend'e gönderilir.
+  Kullanıcı çıktı üzerine yorum yaparak içeriği düzenleyebilir
+  ("Excel'e aktar", "bu grafiği değiştir" vb.).
+- Ekran kapatıldığında (sayfa değişimi, refresh, tab kapatma) geçmiş
+  silinir. Kalıcı konuşma kaydı yok.
+- Gelecek: ChatGPT tarzı kalıcı konuşma geçmişi (sol menüde sohbet
+  listesi, eski sohbetlere dönüş, DB'de ChatConversation + ChatMessage)
+  ayrı bir feature olarak eklenecektir.
+
+Yapılacaklar:
+
+1. hooks/use-chat.ts oluştur:
+   - useChatQuery(): POST /chat/query { message, messages }
+     messages: son 10 mesaj (role, content) — context için
+   - useChatExport(exportId): GET /chat/export/:exportId (blob indirme)
+
+2. lib/query-keys.ts güncelle: chat key'leri
+
+3. app/(dashboard)/chat/page.tsx oluştur:
+   - Tam sayfa chat arayüzü
+   - Layout: Sol menüye "AI Analiz" veya "Chat" linki eklenir
+
+4. components/chat/ChatPanel.tsx oluştur:
+
+   Tasarım:
+   - Üst: Sayfa başlığı "AI Analiz Asistanı" + kısa açıklama
+     ("Fuar ve müşteri verilerinizi sorarak analiz edin.")
+   - Orta: Konuşma alanı (scroll, flex-1)
+     - Kullanıcı mesajları: sağda, accent border, rounded-xl
+     - AI yanıtları: solda, surface bg, rounded-xl
+     - Her mesajda avatar (kullanıcı: 👤, AI: 🤖)
+     - AI yanıtı: önce metin (whitespace-pre-wrap), sonra grafikler,
+       sonra tablolar, en sonda exportId varsa "📥 Excel İndir" butonu
+   - Alt: Input alanı (fixed veya sticky)
+     - Textarea (min 2 satır, max 6 satır, resize vertical)
+     - "Gönder" butonu (accent)
+     - Loading: Gönder tıklanınca buton "Analiz ediliyor..." disabled
+
+5. components/chat/ChartRenderer.tsx oluştur:
+
+   Props: chart: { chartType, title, labels, data, description? }
+
+   Tasarım:
+   - chartType'a göre recharts bileşeni: BarChart, LineChart, PieChart,
+     AreaChart, ComposedChart (stacked bar)
+   - Başlık: 14px font-semibold, text rengi
+   - Grafik: rounded-xl border, bg-surface, padding
+   - Altında description varsa: 12px muted, italic
+   - Responsive: container max-width, grafik %100
+
+6. components/chat/TableRenderer.tsx oluştur:
+
+   Props: table: { columns: string[], rows: any[][] }
+
+   Tasarım:
+   - Overflow-x-auto ile yatay scroll
+   - Header: bg-surface, font-semibold, border-b
+   - Satırlar: zebra striping (alternatif satır rengi)
+   - Hücre: padding, truncate uzun metinlerde
+   - Max-height + scroll (çok satırda)
+
+7. components/chat/ChatMessage.tsx oluştur:
+
+   Props: message: { role, content, charts?, tables?, exportId? }
+
+   Tasarım:
+   - role === 'user': sağa hizalı, compact
+   - role === 'assistant': sola hizalı, geniş
+   - content: paragraf boşlukları korunarak render
+   - charts: her biri ChartRenderer ile, aralarında gap-4
+   - tables: her biri TableRenderer ile, aralarında gap-4
+   - exportId: "📥 Excel İndir" butonu, onClick → download
+
+8. Layout güncellemesi:
+   - components/layout/Sidebar veya Navigation: "AI Analiz" menü öğesi
+   - İkon: 💬 veya chart/analytics ikonu
+
+Etkilenen dosyalar:
+  YENİ: app/(dashboard)/chat/page.tsx, ChatPanel.tsx, ChartRenderer.tsx,
+        TableRenderer.tsx, ChatMessage.tsx, use-chat.ts
+  DEĞİŞEN: query-keys.ts, layout/navigation
+
+Bağımlılık: F46 (backend hazır)
+Commit: feat(web): add AI chat analytics UI
+Commit: feat(web): add chart/table renderers and Excel download
+
+Durum: [x]
+
+
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 3: FIRSAT NOTLARI                                ║
 ║  Branch: feature/F37-F38-notlar                          ║
