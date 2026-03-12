@@ -9,13 +9,14 @@ import {
   getConversionRateColor,
   getStageBadgeColor,
   getStageLabel,
-  getStageOrder,
+  getNextStageInSequence,
   isTerminalStage,
 } from '@crm/shared';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeleteOpportunity } from '@/hooks/use-opportunities';
+import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useDisplayConfig } from '@/hooks/use-display-config';
 import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
 import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
@@ -50,6 +51,10 @@ export function OpportunityCard({
   const [showStageModal, setShowStageModal] = useState(false);
   const [targetStage, setTargetStage] = useState<string>('');
   const deleteOpportunity = useDeleteOpportunity(fairId);
+  const { data: stageLogs = [] } = useStageHistory(opportunity.id, {
+    enabled: expanded,
+  });
+  const completedStages = stageLogs.map((l) => l.stage);
   const { data: displayConfig } = useDisplayConfig();
 
   const rateColor = getConversionRateColor(opportunity.conversionRate);
@@ -81,17 +86,16 @@ export function OpportunityCard({
 
   const stageColor = getStageBadgeColor(opportunity.currentStage);
   const stageLabel = getStageLabel(opportunity.currentStage);
-  const currentOrder = getStageOrder(opportunity.currentStage);
-  const currentIsTerminal = isTerminalStage(opportunity.currentStage);
+  const effectiveCurrentStage =
+    stageLogs[stageLogs.length - 1]?.stage ?? opportunity.currentStage;
+  const currentIsTerminal = isTerminalStage(effectiveCurrentStage);
 
   const handleStageClick = (stage: string) => {
     if (currentIsTerminal) return;
-    if (stage === opportunity.currentStage) return;
+    if (stage === effectiveCurrentStage) return;
 
-    const targetOrder = getStageOrder(stage);
-    const targetIsTerminal = isTerminalStage(stage);
-    const allowed = targetIsTerminal || targetOrder > currentOrder;
-    if (!allowed) return;
+    const nextStage = getNextStageInSequence(effectiveCurrentStage);
+    if (!nextStage || stage !== nextStage) return;
 
     setTargetStage(stage);
     setShowStageModal(true);
@@ -147,7 +151,10 @@ export function OpportunityCard({
                   Pipeline
                 </p>
                 <PipelineProgressBar
-                  currentStage={opportunity.currentStage}
+                  currentStage={
+                    stageLogs[stageLogs.length - 1]?.stage ?? opportunity.currentStage
+                  }
+                  completedStages={completedStages}
                   compact
                   onStageClick={handleStageClick}
                 />

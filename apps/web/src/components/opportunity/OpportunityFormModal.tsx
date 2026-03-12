@@ -20,8 +20,68 @@ import {
   useCreateOpportunity,
   useUpdateOpportunity,
 } from '@/hooks/use-opportunities';
+import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useProducts } from '@/hooks/use-products';
+import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
+import { getNextStageInSequence, isTerminalStage } from '@crm/shared';
+
+function PipelineAndStageHistoryBlock({
+  opportunityId,
+  initialCurrentStage,
+  fairId,
+}: {
+  opportunityId: string;
+  initialCurrentStage: string;
+  fairId: string;
+}) {
+  const [showStageModal, setShowStageModal] = useState(false);
+  const [targetStage, setTargetStage] = useState('');
+  const { data: logs = [] } = useStageHistory(opportunityId);
+  const completedStages = logs.map((l) => l.stage);
+  const currentStage = logs[logs.length - 1]?.stage ?? initialCurrentStage;
+  const currentIsTerminal = isTerminalStage(currentStage);
+
+  const handleStageClick = (stage: string) => {
+    if (currentIsTerminal) return;
+    if (stage === currentStage) return;
+    const nextStage = getNextStageInSequence(currentStage);
+    if (!nextStage || stage !== nextStage) return;
+    setTargetStage(stage);
+    setShowStageModal(true);
+  };
+
+  return (
+    <>
+      <PipelineProgressBar
+        currentStage={currentStage}
+        completedStages={completedStages}
+        onStageClick={handleStageClick}
+        compact={false}
+        interactive
+      />
+      <div className="mt-3">
+        <StageHistory
+          opportunityId={opportunityId}
+          compact={false}
+          editable
+          allowDeleteLast
+          fairId={fairId}
+        />
+      </div>
+      <StageTransitionModal
+        open={showStageModal}
+        onClose={() => setShowStageModal(false)}
+        opportunityId={opportunityId}
+        fairId={fairId}
+        currentStage={currentStage}
+        targetStage={targetStage}
+      />
+    </>
+  );
+}
 import { useDisplayConfig } from '@/hooks/use-display-config';
+import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
+import { StageHistory } from '@/components/opportunity/StageHistory';
 
 interface OpportunityFormModalProps {
   open: boolean;
@@ -303,6 +363,19 @@ export function OpportunityFormModal({
             </button>
           )}
         </div>
+
+        {isEdit && initial && (
+          <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-3">
+            <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+              Pipeline ve Aşama Geçmişi
+            </p>
+            <PipelineAndStageHistoryBlock
+              opportunityId={initial.id}
+              initialCurrentStage={initial.currentStage}
+              fairId={fairId}
+            />
+          </div>
+        )}
 
         {submitError && (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">

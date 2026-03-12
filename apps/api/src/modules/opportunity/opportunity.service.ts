@@ -4,10 +4,10 @@ import {
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
-  PIPELINE_STAGES,
   getStageOrder,
   isTerminalStage,
   type StageTransitionInput,
+  type UpdateStageLogInput,
 } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
@@ -400,15 +400,12 @@ export class OpportunityService {
     let wonCount = 0;
     let lostCount = 0;
 
-    const terminalStages = PIPELINE_STAGES.filter((s) => s.terminal).map(
-      (s) => s.value as string,
-    );
-
     for (const row of stages) {
       byStage[row.currentStage] = row._count.id;
-      if (terminalStages.includes(row.currentStage)) {
-        if (row.currentStage === 'satisa_donustu') wonCount += row._count.id;
-        else if (row.currentStage === 'olumsuz') lostCount += row._count.id;
+      if (row.currentStage === 'satisa_donustu') {
+        wonCount += row._count.id;
+      } else if (row.currentStage === 'olumsuz') {
+        lostCount += row._count.id;
       } else {
         openTotal += row._count.id;
       }
@@ -420,6 +417,115 @@ export class OpportunityService {
       wonCount,
       lostCount,
     };
+  }
+
+  async updateStageLog(
+    opportunityId: string,
+    logId: string,
+    dto: UpdateStageLogInput,
+    auditUser?: AuditUser,
+  ) {
+    const log = await this.prisma.opportunityStageLog.findUnique({
+      where: { id: logId },
+      include: { opportunity: true },
+    });
+
+    if (!log || log.opportunityId !== opportunityId) {
+      throw new NotFoundException('Aşama kaydı bulunamadı');
+    }
+
+    const before = {
+      id: log.id,
+      opportunityId: log.opportunityId,
+      stage: log.stage,
+      note: log.note,
+      lossReason: log.lossReason,
+      createdAt: log.createdAt,
+    };
+
+    const updated = await this.prisma.opportunityStageLog.update({
+      where: { id: logId },
+      data: {
+        createdAt: dto.createdAt ? new Date(dto.createdAt) : log.createdAt,
+        note: dto.note ?? null,
+      },
+    });
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'opportunity',
+      entityId: opportunityId,
+      action: 'update',
+      before,
+      after: {
+        id: updated.id,
+        opportunityId: updated.opportunityId,
+        stage: updated.stage,
+        note: updated.note,
+        lossReason: updated.lossReason,
+        createdAt: updated.createdAt,
+      },
+    });
+
+    return this.getStageHistory(opportunityId);
+  }
+
+  async deleteLastStageLog(
+    opportunityId: string,
+    logId: string,
+    auditUser?: AuditUser,
+  ) {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const logs = await tx.opportunityStageLog.findMany({
+        where: { opportunityId },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!logs.length) {
+        throw new NotFoundException('Aşama kaydı bulunamadı');
+      }
+
+      const last = logs[logs.length - 1]!;
+      if (last.id !== logId) {
+        throw new BadRequestException('Sadece son aşama kaydı silinebilir');
+      }
+
+      const previous = logs.length > 1 ? logs[logs.length - 2] : null;
+      const newStage = previous ? previous.stage : 'tanisma';
+      const newLossReason =
+        previous && previous.stage === 'olumsuz' ? previous.lossReason : null;
+
+      await tx.opportunityStageLog.delete({ where: { id: logId } });
+
+      const updatedOpportunity = await tx.opportunity.update({
+        where: { id: opportunityId },
+        data: {
+          currentStage: newStage,
+          lossReason: newLossReason,
+        },
+      });
+
+      return {
+        newStage,
+        newLossReason,
+        opportunityId: updatedOpportunity.id,
+      };
+    });
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'opportunity',
+      entityId: opportunityId,
+      action: 'update',
+      after: {
+        currentStage: result.newStage,
+        lossReason: result.newLossReason,
+      },
+    });
+
+    return this.getStageHistory(opportunityId);
   }
 
   private async ensureFairExists(fairId: string): Promise<void> {

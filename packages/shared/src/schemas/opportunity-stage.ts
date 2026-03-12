@@ -20,4 +20,10 @@ export const stageTransitionSchema = z
     { message: 'Olumsuz aşamada kayıp nedeni zorunludur', path: ['lossReason'] },
   );
 
+export const updateStageLogSchema = z.object({
+  createdAt: z.string().min(1, 'Tarih zorunludur'),
+  note: z.string().nullable().optional(),
+});
+
 export type StageTransitionInput = z.infer<typeof stageTransitionSchema>;
+export type UpdateStageLogInput = z.infer<typeof updateStageLogSchema>;

@@ -5,6 +5,7 @@ import {
   getStageBadgeColor,
   getStageLabel,
   getStageOrder,
+  getNextStageInSequence,
   isTerminalStage,
 } from '@crm/shared';
 import { cn } from '@/lib/utils';
@@ -13,15 +14,21 @@ interface PipelineProgressBarProps {
   currentStage: string;
   onStageClick: (stage: string) => void;
   compact?: boolean;
+  interactive?: boolean;
+  /** Aşama geçmişinde girilmiş aşamalar. Verilirse yeşil gösterim buna göre yapılır. */
+  completedStages?: string[];
 }
 
 export function PipelineProgressBar({
   currentStage,
   onStageClick,
   compact = false,
+  interactive = true,
+  completedStages,
 }: PipelineProgressBarProps) {
   const currentOrder = getStageOrder(currentStage);
   const currentIsTerminal = isTerminalStage(currentStage);
+  const completedSet = completedStages ? new Set(completedStages) : null;
 
   return (
     <div className={cn('w-full', compact ? 'py-1' : 'py-2')}>
@@ -29,21 +36,25 @@ export function PipelineProgressBar({
         {PIPELINE_STAGES.map((stage, idx) => {
           const stageOrder = stage.order;
           const isCurrent = stage.value === currentStage;
-          const isPast = stageOrder < currentOrder && !currentIsTerminal;
-          const isFuture = stageOrder > currentOrder && !currentIsTerminal;
+          const isCompleted =
+            completedSet !== null
+              ? completedSet.has(stage.value)
+              : stageOrder <= currentOrder && !currentIsTerminal;
+          const isFuture = stageOrder > currentOrder || currentIsTerminal;
 
+          const nextStageValue = getNextStageInSequence(currentStage);
           const isClickable =
-            !isCurrent && (stage.terminal || stageOrder > currentOrder) && !currentIsTerminal;
+            interactive &&
+            !isCurrent &&
+            !currentIsTerminal &&
+            nextStageValue !== null &&
+            stage.value === nextStageValue;
 
-          const color = isCurrent
-            ? getStageBadgeColor(stage.value)
-            : isPast
-              ? '#4ADE80'
-              : stage.terminal && currentIsTerminal
-                ? getStageBadgeColor(stage.value)
-                : isFuture
-                  ? '#6B7280'
-                  : '#6B7280';
+          const color = isCompleted
+            ? '#4ADE80'
+            : stage.terminal && currentIsTerminal
+              ? getStageBadgeColor(stage.value)
+              : '#6B7280';
 
           const circleClass = cn(
             'flex h-7 w-7 items-center justify-center rounded-full border text-[12px] font-bold',
@@ -52,9 +63,18 @@ export function PipelineProgressBar({
             !isClickable && !isCurrent && 'cursor-not-allowed opacity-80',
           );
 
+          const nextStage = PIPELINE_STAGES[idx + 1];
+          const nextCompleted =
+            nextStage && completedSet !== null
+              ? completedSet.has(nextStage.value)
+              : completedSet === null
+                ? nextStage && nextStage.order <= currentOrder && !currentIsTerminal
+                : false;
+          const isLineGreen = isCompleted && nextCompleted;
+
           const lineClass = cn(
             'h-[2px] flex-1 rounded-full',
-            isPast ? 'bg-green' : isCurrent ? 'bg-accent/60' : 'bg-border',
+            isLineGreen ? 'bg-green' : 'bg-border',
           );
 
           return (
@@ -71,7 +91,7 @@ export function PipelineProgressBar({
                   onClick={() => isClickable && onStageClick(stage.value)}
                   title={getStageLabel(stage.value)}
                 >
-                  {isPast ? '✓' : idx + 1}
+                  {isCompleted ? '✓' : idx + 1}
                 </button>
 
                 {idx !== PIPELINE_STAGES.length - 1 && <div className={lineClass} />}

@@ -17,15 +17,27 @@ import {
   createOpportunitySchema,
   updateOpportunitySchema,
   stageTransitionSchema,
+  updateStageLogSchema,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
   type StageTransitionInput,
+  type UpdateStageLogInput,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { OpportunityService } from './opportunity.service';
+
+type StageLogResponse = {
+  id: string;
+  opportunityId: string;
+  stage: string;
+  note: string | null;
+  lossReason: string | null;
+  createdAt: string;
+  changedBy: { id: string; name: string; email: string };
+};
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -87,20 +99,32 @@ export class OpportunityController {
   async getStageHistory(
     @Param('id') id: string,
   ): Promise<
-    ApiSuccessResponse<
-      Array<{
-        id: string;
-        opportunityId: string;
-        stage: string;
-        note: string | null;
-        lossReason: string | null;
-        createdAt: string;
-        changedBy: { id: string; name: string; email: string };
-      }>
-    >
+    ApiSuccessResponse<StageLogResponse[]>
   > {
     const data = await this.opportunityService.getStageHistory(id);
     return { success: true, message: 'Aşama geçmişi getirildi', data };
+  }
+
+  @Patch('opportunities/:id/stages/:logId')
+  async updateStageLog(
+    @Param('id') id: string,
+    @Param('logId') logId: string,
+    @Body(new ZodValidationPipe(updateStageLogSchema)) dto: UpdateStageLogInput,
+    @CurrentUser() user: { id: string; email: string },
+  ): Promise<ApiSuccessResponse<StageLogResponse[]>> {
+    const data = await this.opportunityService.updateStageLog(id, logId, dto, user);
+    return { success: true, message: 'Aşama kaydı güncellendi', data };
+  }
+
+  @Delete('opportunities/:id/stages/:logId')
+  @HttpCode(HttpStatus.OK)
+  async deleteLastStageLog(
+    @Param('id') id: string,
+    @Param('logId') logId: string,
+    @CurrentUser() user: { id: string; email: string },
+  ): Promise<ApiSuccessResponse<StageLogResponse[]>> {
+    const data = await this.opportunityService.deleteLastStageLog(id, logId, user);
+    return { success: true, message: 'Son aşama kaydı silindi', data };
   }
 
   @Patch('opportunities/:id')
