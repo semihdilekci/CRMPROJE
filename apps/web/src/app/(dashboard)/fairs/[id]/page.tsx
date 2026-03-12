@@ -25,12 +25,18 @@ export default function FairDetailPage() {
 
   const [search, setSearch] = useState('');
   const [rateFilter, setRateFilter] = useState('');
+  const [stageFilter, setStageFilter] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<OpportunityWithCustomer | null>(null);
 
-  const { data: opportunities } = useOpportunitiesByFair(fairId, search, rateFilter);
+  const { data: opportunities } = useOpportunitiesByFair(
+    fairId,
+    search,
+    rateFilter,
+    stageFilter,
+  );
 
   const allOpportunities = useMemo(
     () => fair?.opportunities ?? [],
@@ -76,6 +82,8 @@ export default function FairDetailPage() {
           onSearchChange={setSearch}
           rateFilter={rateFilter}
           onRateFilterChange={setRateFilter}
+          stageFilter={stageFilter}
+          onStageFilterChange={setStageFilter}
           onAddOpportunity={() => {
             setEditingOpportunity(null);
             setShowOpportunityModal(true);
@@ -109,7 +117,7 @@ export default function FairDetailPage() {
               </button>
             </div>
           </div>
-        ) : search || rateFilter ? (
+        ) : search || rateFilter || stageFilter ? (
           <p className="py-12 text-center text-muted">Arama sonucu bulunamadı.</p>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">

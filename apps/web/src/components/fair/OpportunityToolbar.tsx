@@ -3,7 +3,12 @@
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { CONVERSION_RATE_LABELS, type ConversionRate } from '@crm/shared';
+import {
+  CONVERSION_RATE_LABELS,
+  PIPELINE_STAGES,
+  getStageLabel,
+  type ConversionRate,
+} from '@crm/shared';
 import { useDisplayConfig } from '@/hooks/use-display-config';
 
 interface OpportunityToolbarProps {
@@ -11,6 +16,8 @@ interface OpportunityToolbarProps {
   onSearchChange: (value: string) => void;
   rateFilter: string;
   onRateFilterChange: (value: string) => void;
+  stageFilter: string;
+  onStageFilterChange: (value: string) => void;
   onAddOpportunity: () => void;
 }
 
@@ -19,6 +26,8 @@ export function OpportunityToolbar({
   onSearchChange,
   rateFilter,
   onRateFilterChange,
+  stageFilter,
+  onStageFilterChange,
   onAddOpportunity,
 }: OpportunityToolbarProps) {
   const { data: displayConfig } = useDisplayConfig();
@@ -39,6 +48,16 @@ export function OpportunityToolbar({
           {(Object.entries(labels) as [ConversionRate, string][]).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div className="w-[200px]">
+        <Select value={stageFilter} onChange={(e) => onStageFilterChange(e.target.value)}>
+          <option value="">Tüm Aşamalar</option>
+          {PIPELINE_STAGES.map((s) => (
+            <option key={s.value} value={s.value}>
+              {getStageLabel(s.value)}
             </option>
           ))}
         </Select>

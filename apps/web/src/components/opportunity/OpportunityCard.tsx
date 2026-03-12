@@ -7,12 +7,19 @@ import {
   formatDateTime,
   getConversionRateLabel,
   getConversionRateColor,
+  getStageBadgeColor,
+  getStageLabel,
+  getStageOrder,
+  isTerminalStage,
 } from '@crm/shared';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeleteOpportunity } from '@/hooks/use-opportunities';
 import { useDisplayConfig } from '@/hooks/use-display-config';
+import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
+import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
+import { StageHistory } from '@/components/opportunity/StageHistory';
 
 function formatTonnageShort(quantity: number | null, unit: string): string {
   if (quantity == null || quantity === 0) return '';
@@ -40,6 +47,8 @@ export function OpportunityCard({
 }: OpportunityCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showStageModal, setShowStageModal] = useState(false);
+  const [targetStage, setTargetStage] = useState<string>('');
   const deleteOpportunity = useDeleteOpportunity(fairId);
   const { data: displayConfig } = useDisplayConfig();
 
@@ -70,6 +79,24 @@ export function OpportunityCard({
           unit: 'ton',
         }));
 
+  const stageColor = getStageBadgeColor(opportunity.currentStage);
+  const stageLabel = getStageLabel(opportunity.currentStage);
+  const currentOrder = getStageOrder(opportunity.currentStage);
+  const currentIsTerminal = isTerminalStage(opportunity.currentStage);
+
+  const handleStageClick = (stage: string) => {
+    if (currentIsTerminal) return;
+    if (stage === opportunity.currentStage) return;
+
+    const targetOrder = getStageOrder(stage);
+    const targetIsTerminal = isTerminalStage(stage);
+    const allowed = targetIsTerminal || targetOrder > currentOrder;
+    if (!allowed) return;
+
+    setTargetStage(stage);
+    setShowStageModal(true);
+  };
+
   return (
     <>
       <div className="rounded-xl border border-border bg-card transition-colors hover:border-border-hover">
@@ -87,6 +114,7 @@ export function OpportunityCard({
               {opportunity.conversionRate && (
                 <Badge color={rateColor}>{rateLabel}</Badge>
               )}
+              <Badge color={stageColor}>{stageLabel}</Badge>
               {displayProducts.slice(0, 2).map((p, i) => (
                 <Badge key={`${p.productName}-${i}`}>
                   {p.quantity != null && p.quantity > 0
@@ -114,6 +142,17 @@ export function OpportunityCard({
         {expanded && (
           <div className="border-t border-border px-4 pb-4 pt-3">
             <div className="flex flex-col gap-2 text-[13px]">
+              <div className="rounded-xl border border-border bg-surface px-3 py-2">
+                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+                  Pipeline
+                </p>
+                <PipelineProgressBar
+                  currentStage={opportunity.currentStage}
+                  compact
+                  onStageClick={handleStageClick}
+                />
+              </div>
+
               {opportunity.budgetRaw && (
                 <p>
                   <span className="text-muted">Tahmini Bütçe: </span>
@@ -179,6 +218,13 @@ export function OpportunityCard({
                   />
                 </div>
               )}
+
+              <div className="mt-2">
+                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+                  Aşama Geçmişi
+                </p>
+                <StageHistory opportunityId={opportunity.id} compact />
+              </div>
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -213,6 +259,15 @@ export function OpportunityCard({
         title="Fırsatı Sil"
         message={`"${customer.name}" (${customer.company}) fırsatını silmek istediğinizden emin misiniz?`}
         loading={deleteOpportunity.isPending}
+      />
+
+      <StageTransitionModal
+        open={showStageModal}
+        onClose={() => setShowStageModal(false)}
+        opportunityId={opportunity.id}
+        fairId={fairId}
+        currentStage={opportunity.currentStage}
+        targetStage={targetStage}
       />
     </>
   );
