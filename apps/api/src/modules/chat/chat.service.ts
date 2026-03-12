@@ -1,6 +1,11 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
+import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '@prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import * as path from 'path';
@@ -8,7 +13,8 @@ import * as fs from 'fs';
 import type { ChatQueryInput, ChatQueryResponse, ChartData, TableData } from '@crm/shared';
 
 const EXPORT_DIR = path.join(process.cwd(), 'exports');
-const EXPORT_TTL_MS = 60 * 60 * 1000; // 1 saat
+const EXPORT_TTL_MS = 60 * 60 * 1000;
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 
 @Injectable()
 export class ChatService {
@@ -31,60 +37,63 @@ export class ChatService {
     userId: string,
     input: ChatQueryInput,
   ): Promise<ChatQueryResponse> {
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new BadRequestException(
-        'AI analiz servisi yapılandırılmamış. GEMINI_API_KEY tanımlayın.',
-      );
-    }
-
-    const contextData = await this.gatherContextData(userId);
+    const provider = input.provider ?? 'claude';
+    const contextData = await this.gatherContextData();
     const wantsExport = this.detectExportIntent(input.message);
-
     const systemPrompt = this.buildSystemPrompt(contextData, wantsExport);
-    const ai = new GoogleGenAI({ apiKey });
 
-    const userMessage =
-      input.messages?.length
-        ? [
-            ...input.messages.slice(-10).map((m) =>
-              m.role === 'user'
-                ? { role: 'user' as const, parts: [{ text: m.content }] }
-                : { role: 'model' as const, parts: [{ text: m.content }] },
-            ),
-            { role: 'user' as const, parts: [{ text: input.message }] },
-          ]
-        : input.message;
+    if (provider === 'ollama') {
+      return this.queryOllama(userId, input, systemPrompt, wantsExport);
+    }
+    return this.queryClaude(userId, input, systemPrompt, wantsExport);
+  }
+
+  private async queryOllama(
+    userId: string,
+    input: ChatQueryInput,
+    systemPrompt: string,
+    wantsExport: boolean,
+  ): Promise<ChatQueryResponse> {
+    const baseUrl =
+      this.config.get<string>('OLLAMA_BASE_URL')?.trim() ?? 'http://localhost:11434';
+    const model =
+      this.config.get<string>('OLLAMA_MODEL')?.trim() ?? 'qwen2.5-coder:32b';
+
+    this.logger.log(`Ollama isteği: model=${model}, baseUrl=${baseUrl}`);
+
+    const ollamaMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+      ...(input.messages?.length
+        ? input.messages.slice(-10).map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          }))
+        : []),
+      { role: 'user', content: input.message },
+    ];
 
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: 'application/json',
-        },
-        contents: userMessage,
+      const res = await fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages: ollamaMessages, stream: false }),
       });
 
-      const text = response.text;
-      if (!text) {
-        throw new BadRequestException('AI yanıt üretilemedi');
+      if (!res.ok) {
+        const errText = await res.text();
+        this.logger.error('Ollama API hatası', res.status, errText);
+        throw new Error(`Ollama ${res.status}: ${errText}`);
       }
 
-      let parsed: {
-        text?: string;
-        charts?: ChartData[];
-        tables?: TableData[];
-        exportId?: string;
-        exportDescription?: string;
-      };
+      const json = (await res.json()) as { message?: { content?: string } };
+      const text = json?.message?.content;
 
-      try {
-        parsed = JSON.parse(text) as typeof parsed;
-      } catch {
-        parsed = { text };
+      if (!text || typeof text !== 'string') {
+        this.logger.warn('Ollama boş yanıt', json);
+        throw new InternalServerErrorException('AI yanıt üretilemedi');
       }
 
+      const parsed = this.parseAiResponse(text);
       const result: ChatQueryResponse = {
         text: parsed.text ?? text,
         charts: parsed.charts,
@@ -99,10 +108,129 @@ export class ChatService {
 
       return result;
     } catch (error) {
-      this.logger.error('Gemini API hatası', error);
-      throw new BadRequestException(
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      const errStr = String(error);
+      this.logger.error('Ollama hatası', errStr, error instanceof Error ? error.stack : undefined);
+
+      if (
+        errStr.includes('ECONNREFUSED') ||
+        errStr.includes('fetch failed') ||
+        errStr.includes('Failed to fetch')
+      ) {
+        throw new BadRequestException(
+          'Ollama çalışmıyor. Lütfen "ollama serve" ile başlatın veya Claude seçin.',
+        );
+      }
+
+      throw new InternalServerErrorException(
         'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
       );
+    }
+  }
+
+  private async queryClaude(
+    userId: string,
+    input: ChatQueryInput,
+    systemPrompt: string,
+    wantsExport: boolean,
+  ): Promise<ChatQueryResponse> {
+    const apiKey = this.config.get<string>('ANTHROPIC_API_KEY')?.trim();
+    if (!apiKey) {
+      throw new BadRequestException(
+        'AI analiz servisi yapılandırılmamış. apps/api/.env içinde ANTHROPIC_API_KEY=... tanımlayın (console.anthropic.com adresinden key alın).',
+      );
+    }
+
+    const client = new Anthropic({ apiKey });
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> =
+      input.messages?.length
+        ? [
+            ...input.messages.slice(-10).map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+            { role: 'user' as const, content: input.message },
+          ]
+        : [{ role: 'user' as const, content: input.message }];
+
+    try {
+      const response = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages,
+      });
+
+      const textBlock = response.content.find((b) => b.type === 'text');
+      const text =
+        textBlock && 'text' in textBlock ? (textBlock as { text: string }).text : undefined;
+
+      if (!text || typeof text !== 'string') {
+        this.logger.warn('Claude boş veya geçersiz yanıt', { response });
+        throw new InternalServerErrorException('AI yanıt üretilemedi');
+      }
+
+      const parsed = this.parseAiResponse(text);
+      const result: ChatQueryResponse = {
+        text: parsed.text ?? text,
+        charts: parsed.charts,
+        tables: parsed.tables,
+      };
+
+      if (wantsExport && parsed.tables?.length) {
+        const exportId = await this.createExcelExport(parsed.tables, userId);
+        result.exportId = exportId;
+        result.exportDescription = 'Analiz verisi Excel dosyası';
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      const errStr = String(error);
+      this.logger.error('Claude API hatası', errStr, error instanceof Error ? error.stack : undefined);
+
+      if (errStr.includes('429') || errStr.includes('overloaded') || errStr.includes('rate')) {
+        throw new InternalServerErrorException(
+          'Claude API kotası aşıldı. Birkaç dakika bekleyip tekrar deneyin.',
+        );
+      }
+      if (errStr.includes('401') || errStr.includes('API key') || errStr.includes('authentication')) {
+        throw new BadRequestException(
+          'ANTHROPIC_API_KEY geçersiz. console.anthropic.com adresinden yeni key alın.',
+        );
+      }
+      if (errStr.includes('credit') || errStr.includes('balance') || errStr.includes('too low')) {
+        throw new BadRequestException(
+          'Anthropic hesabınızda kredi bakiyesi yetersiz. console.anthropic.com → Plans & Billing üzerinden kredi ekleyin veya planı yükseltin.',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+      );
+    }
+  }
+
+  private parseAiResponse(text: string): {
+    text?: string;
+    charts?: ChartData[];
+    tables?: TableData[];
+  } {
+    const jsonStr = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    try {
+      return JSON.parse(jsonStr) as { text?: string; charts?: ChartData[]; tables?: TableData[] };
+    } catch {
+      return { text };
     }
   }
 
@@ -125,7 +253,7 @@ export class ChatService {
     };
   }
 
-  private async gatherContextData(_userId: string) {
+  private async gatherContextData() {
     const fairs = await this.prisma.fair.findMany({
       orderBy: { startDate: 'desc' },
       include: {
@@ -163,7 +291,9 @@ export class ChatService {
 
       for (const opp of fair.opportunities) {
         if (opp.budgetRaw) {
-          const num = parseFloat(String(opp.budgetRaw).replace(/[^\d.,]/g, '').replace(',', '.'));
+          const num = parseFloat(
+            String(opp.budgetRaw).replace(/[^\d.,]/g, '').replace(',', '.'),
+          );
           if (!isNaN(num)) budgetTotal += num;
         }
         byStage[opp.currentStage] = (byStage[opp.currentStage] ?? 0) + 1;
@@ -195,7 +325,6 @@ export class ChatService {
 
     const customers = await this.prisma.customer.findMany({
       include: {
-        _count: { select: { opportunities: true } },
         opportunities: {
           include: {
             opportunityProducts: { include: { product: true } },
@@ -237,19 +366,17 @@ Veri (JSON):
 ${dataJson}
 
 Yanıt stratejin:
-a) Özet: Soruyu kısa bir cümleyle özetle, neyi analiz ettiğini belirt.
-b) Metin yorumu: Veriyi yorumlayarak ana bulguları, trendleri ve dikkat çeken noktaları açık, anlaşılır Türkçe ile yaz. Sayıları ve oranları vurgula.
-c) Grafik önerisi: Soruya uygun grafik türlerini düşün: bar, line, pie, donut, stackedBar, area, composed. Her grafik için JSON: { chartType, title, labels, data, description }.
+a) Özet: Soruyu kısa bir cümleyle özetle.
+b) Metin yorumu: Veriyi yorumlayarak ana bulguları, trendleri açık Türkçe ile yaz.
+c) Grafik önerisi: Soruya uygun grafik türleri: bar, line, pie, donut, stackedBar, area, composed. Her grafik için JSON: { chartType, title, labels, data, description }.
 d) Proaktif öneriler: Faydalı ek analizleri öner.
-e) Excel: Sadece kullanıcı açıkça excel/xlsx/indir/export/dışa aktar istediğinde response'a exportId ve exportDescription ekle. İstek yoksa ekleme.
+e) Excel: Sadece kullanıcı excel/xlsx/indir/export istediğinde response'a exportId ekle.
 
-Yanıtını MUTLAKA aşağıdaki JSON formatında döndür. Başka metin ekleme.
+Yanıtını MUTLAKA şu JSON formatında döndür:
 {
-  "text": "Metin yorumu burada",
+  "text": "Metin yorumu",
   "charts": [{ "chartType": "bar", "title": "...", "labels": [...], "data": [...], "description": "..." }],
-  "tables": [{ "columns": ["A", "B"], "rows": [["1","2"]] }],
-  "exportId": null,
-  "exportDescription": null
+  "tables": [{ "columns": ["A", "B"], "rows": [["1","2"]] }]
 }
 
 Kullanıcı Excel istedi mi: ${wantsExport}`;
@@ -281,14 +408,10 @@ Kullanıcı Excel istedi mi: ${wantsExport}`;
 
     for (let i = 0; i < tables.length; i++) {
       const table = tables[i]!;
-      const sheet = workbook.addWorksheet(`Sayfa ${i + 1}`, {
-        headerFooter: { firstHeader: table.columns.join(' | ') },
-      });
-
+      const sheet = workbook.addWorksheet(`Sayfa ${i + 1}`);
       sheet.addRow(table.columns);
       const headerRow = sheet.getRow(1);
       headerRow.font = { bold: true };
-
       for (const row of table.rows) {
         sheet.addRow(row);
       }

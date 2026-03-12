@@ -8,10 +8,14 @@ import {
   Res,
   HttpCode,
   HttpStatus,
-  UsePipes,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiSuccessResponse, ChatQueryResponse, chatQuerySchema, ChatQueryInput } from '@crm/shared';
+import {
+  ApiSuccessResponse,
+  ChatQueryResponse,
+  chatQuerySchema,
+  ChatQueryInput,
+} from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -24,9 +28,8 @@ export class ChatController {
 
   @Post('query')
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(chatQuerySchema))
   async query(
-    @Body() dto: ChatQueryInput,
+    @Body(new ZodValidationPipe(chatQuerySchema)) dto: ChatQueryInput,
     @CurrentUser('id') userId: string,
   ): Promise<ApiSuccessResponse<ChatQueryResponse>> {
     const data = await this.chatService.query(userId, dto);
@@ -43,7 +46,10 @@ export class ChatController {
     @CurrentUser('id') userId: string,
     @Res({ passthrough: false }) res: Response,
   ): Promise<void> {
-    const { filePath, fileName } = await this.chatService.getExport(exportId, userId);
+    const { filePath, fileName } = await this.chatService.getExport(
+      exportId,
+      userId,
+    );
     res.download(filePath, fileName);
   }
 }

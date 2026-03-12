@@ -5,6 +5,10 @@ export const queryKeys = {
       ['users', 'list', filters ?? {}] as const,
     byId: (id: string) => ['users', id] as const,
   },
+  chat: {
+    query: () => ['chat', 'query'] as const,
+    export: (exportId: string) => ['chat', 'export', exportId] as const,
+  },
   fairs: {
     all: ['fairs'] as const,
     byId: (id: string) => ['fairs', id] as const,
@@ -14,10 +18,6 @@ export const queryKeys = {
     all: ['customers'] as const,
     list: (search?: string) => ['customers', 'list', { search }] as const,
     byId: (id: string) => ['customers', id] as const,
-  },
-  chat: {
-    query: () => ['chat', 'query'] as const,
-    export: (exportId: string) => ['chat', 'export', exportId] as const,
   },
   opportunities: {
     byFair: (fairId: string) => ['opportunities', 'fair', fairId] as const,

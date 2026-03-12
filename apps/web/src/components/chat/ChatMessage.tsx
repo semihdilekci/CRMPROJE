@@ -35,7 +35,7 @@ export function ChatMessage({
         {isUser ? '👤' : '🤖'}
       </div>
       <div
-        className={`flex max-w-[85%] flex-col gap-3 ${
+        className={`flex max-w-[95%] flex-col gap-3 ${
           isUser ? 'items-end' : 'items-start'
         }`}
       >
@@ -50,17 +50,20 @@ export function ChatMessage({
             {content}
           </pre>
         </div>
-        {!isUser && charts && charts.length > 0 && (
-          <div className="flex w-full flex-col gap-4">
-            {charts.map((chart, i) => (
-              <ChartRenderer key={i} chart={chart} />
+        {!isUser && ((charts?.length ?? 0) > 0 || (tables?.length ?? 0) > 0) && (
+          <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {charts?.map((chart, i) => (
+              <div key={`chart-${i}`} className="min-w-0">
+                <ChartRenderer chart={chart} />
+              </div>
             ))}
-          </div>
-        )}
-        {!isUser && tables && tables.length > 0 && (
-          <div className="flex w-full flex-col gap-4">
-            {tables.map((table, i) => (
-              <TableRenderer key={i} table={table} />
+            {tables?.map((table, i) => (
+              <div
+                key={`table-${i}`}
+                className={`min-w-0 ${table.columns.length > 4 ? 'md:col-span-2' : ''}`}
+              >
+                <TableRenderer table={table} />
+              </div>
             ))}
           </div>
         )}

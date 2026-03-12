@@ -1,10 +1,69 @@
-import { PrismaClient, Fair } from '@prisma/client';
+/**
+ * Raporlama için anlamlı veri oluşturan seed script.
+ * Fuar, fırsat, bütçe, pipeline, satışa dönüşme, ürünler ve tonajlar dahil
+ * tüm raporlama metrikleri için zengin veri seti üretir.
+ *
+ * Çalıştırma: cd apps/api && npx prisma db seed
+ */
+import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
+const PIPELINE_STAGES = [
+  'tanisma',
+  'toplanti',
+  'proje',
+  'teklif',
+  'sozlesme',
+  'satisa_donustu',
+  'olumsuz',
+] as const;
+
+const CONVERSION_RATES = ['very_high', 'high', 'medium', 'low', 'very_low'] as const;
+const CURRENCIES = ['USD', 'EUR', 'TRY', 'GBP'] as const;
+const LOSS_REASONS = [
+  'price_high',
+  'competitor',
+  'need_gone',
+  'timing',
+  'communication_lost',
+  'budget_not_approved',
+  'other',
+] as const;
+
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
+function pickRandomMultiple<T>(arr: readonly T[], min: number, max: number): T[] {
+  const count = min + Math.floor(Math.random() * (max - min + 1));
+  const shuffled = [...arr].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(count, arr.length));
+}
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 async function main(): Promise<void> {
-  console.log('Seeding database...');
+  console.log('🗑️  Mevcut veriler siliniyor...');
+
+  await prisma.opportunityStageLog.deleteMany();
+  await prisma.opportunityProduct.deleteMany();
+  await prisma.opportunity.deleteMany();
+  await prisma.customer.deleteMany();
+  await prisma.fair.deleteMany();
+  await prisma.product.deleteMany();
+  // User ve Team silinmiyor - mevcut kullanıcılar korunuyor
+
+  console.log('👤 Kullanıcılar oluşturuluyor...');
 
   const password = await argon2.hash('Test1234!');
 
@@ -41,9 +100,69 @@ async function main(): Promise<void> {
     },
   });
 
-  console.log(`Users seeded: ${admin.name}, ${user1.name}, ${user2.name}`);
+  const users = [admin, user1, user2];
+  console.log(`   ✓ ${users.length} kullanıcı hazır`);
 
+  // --- ÜRÜNLER ---
+  const productNames = [
+    'Endüstriyel Pompalar',
+    'Vana Sistemleri',
+    'Kompresörler',
+    'Filtre Üniteleri',
+    'Otomasyon Yazılımı',
+    'Sensörler & Ölçüm',
+    'Boru & Fitting',
+    'Isı Eşanjörleri',
+    'Proses Ekipmanları',
+    'Kontrol Panelleri',
+    'Soğutma Grupları',
+    'Klima Santralleri',
+    'Fan Coil Üniteleri',
+    'VRF Sistemleri',
+    'Chiller Üniteleri',
+  ];
+
+  const products: { id: string; name: string }[] = [];
+  for (const name of productNames) {
+    const p = await prisma.product.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    products.push(p);
+  }
+  console.log(`   ✓ ${products.length} ürün`);
+
+  // --- FUARLAR (geçmiş + gelecek, farklı dönemler) ---
   const fairsData = [
+    {
+      name: 'ISK-SODEX Istanbul 2024',
+      address: 'Tüyap Fuar ve Kongre Merkezi, Büyükçekmece, İstanbul',
+      startDate: new Date('2024-10-09'),
+      endDate: new Date('2024-10-12'),
+      createdById: admin.id,
+    },
+    {
+      name: 'WIN Eurasia 2024',
+      address: 'Tüyap Fuar ve Kongre Merkezi, Büyükçekmece, İstanbul',
+      startDate: new Date('2024-06-12'),
+      endDate: new Date('2024-06-15'),
+      createdById: admin.id,
+    },
+    {
+      name: 'MOTEK Mediterranean 2024',
+      address: 'İstanbul Fuar Merkezi (İFM), Yeşilköy, İstanbul',
+      startDate: new Date('2024-09-25'),
+      endDate: new Date('2024-09-28'),
+      createdById: user1.id,
+    },
+    {
+      name: 'Chillventa Nürnberg 2024',
+      address: 'NürnbergMesse, Nürnberg, Germany',
+      startDate: new Date('2024-10-15'),
+      endDate: new Date('2024-10-17'),
+      createdById: user2.id,
+    },
     {
       name: 'ISK-SODEX Istanbul 2025',
       address: 'Tüyap Fuar ve Kongre Merkezi, Büyükçekmece, İstanbul',
@@ -66,18 +185,18 @@ async function main(): Promise<void> {
       createdById: user1.id,
     },
     {
-      name: 'Hannover Messe 2026',
+      name: 'Hannover Messe 2025',
       address: 'Deutsche Messe, Hannover, Germany',
-      startDate: new Date('2026-04-20'),
-      endDate: new Date('2026-04-24'),
+      startDate: new Date('2025-04-21'),
+      endDate: new Date('2025-04-25'),
       createdById: admin.id,
     },
     {
-      name: 'Automechanika Frankfurt 2026',
-      address: 'Messe Frankfurt, Frankfurt am Main, Germany',
-      startDate: new Date('2026-09-08'),
-      endDate: new Date('2026-09-12'),
-      createdById: user1.id,
+      name: 'Chillventa Nürnberg 2025',
+      address: 'NürnbergMesse, Nürnberg, Germany',
+      startDate: new Date('2025-10-14'),
+      endDate: new Date('2025-10-16'),
+      createdById: user2.id,
     },
     {
       name: 'Aqua-Therm Moscow 2026',
@@ -94,233 +213,174 @@ async function main(): Promise<void> {
       createdById: admin.id,
     },
     {
-      name: 'Chillventa Nürnberg 2025',
-      address: 'NürnbergMesse, Nürnberg, Germany',
-      startDate: new Date('2025-10-14'),
-      endDate: new Date('2025-10-16'),
-      createdById: user2.id,
-    },
-    {
       name: 'IFH/Intherm 2026',
       address: 'NürnbergMesse, Nürnberg, Germany',
       startDate: new Date('2026-04-08'),
       endDate: new Date('2026-04-11'),
       createdById: user1.id,
     },
-    {
-      name: 'ACREX India 2026',
-      address: 'Bangalore International Exhibition Centre, Bangalore, India',
-      startDate: new Date('2026-02-26'),
-      endDate: new Date('2026-02-28'),
-      createdById: admin.id,
-    },
   ];
 
-  const fairs: Fair[] = [];
-  for (let i = 0; i < fairsData.length; i++) {
-    const data = fairsData[i]!;
-    const fair = await prisma.fair.upsert({
-      where: { id: `seed-fair-${i + 1}` },
-      update: {},
-      create: { ...data, id: `seed-fair-${i + 1}` },
-    });
-    fairs.push(fair);
-  }
+  const fairs = await Promise.all(
+    fairsData.map((d) =>
+      prisma.fair.create({
+        data: d,
+      })
+    )
+  );
+  console.log(`   ✓ ${fairs.length} fuar`);
 
-  console.log(`Fairs seeded: ${fairs.length}`);
-
-  const conversionRates = ['very_high', 'high', 'medium', 'low', 'very_low'];
-  const currencies = ['USD', 'EUR', 'TRY', 'GBP'];
-  const productPool = [
-    'Endüstriyel Pompalar',
-    'Vana Sistemleri',
-    'Kompresörler',
-    'Filtre Üniteleri',
-    'Otomasyon Yazılımı',
-    'Sensörler & Ölçüm',
-    'Boru & Fitting',
-    'Isı Eşanjörleri',
-    'Proses Ekipmanları',
-    'Kontrol Panelleri',
-  ];
-
-  for (const name of productPool) {
-    await prisma.product.upsert({
-      where: { name },
-      update: {},
-      create: { name },
-    });
-  }
-  console.log(`Products seeded: ${productPool.length}`);
-
+  // --- MÜŞTERİLER ---
   const customerTemplates = [
-    {
-      company: 'Atlas Mühendislik A.Ş.',
-      name: 'Can Öztürk',
-      phone: '+905551234567',
-      email: 'can@atlasmuh.com',
-    },
-    {
-      company: 'Meridyen Tesisat Ltd.',
-      name: 'Zeynep Arslan',
-      phone: '+905559876543',
-      email: 'zeynep@meridyen.com.tr',
-    },
-    {
-      company: 'Nordic HVAC Solutions',
-      name: 'Erik Lindqvist',
-      phone: '+46701234567',
-      email: 'erik@nordichvac.se',
-    },
-    {
-      company: 'Ankara Isı Sistemleri',
-      name: 'Burak Çelik',
-      phone: '+905327654321',
-      email: 'burak@ankaraisi.com.tr',
-    },
-    {
-      company: 'GreenTech Industries GmbH',
-      name: 'Hans Weber',
-      phone: '+491761234567',
-      email: 'h.weber@greentech.de',
-    },
-    {
-      company: 'İzmir Soğutma A.Ş.',
-      name: 'Selin Yıldız',
-      phone: '+905441239876',
-      email: 'selin@izmirsoğutma.com',
-    },
-    {
-      company: 'ThermoFlow BV',
-      name: 'Jan de Vries',
-      phone: '+31612345678',
-      email: 'jan@thermoflow.nl',
-    },
-    {
-      company: 'Bosphorus Valve Co.',
-      name: 'Emre Aktaş',
-      phone: '+905369871234',
-      email: 'emre@bosphorusvalve.com',
-    },
-    {
-      company: 'Clima Italia S.r.l.',
-      name: 'Marco Rossi',
-      phone: '+393481234567',
-      email: 'marco@climaitalia.it',
-    },
-    {
-      company: 'Antalya Pompa San.',
-      name: 'Derya Koç',
-      phone: '+905071236789',
-      email: 'derya@antalyapompa.com.tr',
-    },
-    {
-      company: 'EcoHeat Systems Plc',
-      name: 'James Clark',
-      phone: '+447912345678',
-      email: 'j.clark@ecoheat.co.uk',
-    },
-    {
-      company: 'Sakarya Otomasyon',
-      name: 'Hakan Şahin',
-      phone: '+905531237890',
-      email: 'hakan@sakaryaoto.com.tr',
-    },
-    {
-      company: 'PipeMaster AG',
-      name: 'Thomas Müller',
-      phone: '+41791234567',
-      email: 'thomas@pipemaster.ch',
-    },
-    {
-      company: 'Karadeniz HVAC Ltd.',
-      name: 'Ayşe Yılmaz',
-      phone: '+905421234567',
-      email: 'ayse@karadenizhvac.com',
-    },
-    {
-      company: 'FrostLine Oy',
-      name: 'Mikko Virtanen',
-      phone: '+358401234567',
-      email: 'mikko@frostline.fi',
-    },
-    {
-      company: 'Marmara Filtre San.',
-      name: 'Oğuz Erdoğan',
-      phone: '+905351234567',
-      email: 'oguz@marmarafiltre.com.tr',
-    },
-    {
-      company: 'AquaPure Systems',
-      name: 'Sarah Johnson',
-      phone: '+12125551234',
-      email: 'sarah@aquapure.com',
-    },
-    {
-      company: 'Trakya Kazan A.Ş.',
-      name: 'Serkan Aydın',
-      phone: '+905461239876',
-      email: 'serkan@trakyakazan.com.tr',
-    },
-    {
-      company: 'SolTech Energy AB',
-      name: 'Anna Svensson',
-      phone: '+46731234567',
-      email: 'anna@soltech.se',
-    },
-    {
-      company: 'Ege Pompa Sistemleri',
-      name: 'Metin Aksoy',
-      phone: '+905381234567',
-      email: 'metin@egepompa.com.tr',
-    },
+    { company: 'Atlas Mühendislik A.Ş.', name: 'Can Öztürk', phone: '+905551234567', email: 'can@atlasmuh.com' },
+    { company: 'Meridyen Tesisat Ltd.', name: 'Zeynep Arslan', phone: '+905559876543', email: 'zeynep@meridyen.com.tr' },
+    { company: 'Nordic HVAC Solutions', name: 'Erik Lindqvist', phone: '+46701234567', email: 'erik@nordichvac.se' },
+    { company: 'Ankara Isı Sistemleri', name: 'Burak Çelik', phone: '+905327654321', email: 'burak@ankaraisi.com.tr' },
+    { company: 'GreenTech Industries GmbH', name: 'Hans Weber', phone: '+491761234567', email: 'h.weber@greentech.de' },
+    { company: 'İzmir Soğutma A.Ş.', name: 'Selin Yıldız', phone: '+905441239876', email: 'selin@izmirsoğutma.com' },
+    { company: 'ThermoFlow BV', name: 'Jan de Vries', phone: '+31612345678', email: 'jan@thermoflow.nl' },
+    { company: 'Bosphorus Valve Co.', name: 'Emre Aktaş', phone: '+905369871234', email: 'emre@bosphorusvalve.com' },
+    { company: 'Clima Italia S.r.l.', name: 'Marco Rossi', phone: '+393481234567', email: 'marco@climaitalia.it' },
+    { company: 'Antalya Pompa San.', name: 'Derya Koç', phone: '+905071236789', email: 'derya@antalyapompa.com.tr' },
+    { company: 'EcoHeat Systems Plc', name: 'James Clark', phone: '+447912345678', email: 'j.clark@ecoheat.co.uk' },
+    { company: 'Sakarya Otomasyon', name: 'Hakan Şahin', phone: '+905531237890', email: 'hakan@sakaryaoto.com.tr' },
+    { company: 'PipeMaster AG', name: 'Thomas Müller', phone: '+41791234567', email: 'thomas@pipemaster.ch' },
+    { company: 'Karadeniz HVAC Ltd.', name: 'Ayşe Yılmaz', phone: '+905421234567', email: 'ayse@karadenizhvac.com' },
+    { company: 'FrostLine Oy', name: 'Mikko Virtanen', phone: '+358401234567', email: 'mikko@frostline.fi' },
+    { company: 'Marmara Filtre San.', name: 'Oğuz Erdoğan', phone: '+905351234567', email: 'oguz@marmarafiltre.com.tr' },
+    { company: 'AquaPure Systems', name: 'Sarah Johnson', phone: '+12125551234', email: 'sarah@aquapure.com' },
+    { company: 'Trakya Kazan A.Ş.', name: 'Serkan Aydın', phone: '+905461239876', email: 'serkan@trakyakazan.com.tr' },
+    { company: 'SolTech Energy AB', name: 'Anna Svensson', phone: '+46731234567', email: 'anna@soltech.se' },
+    { company: 'Ege Pompa Sistemleri', name: 'Metin Aksoy', phone: '+905381234567', email: 'metin@egepompa.com.tr' },
+    { company: 'Delta Klima A.Ş.', name: 'Fatma Korkmaz', phone: '+905321234567', email: 'fatma@deltaklima.com.tr' },
+    { company: 'RusKlima LLC', name: 'Ivan Petrov', phone: '+74951234567', email: 'ivan@rusklima.ru' },
+    { company: 'Gulf HVAC WLL', name: 'Omar Al-Hassan', phone: '+97312345678', email: 'omar@gulfhvac.bh' },
+    { company: 'Polska Chlodnictwo', name: 'Katarzyna Nowak', phone: '+48123456789', email: 'k.nowak@polskachlod.pl' },
+    { company: 'Mediterranean Cooling', name: 'Nikos Papadopoulos', phone: '+302101234567', email: 'nikos@medcool.gr' },
   ];
 
-  function pickRandom<T>(arr: T[], count: number): T[] {
-    const shuffled = [...arr].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
-  }
+  const customers = await Promise.all(
+    customerTemplates.map((t) =>
+      prisma.customer.create({
+        data: t,
+      })
+    )
+  );
+  console.log(`   ✓ ${customers.length} müşteri`);
 
-  let customerCount = 0;
-  for (let fi = 0; fi < fairs.length; fi++) {
-    const fair = fairs[fi]!;
-    const startIdx = (fi * 5) % customerTemplates.length;
+  // --- FIRSATLAR (raporlama için zengin dağılım) ---
+  // Pipeline dağılımı: tanisma, toplanti, proje, teklif, sozlesme, satisa_donustu, olumsuz
+  const stageDistribution: Record<string, number> = {
+    tanisma: 35,
+    toplanti: 40,
+    proje: 25,
+    teklif: 30,
+    sozlesme: 20,
+    satisa_donustu: 45,
+    olumsuz: 25,
+  };
 
-    for (let ci = 0; ci < 5; ci++) {
-      const tpl = customerTemplates[(startIdx + ci) % customerTemplates.length]!;
-      const custId = `seed-cust-${fi + 1}-${ci + 1}`;
-      const rate = conversionRates[(fi + ci) % conversionRates.length]!;
-      const currency = currencies[(fi + ci) % currencies.length]!;
-      const budget = String((fi + ci + 1) * 15000 + ci * 3000);
-      const products = pickRandom(productPool, 2 + (ci % 3));
+  const budgetRanges: Record<string, [number, number]> = {
+    USD: [25000, 850000],
+    EUR: [22000, 750000],
+    TRY: [800000, 28000000],
+    GBP: [20000, 650000],
+  };
 
-      await prisma.customer.upsert({
-        where: { id: custId },
-        update: {},
-        create: {
-          id: custId,
-          company: tpl.company,
-          name: tpl.name,
-          phone: tpl.phone,
-          email: tpl.email,
-          budgetRaw: budget,
-          budgetCurrency: currency,
-          conversionRate: rate,
-          products,
+  let oppCount = 0;
+  const stageLogsToCreate: Array<{
+    opportunityId: string;
+    stage: string;
+    note: string | null;
+    lossReason: string | null;
+    createdAt: Date;
+    changedById: string;
+  }> = [];
+
+  for (const stage of PIPELINE_STAGES) {
+    const count = stageDistribution[stage] ?? 15;
+    for (let i = 0; i < count; i++) {
+      const fair = pickRandom(fairs);
+      const customer = pickRandom(customers);
+      const currency = pickRandom(CURRENCIES);
+      const [minB, maxB] = budgetRanges[currency] ?? [10000, 500000];
+      const budgetRaw = String(randomBetween(minB, maxB));
+      const conversionRate = pickRandom(CONVERSION_RATES);
+      const selectedProducts = pickRandomMultiple(
+        products,
+        1,
+        4
+      );
+      const productNamesForOpp = selectedProducts.map((p) => p.name);
+
+      const opp = await prisma.opportunity.create({
+        data: {
           fairId: fair.id,
+          customerId: customer.id,
+          budgetRaw,
+          budgetCurrency: currency,
+          conversionRate,
+          products: productNamesForOpp,
+          currentStage: stage,
+          lossReason: stage === 'olumsuz' ? pickRandom(LOSS_REASONS) : null,
         },
       });
-      customerCount++;
+
+      // OpportunityProduct - tonajlar
+      for (const prod of selectedProducts) {
+        const quantity = Math.round((Math.random() * 95 + 5) * 10) / 10; // 5-100 ton
+        await prisma.opportunityProduct.create({
+          data: {
+            opportunityId: opp.id,
+            productId: prod.id,
+            quantity,
+            unit: 'ton',
+            note: quantity > 50 ? 'Büyük sipariş - öncelikli' : null,
+          },
+        });
+      }
+
+      // Stage log - fırsatın geçmişi
+      const baseDate = new Date(fair.startDate);
+      const logDate = addDays(baseDate, randomBetween(0, 60));
+      stageLogsToCreate.push({
+        opportunityId: opp.id,
+        stage,
+        note: stage === 'olumsuz' ? 'Müşteri ile anlaşılamadı.' : `Aşama güncellendi: ${stage}`,
+        lossReason: stage === 'olumsuz' ? opp.lossReason : null,
+        createdAt: logDate,
+        changedById: pickRandom(users).id,
+      });
+
+      oppCount++;
     }
   }
 
-  console.log(`Customers seeded: ${customerCount}`);
-  console.log('Seeding complete.');
+  // Stage log'ları ekle (OpportunityStageLog changedById User'a bağlı)
+  for (const log of stageLogsToCreate) {
+    await prisma.opportunityStageLog.create({
+      data: log,
+    });
+  }
+
+  console.log(`   ✓ ${oppCount} fırsat (pipeline dağılımlı)`);
+  console.log(`   ✓ ${stageLogsToCreate.length} aşama geçiş kaydı`);
+  console.log('');
+  console.log('✅ Raporlama için anlamlı veri seti oluşturuldu.');
+  console.log('');
+  console.log('Özet:');
+  console.log(`   - ${fairs.length} fuar (geçmiş + gelecek)`);
+  console.log(`   - ${customers.length} müşteri`);
+  console.log(`   - ${oppCount} fırsat`);
+  console.log(`   - Pipeline: tanışma, toplantı, proje, teklif, sözleşme, satışa dönüşme, olumsuz`);
+  console.log(`   - Bütçe: USD, EUR, TRY, GBP`);
+  console.log(`   - Dönüşüm oranları: very_high → very_low`);
+  console.log(`   - Ürün tonajları (OpportunityProduct)`);
 }
 
 main()
   .catch((e) => {
-    console.error('Seed error:', e);
+    console.error('Seed hatası:', e);
     process.exit(1);
   })
   .finally(async () => {

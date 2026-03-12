@@ -10,7 +10,7 @@ export function TableRenderer({ table }: TableRendererProps) {
   const { columns, rows } = table;
 
   return (
-    <div className="max-h-[320px] w-full overflow-auto rounded-xl border border-border bg-surface">
+    <div className="max-h-[320px] w-full overflow-auto rounded-xl border border-border bg-surface shadow-sm">
       <table className="w-full min-w-[200px] border-collapse text-[13px]">
         <thead>
           <tr className="border-b border-border bg-surface">

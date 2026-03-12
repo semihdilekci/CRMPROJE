@@ -5,7 +5,8 @@ import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
-import type { ChartData, TableData } from '@crm/shared';
+import { Select } from '@/components/ui/Select';
+import type { ChartData, TableData, AIProvider } from '@crm/shared';
 
 interface MessageItem {
   role: 'user' | 'assistant';
@@ -18,6 +19,7 @@ interface MessageItem {
 export function ChatPanel() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState('');
+  const [provider, setProvider] = useState<AIProvider>('claude');
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatQuery = useChatQuery();
 
@@ -44,6 +46,7 @@ export function ChatPanel() {
       const result = await chatQuery.mutateAsync({
         message: msg,
         messages: recentMessages,
+        provider,
       });
 
       const assistantMessage: MessageItem = {
@@ -75,19 +78,29 @@ export function ChatPanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-border/50 px-6 py-4">
-        <h1 className="font-serif text-[20px] font-semibold text-text">
-          AI Analiz Asistanı
-        </h1>
-        <p className="mt-1 text-[13px] text-muted">
-          Fuar ve müşteri verilerinizi sorarak analiz edin.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-[20px] font-semibold text-text">
+              AI Analiz Asistanı
+            </h1>
+            <p className="mt-1 text-[13px] text-muted">
+              Fuar ve müşteri verilerinizi sorarak analiz edin.
+            </p>
+          </div>
+          <Select
+            label="Model"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as AIProvider)}
+            className="w-[200px]"
+          >
+            <option value="claude">Claude (Bulut)</option>
+            <option value="ollama">Ollama Qwen (Yerel)</option>
+          </Select>
+        </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-4"
-      >
-        <div className="mx-auto flex max-w-[720px] flex-col gap-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="mx-auto flex max-w-[960px] flex-col gap-6">
           {messages.length === 0 && (
             <div className="py-12 text-center text-muted">
               <p className="text-[14px]">

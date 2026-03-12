@@ -847,10 +847,11 @@ Durum: [x]
 ║  BRANCH 2.5: AI ANALİTİK CHATBOT                         ║
 ║  Branch: feature/F46-F47-ai-chatbot                      ║
 ║  Bağımlılık: Branch 1 + Branch 2                        ║
+║  Plan: F46 → F47 → F46a (model seçimi) → F47b (grafik)   ║
 ╚══════════════════════════════════════════════════════════╝
 
 ----------------------------------------------------------------------
-F46 — AI Chatbot: Backend (Gemini Entegrasyonu)
+F46 — AI Chatbot: Backend (Claude Entegrasyonu)
 ----------------------------------------------------------------------
 
 Amaç: Kullanıcının doğal dilde sorduğu sorulara, Fuar/Müşteri/Fırsat
@@ -858,11 +859,11 @@ verilerine dayalı analiz üreten AI endpoint'i.
 
 Yapılacaklar:
 
-1. Ortam değişkeni: GEMINI_API_KEY (aistudio.google.com'dan alınır)
+1. Ortam değişkeni: ANTHROPIC_API_KEY (console.anthropic.com'dan alınır)
 
 2. modules/chat/ modülü oluştur:
    - chat.module.ts
-   - chat.service.ts: Gemini API çağrısı, veri toplama, prompt oluşturma
+   - chat.service.ts: Claude API çağrısı, veri toplama, prompt oluşturma
    - chat.controller.ts: POST /chat/query
 
 3. Veri toplama (auth user'a göre):
@@ -875,9 +876,9 @@ Yapılacaklar:
    - messages: Opsiyonel. Frontend'den gelen konuşma geçmişi (son N mesaj).
      Kullanıcı çıktı üzerine yorum yaparak düzenleme istediğinde ("bunu
      Excel'e aktar", "grafiği değiştir" vb.) context için kullanılır.
-   - Backend messages'ı Gemini'ye context olarak iletir. DB'de saklanmaz.
+   - Backend messages'ı Claude'a context olarak iletir. DB'de saklanmaz.
 
-5. System prompt (Gemini'ye gönderilecek):
+5. System prompt (Claude'a gönderilecek):
 
    Sen bir Fuar CRM Kıdemli Analisti olarak çalışıyorsun. Görevin,
    kullanıcının sorduğu soruyu yanıtlamak ve verilen JSON veriyi
@@ -911,13 +912,13 @@ Yapılacaklar:
    - GET /chat/export/:exportId — Excel dosyası indirilir.
 
 Etkilenen dosyalar:
-  YENİ: modules/chat/*, lib/gemini.ts
+  YENİ: modules/chat/*
   DEĞİŞEN: app.module.ts, .env.example
 
 Bağımlılık: Branch 1 + Branch 2
-Commit: feat(api): add Gemini-powered chat analytics endpoint
+Commit: feat(api): add Claude-powered chat analytics endpoint
 
-Durum: [x]
+Durum: [ ]
 
 ----------------------------------------------------------------------
 F47 — AI Chatbot: Frontend
@@ -1012,6 +1013,179 @@ Etkilenen dosyalar:
 Bağımlılık: F46 (backend hazır)
 Commit: feat(web): add AI chat analytics UI
 Commit: feat(web): add chart/table renderers and Excel download
+
+Durum: [ ]
+
+
+----------------------------------------------------------------------
+F46a — AI Chatbot: Çoklu Model Desteği (Ollama + Claude)
+----------------------------------------------------------------------
+
+Amaç: Chat ekranında dropdown ile AI modeli seçimi. Local Ollama
+(qwen2.5-coder:32b) veya bulut Claude API kullanılabilir.
+
+Yapılacaklar:
+
+1. packages/shared güncelle:
+
+   types/chat.ts:
+   - AIProvider tipi ekle: type AIProvider = 'ollama' | 'claude';
+   - ChatQueryInput interface'ine provider?: AIProvider ekle (opsiyonel)
+
+   schemas/chat.schema.ts:
+   - chatQueryObjectSchema'ya provider alanı ekle:
+     provider: z.enum(['ollama', 'claude']).optional().default('claude')
+   - ChatQueryInput artık { message, messages?, provider? } içerir
+
+2. Backend — modules/chat/chat.service.ts güncelle:
+
+   Provider routing:
+   - dto.provider === 'ollama' ise Ollama API çağrısı
+   - else (varsayılan) Claude API çağrısı, mevcut implementasyon
+
+   Ollama entegrasyonu:
+   - Ortam: OLLAMA_BASE_URL (default: http://localhost:11434)
+   - Model: OLLAMA_MODEL (default: qwen2.5-coder:32b)
+   - API: POST {OLLAMA_BASE_URL}/api/chat
+       Body: {
+         model: OLLAMA_MODEL,
+         messages: [{ role: 'system', content: systemPrompt }, ...userMessages],
+         stream: false
+       }
+   - System prompt: Mevcut buildSystemPrompt ile aynı
+   - User messages: input.messages + input.message, format Ollama'ya uygun
+   - Yanıt: response.message.content — JSON parse (text, charts, tables)
+   - Hata: ECONNREFUSED / Ollama erişilemezse:
+     "Ollama çalışmıyor. Lütfen 'ollama serve' ile başlatın veya Claude seçin."
+
+   Claude: Mevcut implementasyon korunur (ANTHROPIC_API_KEY)
+
+3. Backend — .env.example güncelle:
+   OLLAMA_BASE_URL=http://localhost:11434
+   OLLAMA_MODEL=qwen2.5-coder:32b
+   (ANTHROPIC_API_KEY mevcut — Claude için)
+
+4. Frontend — components/chat/ChatPanel.tsx güncelle:
+   - Üst bölüme (başlık altına) model seçim dropdown ekle
+   - Seçenekler:
+     - "Claude (Bulut)" — value: claude
+     - "Ollama Qwen (Yerel)" — value: ollama
+   - Seçilen değer useState ile tutulur
+   - useChatQuery mutation'a provider parametresi geçirilir
+
+5. Frontend — hooks/use-chat.ts güncelle:
+   - useChatQuery(input) — input'a provider eklenir
+   - POST body: { message, messages, provider }
+
+6. docs/deployment-and-env-strategy.md güncelle:
+   - OLLAMA_BASE_URL, OLLAMA_MODEL (opsiyonel, sadece Ollama kullanılacaksa)
+
+Etkilenen dosyalar:
+  DEĞİŞEN: packages/shared (types/chat, schemas/chat),
+            chat.service.ts, ChatPanel.tsx, use-chat.ts,
+            .env.example, deployment-and-env-strategy.md
+
+Bağımlılık: F46, F47 tamamlanmış olmalı
+Commit: feat(shared): add AIProvider type and provider to chat schema
+Commit: feat(api): add Ollama provider support in ChatService
+Commit: feat(web): add model selector dropdown to ChatPanel
+
+Durum: [x]
+
+
+----------------------------------------------------------------------
+F47b — AI Chatbot: Grafik Tasarımı ve Chat İçi Dashboard Layout
+----------------------------------------------------------------------
+
+Amaç: Grafikleri daha çekici hale getirmek ve AI yanıtlarını chat içinde
+doğrudan dashboard düzeninde göstermek. Kullanıcı soru sorduğunda
+grafikler buton olmadan, mesaj içinde grid layout ile gösterilir.
+
+Yapılacaklar:
+
+1. ChartRenderer tasarım iyileştirmeleri:
+
+   Renk paleti (mevcut tek sarı kaldırılır):
+   - Bar / Line / Area grafikler için:
+     [#3B82F6, #10B981, #F59E0B, #8B5CF6, #EC4899, #6366F1]
+     (mavi, yeşil, amber, mor, pembe, indigo)
+   - Pie / Donut grafikler için:
+     Aynı palet, her dilim farklı renk (Cell fill)
+   - StackedBar / Composed: Her seri farklı renk (barKeys sırasına göre)
+
+   Gradient ve görsel efektler:
+   - Area grafiklerde: fill için linear-gradient (açık → koyu)
+     SVG defs: <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+       <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.4} />
+       <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+     </linearGradient></defs>
+     Area: fill="url(#areaGradient)"
+   - Bar grafiklerde: fill için solid renk (paletten, seri sırasına göre)
+   - Line grafiklerde: stroke paletten, dot fill aynı renk
+
+   Tasarım sistemi uyumu:
+   - Container: border-border, bg-surface (mevcut)
+   - Başlık: text-text, font-semibold
+   - Tooltip: CustomTooltip mevcut, bg-surface, border-border
+   - Altında description: text-muted, italic
+
+   Responsive:
+   - Grafik yüksekliği: 240px (mevcut)
+   - ResponsiveContainer genişlik %100
+
+2. ChatMessage — Chat içi dashboard layout:
+
+   Mevcut davranış: charts ve tables alt alta, flex-col gap-4
+   Yeni davranış: Grafikler grid layout ile dashboard hissi
+
+   Layout yapısı:
+   - Önce metin (content): paragraf, whitespace-pre-wrap (değişmez)
+   - Sonra grafikler + tablolar birlikte: CSS Grid
+   - Grid: grid-cols-1 md:grid-cols-2 lg:grid-cols-3, gap-4
+   - Her grafik/tablo bir kart: rounded-xl, border, bg-surface, p-4
+   - Tablolar: 1 grafik = 1 grid item, geniş tablolar grid-column: span 2
+
+   Responsive:
+   - Mobil (< 768px): 1 sütun
+   - Tablet (768–1024px): 2 sütun
+   - Desktop (> 1024px): 3 sütun
+
+   Özel durumlar:
+   - 1 grafik: Tam genişlik (tek sütun)
+   - 2 grafik: 2 sütun yan yana (md+)
+   - 3+ grafik: Grid doldurur, 3. sütun lg+ breakpoint'te
+   - Tablo + grafik karışık: Her biri grid item, tablolar genişse span-2
+
+   Görsel hiyerarşi:
+   - Metin özeti en üstte (okunabilir, 14px)
+   - Grid alanı: gap-4, kartlar eşit yükseklikte (min-h) değil, içerik kadar
+   - Her kart: shadow-sm (opsiyonel), hover'da subtle border vurgusu
+   - Export butonu: Grafiklerin/tabloların altında, aynı hizada (değişmez)
+
+3. ChatPanel — Üst alan düzeni:
+
+   Başlık + model dropdown (F46a) zaten varsa:
+   - "AI Analiz Asistanı" + kısa açıklama
+   - Model dropdown sağda veya hemen altında
+
+   Konuşma alanı:
+   - AI mesajları geniş: max-w-[85%] yerine max-w-[95%] veya tam genişlik
+     (dashboard grid için daha fazla alan)
+   - Scroll: overflow-y-auto, flex-1
+
+4. TableRenderer — Tutarlı kart stili:
+
+   - ChartRenderer ile aynı kart: rounded-xl, border-border, bg-surface
+   - Header ve satırlar mevcut
+
+Etkilenen dosyalar:
+  DEĞİŞEN: ChartRenderer.tsx (renk paleti, gradient)
+  DEĞİŞEN: ChatMessage.tsx (grid layout)
+  DEĞİŞEN: ChatPanel.tsx (mesaj genişliği, gerekirse)
+  DEĞİŞEN: TableRenderer.tsx (kart stili)
+
+Bağımlılık: F47
+Commit: feat(web): improve chart styling and inline dashboard grid layout
 
 Durum: [x]
 
