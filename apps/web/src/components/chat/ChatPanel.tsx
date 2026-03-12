@@ -19,7 +19,7 @@ interface MessageItem {
 export function ChatPanel() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<AIProvider>('claude');
+  const [provider, setProvider] = useState<AIProvider>('ollama');
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatQuery = useChatQuery();
 
@@ -28,7 +28,7 @@ export function ChatPanel() {
       top: scrollRef.current.scrollHeight,
       behavior: 'smooth',
     });
-  }, [messages]);
+  }, [messages.length, chatQuery.isPending]);
 
   const handleSubmit = async () => {
     const msg = input.trim();
@@ -101,7 +101,7 @@ export function ChatPanel() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-          {messages.length === 0 && (
+          {messages.length === 0 && !chatQuery.isPending && (
             <div className="py-12 text-center text-muted">
               <p className="text-[14px]">
                 Bir soru yazın. Örn: &quot;Fuarlarımın fırsat dağılımı nasıl?&quot;
@@ -118,24 +118,38 @@ export function ChatPanel() {
               exportId={m.exportId}
             />
           ))}
+          {chatQuery.isPending && (
+            <div className="flex items-center justify-center gap-2 py-6">
+              <span className="animate-pulse text-[14px] text-muted">
+                Analiz Hazırlanıyor
+              </span>
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent [animation-delay:300ms]" />
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="border-t border-border/50 px-6 py-4">
-        <div className="mx-auto flex w-full max-w-[1600px] gap-3">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Analiz etmek istediğiniz soruyu yazın..."
-            className="min-h-[80px] max-h-[160px] resize-y"
-            rows={2}
-            disabled={chatQuery.isPending}
-          />
+        <div className="mx-auto flex w-full max-w-[960px] items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Analiz etmek istediğiniz soruyu yazın..."
+              className="min-h-[80px] max-h-[160px] w-full resize-y"
+              rows={2}
+              disabled={chatQuery.isPending}
+            />
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={!input.trim() || chatQuery.isPending}
-            className="self-end"
+            className="shrink-0"
           >
             {chatQuery.isPending ? 'Analiz ediliyor...' : 'Gönder'}
           </Button>

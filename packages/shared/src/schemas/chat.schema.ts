@@ -8,7 +8,7 @@ export const chatMessageSchema = z.object({
 const chatQueryObjectSchema = z.object({
   message: z.string().min(1, 'Mesaj zorunludur').max(4000, 'Mesaj en fazla 4000 karakter olabilir'),
   messages: z.array(chatMessageSchema).max(20).optional(),
-  provider: z.enum(['ollama', 'claude']).optional().default('claude'),
+  provider: z.enum(['ollama', 'claude']).optional().default('ollama'),
 });
 
 /** String veya obje kabul eder; string gelirse { message: string }'e dönüştürür */
