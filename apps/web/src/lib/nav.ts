@@ -14,7 +14,10 @@ export function getNavForRole(role: UserRole | undefined): {
   main: NavLink[];
   admin: NavSection | null;
 } {
-  const main: NavLink[] = [{ href: '/fairs', label: 'Fuarlar' }];
+  const main: NavLink[] = [
+    { href: '/fairs', label: 'Fuarlar' },
+    { href: '/chat', label: 'AI Analiz' },
+  ];
 
   if (role === 'admin') {
     return {

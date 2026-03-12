@@ -15,6 +15,10 @@ export const queryKeys = {
     list: (search?: string) => ['customers', 'list', { search }] as const,
     byId: (id: string) => ['customers', id] as const,
   },
+  chat: {
+    query: () => ['chat', 'query'] as const,
+    export: (exportId: string) => ['chat', 'export', exportId] as const,
+  },
   opportunities: {
     byFair: (fairId: string) => ['opportunities', 'fair', fairId] as const,
     byFairFiltered: (

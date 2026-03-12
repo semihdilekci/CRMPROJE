@@ -41,6 +41,9 @@ yarn-error.log*
 # Uploads (local dev storage)
 uploads/
 
+# AI Chat Excel exports (temporary)
+exports/
+
 # Misc
 .cache/
 .turbo/

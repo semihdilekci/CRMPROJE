@@ -13,6 +13,7 @@ import { AuditModule } from '@modules/audit/audit.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { TeamModule } from '@modules/team/team.module';
 import { OpportunityModule } from '@modules/opportunity/opportunity.module';
+import { ChatModule } from '@modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { OpportunityModule } from '@modules/opportunity/opportunity.module';
     FairModule,
     CustomerModule,
     OpportunityModule,
+    ChatModule,
     UploadModule,
     AdminModule,
     ProductModule,
