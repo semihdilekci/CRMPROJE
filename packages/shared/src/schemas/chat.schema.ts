@@ -5,10 +5,14 @@ export const chatMessageSchema = z.object({
   content: z.string(),
 });
 
+export const OLLAMA_MODELS = ['qwen2.5-coder:7b', 'qwen2.5-coder:14b'] as const;
+export type OllamaModel = (typeof OLLAMA_MODELS)[number];
+
 const chatQueryObjectSchema = z.object({
   message: z.string().min(1, 'Mesaj zorunludur').max(4000, 'Mesaj en fazla 4000 karakter olabilir'),
   messages: z.array(chatMessageSchema).max(20).optional(),
-  provider: z.enum(['ollama', 'claude']).optional().default('ollama'),
+  provider: z.enum(['ollama', 'claude', 'gemini']).optional().default('ollama'),
+  ollamaModel: z.enum(OLLAMA_MODELS).optional(),
 });
 
 /** String veya obje kabul eder; string gelirse { message: string }'e dönüştürür */

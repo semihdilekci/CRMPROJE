@@ -847,7 +847,7 @@ Durum: [x]
 ║  BRANCH 2.5: AI ANALİTİK CHATBOT                         ║
 ║  Branch: feature/F46-F47-ai-chatbot                      ║
 ║  Bağımlılık: Branch 1 + Branch 2                        ║
-║  Plan: F46 → F47 → F46a → F47b → F47c (uyarlanabilir veri) ║
+║  Plan: F46 → F47 → F46a → F47b                              ║
 ╚══════════════════════════════════════════════════════════╝
 
 ----------------------------------------------------------------------
@@ -867,12 +867,12 @@ Yapılacaklar:
    - chat.controller.ts: POST /chat/query
 
 3. Veri toplama (auth user'a göre):
-   - Fair listesi (id, name, startDate, endDate, targetBudget, targetTonnage)
+   - Fair listesi (id, name, startDate, endDate, opportunityCount)
    - Opportunity özeti (fair bazında sayı, bütçe toplamı, aşama dağılımı)
    - Customer özeti (firma sayısı, ürün bazlı ilgi)
    - StageLog özeti (aşama geçiş istatistikleri)
 
-4. Request body: { message: string, messages?: { role, content }[] }
+4. Request body: { message: string, messages?: { role, content }[], provider?: 'ollama'|'claude' }
    - messages: Opsiyonel. Frontend'den gelen konuşma geçmişi (son N mesaj).
      Kullanıcı çıktı üzerine yorum yaparak düzenleme istediğinde ("bunu
      Excel'e aktar", "grafiği değiştir" vb.) context için kullanılır.
@@ -911,11 +911,6 @@ Yapılacaklar:
    - Geçici dosya veya signed URL ile indirme sağlanır.
    - GET /chat/export/:exportId — Excel dosyası indirilir.
 
-8. (F47c ile) Uyarlanabilir veri kapsamı:
-   - Adım 1: LLM veri kataloğu ile scope belirler (minimal/customers/opportunities/full)
-   - gatherContextData(scope, filters) scope'a göre farklı veri döner
-   - Detay: docs/ai-chat-data-scope.md
-
 Etkilenen dosyalar:
   YENİ: modules/chat/*
   DEĞİŞEN: app.module.ts, .env.example
@@ -923,7 +918,7 @@ Etkilenen dosyalar:
 Bağımlılık: Branch 1 + Branch 2
 Commit: feat(api): add Claude-powered chat analytics endpoint
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 F47 — AI Chatbot: Frontend
@@ -966,10 +961,10 @@ Yapılacaklar:
      - Her mesajda avatar (kullanıcı: 👤, AI: 🤖)
      - AI yanıtı: önce metin (whitespace-pre-wrap), sonra grafikler,
        sonra tablolar, en sonda exportId varsa "📥 Excel İndir" butonu
-   - Alt: Input alanı (fixed veya sticky)
+   - Alt: Input alanı (sticky, max-w-960px ortalı)
      - Textarea (min 2 satır, max 6 satır, resize vertical)
      - "Gönder" butonu (accent)
-     - Loading: Gönder tıklanınca buton "Analiz ediliyor..." disabled
+     - Loading: Buton "Analiz ediliyor...", mesaj alanında "Analiz Hazırlanıyor" bounce animasyonu
 
 5. components/chat/ChartRenderer.tsx oluştur:
 
@@ -1019,7 +1014,7 @@ Bağımlılık: F46 (backend hazır)
 Commit: feat(web): add AI chat analytics UI
 Commit: feat(web): add chart/table renderers and Excel download
 
-Durum: [ ]
+Durum: [x]
 
 
 ----------------------------------------------------------------------
@@ -1027,7 +1022,7 @@ F46a — AI Chatbot: Çoklu Model Desteği (Ollama + Claude)
 ----------------------------------------------------------------------
 
 Amaç: Chat ekranında dropdown ile AI modeli seçimi. Local Ollama
-(qwen2.5-coder:32b) veya bulut Claude API kullanılabilir.
+(qwen2.5-coder:7b) veya bulut Claude API kullanılabilir.
 
 Yapılacaklar:
 
@@ -1039,7 +1034,7 @@ Yapılacaklar:
 
    schemas/chat.schema.ts:
    - chatQueryObjectSchema'ya provider alanı ekle:
-     provider: z.enum(['ollama', 'claude']).optional().default('claude')
+     provider: z.enum(['ollama', 'claude']).optional().default('ollama')
    - ChatQueryInput artık { message, messages?, provider? } içerir
 
 2. Backend — modules/chat/chat.service.ts güncelle:
@@ -1050,7 +1045,7 @@ Yapılacaklar:
 
    Ollama entegrasyonu:
    - Ortam: OLLAMA_BASE_URL (default: http://localhost:11434)
-   - Model: OLLAMA_MODEL (default: qwen2.5-coder:32b)
+   - Model: OLLAMA_MODEL (default: qwen2.5-coder:7b)
    - API: POST {OLLAMA_BASE_URL}/api/chat
        Body: {
          model: OLLAMA_MODEL,
@@ -1067,7 +1062,7 @@ Yapılacaklar:
 
 3. Backend — .env.example güncelle:
    OLLAMA_BASE_URL=http://localhost:11434
-   OLLAMA_MODEL=qwen2.5-coder:32b
+   OLLAMA_MODEL=qwen2.5-coder:7b
    (ANTHROPIC_API_KEY mevcut — Claude için)
 
 4. Frontend — components/chat/ChatPanel.tsx güncelle:

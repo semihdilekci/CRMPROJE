@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
+import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import type { ChartData, TableData, AIProvider } from '@crm/shared';
+import type { ChartData, TableData, OllamaModel } from '@crm/shared';
 
 interface MessageItem {
   role: 'user' | 'assistant';
@@ -17,9 +19,12 @@ interface MessageItem {
 }
 
 export function ChatPanel() {
+  const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<AIProvider>('ollama');
+  const [provider, setProvider] = useState<'ollama' | 'claude' | 'gemini'>('ollama');
+  const [ollamaModel, setOllamaModel] = useState<OllamaModel>('qwen2.5-coder:7b');
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatQuery = useChatQuery();
 
@@ -47,6 +52,7 @@ export function ChatPanel() {
         message: msg,
         messages: recentMessages,
         provider,
+        ...(provider === 'ollama' && { ollamaModel }),
       });
 
       const assistantMessage: MessageItem = {
@@ -57,13 +63,35 @@ export function ChatPanel() {
         exportId: result.exportId,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch {
+    } catch (err: unknown) {
+      const status = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : undefined;
+      const apiMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+
+      if (status === 401) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.',
+          },
+        ]);
+        await logout();
+        router.replace('/login');
+        return;
+      }
+
+      const errorText =
+        apiMessage && typeof apiMessage === 'string'
+          ? apiMessage
+          : 'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.';
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: 'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
-        },
+        { role: 'assistant', content: errorText },
       ]);
     }
   };
@@ -89,12 +117,24 @@ export function ChatPanel() {
           </div>
           <Select
             label="Model"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as AIProvider)}
-            className="w-[200px]"
+            value={provider === 'ollama' ? ollamaModel : provider}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'claude') {
+                setProvider('claude');
+              } else if (v === 'gemini') {
+                setProvider('gemini');
+              } else {
+                setProvider('ollama');
+                setOllamaModel(v as OllamaModel);
+              }
+            }}
+            className="w-[220px]"
           >
             <option value="claude">Claude (Bulut)</option>
-            <option value="ollama">Ollama Qwen (Yerel)</option>
+            <option value="gemini">Gemini (Bulut)</option>
+            <option value="qwen2.5-coder:7b">Ollama Qwen 7B (Yerel)</option>
+            <option value="qwen2.5-coder:14b">Ollama Qwen 14B (Yerel)</option>
           </Select>
         </div>
       </div>

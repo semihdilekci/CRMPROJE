@@ -1,4 +1,4 @@
-export type AIProvider = 'ollama' | 'claude';
+export type AIProvider = 'ollama' | 'claude' | 'gemini';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
