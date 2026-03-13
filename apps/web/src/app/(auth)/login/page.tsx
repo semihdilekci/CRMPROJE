@@ -32,11 +32,11 @@ export default function LoginPage() {
   const isValid = email.length > 0 && password.length >= 6;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg">
-      <div className="w-full max-w-[400px] rounded-2xl border border-border bg-card p-8">
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-[400px] rounded-2xl border border-white/20 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 p-8">
         <div className="mb-8 text-center">
-          <h1 className="font-serif text-[28px] font-semibold text-text">Fuar CRM</h1>
-          <p className="mt-2 text-[14px] text-muted">Yönetim paneline giriş yapın</p>
+          <h1 className="font-serif text-[28px] font-semibold text-white">Fuar CRM</h1>
+          <p className="mt-2 text-[14px] text-white/60">Yönetim paneline giriş yapın</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

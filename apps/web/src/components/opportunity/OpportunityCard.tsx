@@ -103,15 +103,15 @@ export function OpportunityCard({
 
   return (
     <>
-      <div className="rounded-xl border border-border bg-card transition-colors hover:border-border-hover">
+      <div className="rounded-xl border border-white/20 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 transition-all duration-300 hover:border-white/30">
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex w-full cursor-pointer items-start justify-between p-4 text-left"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold text-text">{customer.name}</p>
-            <p className="text-[13px] font-semibold text-accent">
+            <p className="text-[15px] font-bold text-white">{customer.name}</p>
+            <p className="text-[13px] font-semibold text-violet-400">
               {customer.company}
             </p>
             <div className="mt-2 flex gap-1.5 overflow-hidden">
@@ -137,17 +137,17 @@ export function OpportunityCard({
                 📇
               </span>
             )}
-            <span className="text-muted text-[12px]">
+            <span className="text-white/60 text-[12px]">
               {expanded ? '▲' : '▼'}
             </span>
           </div>
         </button>
 
         {expanded && (
-          <div className="border-t border-border px-4 pb-4 pt-3">
+          <div className="border-t border-white/10 px-4 pb-4 pt-3">
             <div className="flex flex-col gap-2 text-[13px]">
-              <div className="rounded-xl border border-border bg-surface px-3 py-2">
-                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+              <div className="rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2">
+                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-white/60">
                   Pipeline
                 </p>
                 <PipelineProgressBar
@@ -162,15 +162,15 @@ export function OpportunityCard({
 
               {opportunity.budgetRaw && (
                 <p>
-                  <span className="text-muted">Tahmini Bütçe: </span>
-                  <span className="font-semibold text-gold">
+                  <span className="text-white/60">Tahmini Bütçe: </span>
+                  <span className="font-semibold text-amber-400">
                     {formatBudget(opportunity.budgetRaw)}{' '}
                     {opportunity.budgetCurrency ?? ''}
                   </span>
                 </p>
               )}
 
-              <p className="text-muted">
+              <p className="text-white/60">
                 Kayıt: {formatDateTime(opportunity.createdAt)}
               </p>
 
@@ -179,7 +179,7 @@ export function OpportunityCard({
                   {customer.phone && (
                     <a
                       href={`tel:${customer.phone}`}
-                      className="text-text hover:text-accent"
+                      className="text-white hover:text-violet-400"
                       onClick={(e) => e.stopPropagation()}
                     >
                       📞 {customer.phone}
@@ -188,7 +188,7 @@ export function OpportunityCard({
                   {customer.email && (
                     <a
                       href={`mailto:${customer.email}`}
-                      className="break-all text-text hover:text-accent"
+                      className="break-all text-white hover:text-violet-400"
                       onClick={(e) => e.stopPropagation()}
                     >
                       ✉️ {customer.email}
@@ -199,7 +199,7 @@ export function OpportunityCard({
 
               {hasProducts && (
                 <div className="mt-1">
-                  <p className="mb-1.5 text-muted">İlgilenilen Ürünler:</p>
+                  <p className="mb-1.5 text-white/60">İlgilenilen Ürünler:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {displayProducts.map((p, i) => {
                       const line =
@@ -207,7 +207,7 @@ export function OpportunityCard({
                           ? `${p.productName} — ${formatTonnageLine(p.quantity, p.unit)}`
                           : p.productName;
                       return (
-                        <Badge key={`${p.productName}-${i}`} color="#ff6b35">
+                        <Badge key={`${p.productName}-${i}`} color="#a78bfa">
                           {line}
                         </Badge>
                       );
@@ -227,7 +227,7 @@ export function OpportunityCard({
               )}
 
               <div className="mt-2">
-                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-white/60">
                   Aşama Geçmişi
                 </p>
                 <StageHistory opportunityId={opportunity.id} compact />

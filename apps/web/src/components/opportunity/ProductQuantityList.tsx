@@ -80,7 +80,7 @@ export function ProductQuantityList({
     <div className="flex flex-col gap-2">
       {selectedProducts.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2">
+          <div className="flex flex-col gap-2 rounded-lg border border-white/20 backdrop-blur-xl bg-white/5 p-2">
             {selectedProducts.map((row, index) => {
               const options = getProductOptionsForRow(row, selectedProducts, availableProducts);
               return (
@@ -98,7 +98,7 @@ export function ProductQuantityList({
                         productName: product?.name ?? '',
                       });
                     }}
-                    className="min-w-0 flex-1 rounded border border-border bg-card px-2 py-1.5 text-[14px] text-text focus:border-accent focus:outline-none"
+                    className="min-w-0 flex-1 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-[14px] text-white focus:border-violet-400/60 focus:outline-none"
                   >
                     <option value="">Ürün seçin</option>
                     {options.map((p) => (
@@ -120,12 +120,12 @@ export function ProductQuantityList({
                       quantity: num != null && !Number.isNaN(num) ? num : null,
                     });
                   }}
-                  className="w-20 rounded border border-border bg-card px-2 py-1.5 text-right text-[13px] text-text focus:border-accent focus:outline-none"
+                  className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-right text-[13px] text-white focus:border-violet-400/60 focus:outline-none"
                 />
                 <select
                   value={row.unit}
                   onChange={(e) => updateRow(index, { unit: e.target.value })}
-                  className="w-[70px] rounded border border-border bg-card px-2 py-1.5 text-[13px] text-text focus:border-accent focus:outline-none"
+                  className="w-[70px] rounded border border-white/20 bg-white/5 px-2 py-1.5 text-[13px] text-white focus:border-violet-400/60 focus:outline-none"
                 >
                   {UNITS.map((u) => (
                     <option key={u.value} value={u.value}>
@@ -136,7 +136,7 @@ export function ProductQuantityList({
                 <button
                   type="button"
                   onClick={() => removeProduct(index)}
-                  className="shrink-0 rounded p-1 text-muted transition-colors hover:bg-danger-soft hover:text-danger"
+                  className="shrink-0 rounded p-1 text-white/60 transition-colors hover:bg-danger/20 hover:text-danger"
                   aria-label="Kaldır"
                 >
                   ×
@@ -146,7 +146,7 @@ export function ProductQuantityList({
             })}
           </div>
           {summary && (
-            <p className="text-[12px] text-muted">{summary}</p>
+            <p className="text-[12px] text-white/60">{summary}</p>
           )}
         </div>
       )}

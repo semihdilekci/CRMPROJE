@@ -7,6 +7,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { FairCard } from '@/components/fair/FairCard';
 import { FairFormModal } from '@/components/fair/FairFormModal';
+import { Button } from '@/components/ui/Button';
 
 export default function FairsPage() {
   const router = useRouter();
@@ -20,23 +21,23 @@ export default function FairsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg">
-        <p className="text-muted text-lg">Yükleniyor...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-white/60 text-lg">Yükleniyor...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar showNewFairButton onNewFair={() => setShowCreateModal(true)} />
       <ContentWrapper>
         {fairs && fairs.length > 0 ? (
           <>
-            <p className="mb-5 text-[14px] text-muted">
+            <p className="mb-5 text-[14px] text-white/60">
               {fairs.length} fuar · {totalOpportunities} toplam fırsat
             </p>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
               {fairs.map((fair) => (
                 <FairCard
                   key={fair.id}
@@ -48,7 +49,7 @@ export default function FairsPage() {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="flex min-h-[160px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border text-muted transition-colors duration-200 hover:border-accent hover:text-accent"
+                className="flex min-h-[160px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-white/20 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
               >
                 <span className="text-[15px] font-medium">+ Yeni Fuar Ekle</span>
               </button>
@@ -57,18 +58,18 @@ export default function FairsPage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <span className="text-[56px]">🏛</span>
-            <h2 className="mt-4 font-serif text-[22px] font-semibold text-text">
+            <h2 className="mt-4 font-serif text-[22px] font-semibold text-white">
               Henüz fuar eklenmemiş
             </h2>
-            <p className="mt-2 max-w-[320px] text-[14px] text-muted">
+            <p className="mt-2 max-w-[320px] text-[14px] text-white/60">
               Fırsat kayıtlarını tutmak için ilk fuarınızı oluşturun
             </p>
-            <button
+            <Button
               onClick={() => setShowCreateModal(true)}
-              className="mt-6 cursor-pointer rounded-xl bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent/90"
+              className="mt-6"
             >
               + İlk Fuarı Oluştur
-            </button>
+            </Button>
           </div>
         )}
       </ContentWrapper>

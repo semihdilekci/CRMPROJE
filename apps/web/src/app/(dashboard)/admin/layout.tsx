@@ -25,8 +25,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (isLoading || !isAuthenticated || user?.role !== 'admin') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg">
-        <p className="text-muted text-lg">Yükleniyor...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-white/60 text-lg">Yükleniyor...</p>
       </div>
     );
   }

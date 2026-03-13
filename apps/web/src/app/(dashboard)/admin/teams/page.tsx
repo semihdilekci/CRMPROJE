@@ -57,11 +57,11 @@ export default function AdminTeamsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › Ekipler" />
       <ContentWrapper>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-serif text-[22px] font-semibold text-text">Ekipler</h1>
+          <h1 className="font-serif text-[22px] font-semibold text-white">Ekipler</h1>
           <Button onClick={handleAdd}>+ Yeni Ekip</Button>
         </div>
 
@@ -75,46 +75,46 @@ export default function AdminTeamsPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted">Yükleniyor...</p>
+          <p className="text-white/60">Yükleniyor...</p>
         ) : teams && teams.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
             <table className="w-full min-w-[600px] text-left text-[14px]">
               <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-4 py-3 font-semibold text-text">Ekip adı</th>
-                  <th className="px-4 py-3 font-semibold text-text">Açıklama</th>
-                  <th className="px-4 py-3 font-semibold text-text">Kullanıcı</th>
-                  <th className="px-4 py-3 font-semibold text-text">Durum</th>
-                  <th className="px-4 py-3 font-semibold text-text">Oluşturulma</th>
-                  <th className="px-4 py-3 font-semibold text-text">İşlem</th>
+                <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
+                  <th className="px-4 py-3 font-semibold text-white">Ekip adı</th>
+                  <th className="px-4 py-3 font-semibold text-white">Açıklama</th>
+                  <th className="px-4 py-3 font-semibold text-white">Kullanıcı</th>
+                  <th className="px-4 py-3 font-semibold text-white">Durum</th>
+                  <th className="px-4 py-3 font-semibold text-white">Oluşturulma</th>
+                  <th className="px-4 py-3 font-semibold text-white">İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {teams.map((team) => (
-                  <tr key={team.id} className="border-b border-border/70 hover:bg-surface/50">
-                    <td className="px-4 py-3 font-medium text-text">{team.name}</td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-muted">
+                  <tr key={team.id} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="px-4 py-3 font-medium text-white">{team.name}</td>
+                    <td className="max-w-[200px] truncate px-4 py-3 text-white/60">
                       {team.description || '—'}
                     </td>
-                    <td className="px-4 py-3 text-text">{team.userCount}</td>
+                    <td className="px-4 py-3 text-white">{team.userCount}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${
                           team.active
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-muted/30 text-muted'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-white/10 text-white/60'
                         }`}
                       >
                         {team.active ? 'Aktif' : 'Pasif'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-muted">{formatDate(team.createdAt)}</td>
+                    <td className="px-4 py-3 text-white/60">{formatDate(team.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(team)}
-                          className="text-[13px] text-accent hover:underline"
+                          className="text-[13px] text-violet-400 hover:underline"
                         >
                           Düzenle
                         </button>
@@ -133,8 +133,8 @@ export default function AdminTeamsPage() {
             </table>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-muted">
+          <div className="rounded-xl border border-dashed border-white/20 py-16 text-center">
+            <p className="text-white/60">
               {search ? 'Arama kriterine uygun ekip yok.' : 'Henüz ekip yok.'}
             </p>
             {!search && (

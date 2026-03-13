@@ -74,11 +74,11 @@ export function StageHistory({
   }, [logs, compact, showAll]);
 
   if (isLoading) {
-    return <p className="text-[13px] text-muted">Yükleniyor...</p>;
+    return <p className="text-[13px] text-white/60">Yükleniyor...</p>;
   }
 
   if (!logs.length) {
-    return <p className="text-[13px] text-muted">Henüz aşama geçmişi yok.</p>;
+    return <p className="text-[13px] text-white/60">Henüz aşama geçmişi yok.</p>;
   }
 
   const overallLastId = logs[logs.length - 1]?.id ?? null;
@@ -143,7 +143,7 @@ export function StageHistory({
                 }}
               />
 
-              <div className="ml-4 rounded-xl border border-border bg-surface px-3 py-2">
+              <div className="ml-4 rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <Badge color={stageColor}>{stageLabel}</Badge>
@@ -164,11 +164,11 @@ export function StageHistory({
                       className="h-8 w-[210px] text-[12px]"
                     />
                   ) : (
-                    <p className="text-[12px] text-muted">{formatDateTime(log.createdAt)}</p>
+                    <p className="text-[12px] text-white/60">{formatDateTime(log.createdAt)}</p>
                   )}
                 </div>
 
-                <p className="mt-1 text-[12px] text-muted">
+                <p className="mt-1 text-[12px] text-white/60">
                   {log.changedBy.name} ({log.changedBy.email})
                 </p>
 
@@ -193,7 +193,7 @@ export function StageHistory({
                         <button
                           type="button"
                           onClick={handleDelete}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-[12px] text-danger transition-colors hover:border-danger hover:bg-danger-soft"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-[12px] text-danger transition-colors hover:border-danger hover:bg-danger-soft"
                           title="Son aşama kaydını sil"
                         >
                           🗑
@@ -212,7 +212,7 @@ export function StageHistory({
                 ) : (
                   <>
                     {log.note && (
-                      <p className="mt-2 whitespace-pre-wrap text-[13px] text-text">
+                      <p className="mt-2 whitespace-pre-wrap text-[13px] text-white">
                         {log.note}
                       </p>
                     )}
@@ -222,7 +222,7 @@ export function StageHistory({
                           <button
                             type="button"
                             onClick={handleDelete}
-                            className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-[12px] text-danger transition-colors hover:border-danger hover:bg-danger-soft"
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-[12px] text-danger transition-colors hover:border-danger hover:bg-danger-soft"
                             title="Son aşama kaydını sil"
                           >
                             🗑
@@ -236,7 +236,7 @@ export function StageHistory({
                               [log.id]: !prev[log.id],
                             }))
                           }
-                          className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-[12px] text-muted transition-colors hover:border-accent hover:text-accent"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-[12px] text-white/60 transition-colors hover:border-violet-400 hover:text-violet-400"
                           title="Bu aşamayı düzenle"
                         >
                           ✏️

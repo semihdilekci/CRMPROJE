@@ -65,11 +65,11 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › Kullanıcı Yönetimi" />
       <ContentWrapper>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-serif text-[22px] font-semibold text-text">Kullanıcı Yönetimi</h1>
+          <h1 className="font-serif text-[22px] font-semibold text-white">Kullanıcı Yönetimi</h1>
           <Button onClick={handleAdd}>+ Yeni Kullanıcı</Button>
         </div>
 
@@ -83,7 +83,7 @@ export default function AdminUsersPage() {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="max-w-[160px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-[14px] text-text focus:border-accent focus:outline-none"
+            className="max-w-[160px] rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-[14px] text-white focus:border-violet-400/60 focus:outline-none"
           >
             <option value="">Tüm roller</option>
             <option value="admin">Admin</option>
@@ -92,7 +92,7 @@ export default function AdminUsersPage() {
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="max-w-[200px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-[14px] text-text focus:border-accent focus:outline-none"
+            className="max-w-[200px] rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-[14px] text-white focus:border-violet-400/60 focus:outline-none"
           >
             <option value="">Tüm ekipler</option>
             {teams?.map((t) => (
@@ -104,44 +104,44 @@ export default function AdminUsersPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted">Yükleniyor...</p>
+          <p className="text-white/60">Yükleniyor...</p>
         ) : users && users.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
             <table className="w-full min-w-[700px] text-left text-[14px]">
               <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-4 py-3 font-semibold text-text">Ad Soyad</th>
-                  <th className="px-4 py-3 font-semibold text-text">E-posta</th>
-                  <th className="px-4 py-3 font-semibold text-text">Rol</th>
-                  <th className="px-4 py-3 font-semibold text-text">Ekip</th>
-                  <th className="px-4 py-3 font-semibold text-text">Oluşturulma</th>
-                  <th className="px-4 py-3 font-semibold text-text">İşlem</th>
+                <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
+                  <th className="px-4 py-3 font-semibold text-white">Ad Soyad</th>
+                  <th className="px-4 py-3 font-semibold text-white">E-posta</th>
+                  <th className="px-4 py-3 font-semibold text-white">Rol</th>
+                  <th className="px-4 py-3 font-semibold text-white">Ekip</th>
+                  <th className="px-4 py-3 font-semibold text-white">Oluşturulma</th>
+                  <th className="px-4 py-3 font-semibold text-white">İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b border-border/70 hover:bg-surface/50">
-                    <td className="px-4 py-3 text-text">{user.name}</td>
-                    <td className="px-4 py-3 text-muted">{user.email}</td>
+                  <tr key={user.id} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="px-4 py-3 text-white">{user.name}</td>
+                    <td className="px-4 py-3 text-white/60">{user.email}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${
                           user.role === 'admin'
-                            ? 'bg-accent/20 text-accent'
-                            : 'bg-muted/30 text-muted'
+                            ? 'bg-violet-500/20 text-violet-400'
+                            : 'bg-white/10 text-white/60'
                         }`}
                       >
                         {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-text">{user.teamName || '—'}</td>
-                    <td className="px-4 py-3 text-muted">{formatDate(user.createdAt)}</td>
+                    <td className="px-4 py-3 text-white">{user.teamName || '—'}</td>
+                    <td className="px-4 py-3 text-white/60">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(user)}
-                          className="text-[13px] text-accent hover:underline"
+                          className="text-[13px] text-violet-400 hover:underline"
                         >
                           Düzenle
                         </button>
@@ -160,8 +160,8 @@ export default function AdminUsersPage() {
             </table>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-muted">
+          <div className="rounded-xl border border-dashed border-white/20 py-16 text-center">
+            <p className="text-white/60">
               {search || roleFilter || teamFilter
                 ? 'Arama kriterlerine uygun kullanıcı yok.'
                 : 'Henüz kullanıcı yok.'}

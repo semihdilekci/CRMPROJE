@@ -57,7 +57,7 @@ export function SettingFormModal({ open, onClose, setting }: SettingFormModalPro
             {submitError}
           </p>
         )}
-        <Input label="Anahtar" value={setting.key} readOnly disabled className="bg-muted/30" />
+        <Input label="Anahtar" value={setting.key} readOnly disabled className="bg-white/5 opacity-70" />
         <Input
           label="Değer"
           placeholder="Değer"

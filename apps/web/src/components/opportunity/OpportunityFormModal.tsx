@@ -231,7 +231,7 @@ export function OpportunityFormModal({
         />
 
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Tahmini Bütçe
           </label>
           <div className="flex">
@@ -240,12 +240,12 @@ export function OpportunityFormModal({
               placeholder="0"
               value={budgetDisplay}
               onChange={(e) => handleBudgetChange(e.target.value)}
-              className="flex-1 rounded-l-[10px] border border-r-0 border-border bg-surface px-3 py-2.5 text-right text-text transition-colors focus:border-accent focus:outline-none"
+              className="flex-1 rounded-l-[10px] border border-r-0 border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-right text-white transition-colors focus:border-violet-400/60 focus:outline-none"
             />
             <select
               value={budgetCurrency}
               onChange={(e) => setBudgetCurrency(e.target.value)}
-              className="rounded-r-[10px] border border-l-0 border-border bg-surface px-3 py-2.5 font-bold text-accent transition-colors focus:border-accent focus:outline-none"
+              className="rounded-r-[10px] border border-l-0 border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 font-bold text-violet-400 transition-colors focus:border-violet-400/60 focus:outline-none"
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -257,7 +257,7 @@ export function OpportunityFormModal({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Satışa Dönüşme Tahmini
           </label>
           <div className="flex flex-wrap gap-2">
@@ -297,7 +297,7 @@ export function OpportunityFormModal({
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-[12px] font-bold uppercase tracking-wider text-muted">
+            <label className="text-[12px] font-bold uppercase tracking-wider text-white/60">
               İlgilenilen Ürünler
             </label>
             <button
@@ -314,7 +314,7 @@ export function OpportunityFormModal({
                   },
                 ])
               }
-              className="cursor-pointer rounded-[8px] border border-border px-2.5 py-1 text-[12px] font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+              className="cursor-pointer rounded-[8px] border border-white/20 px-2.5 py-1 text-[12px] font-medium text-white/60 transition-colors hover:border-violet-400/60 hover:text-violet-400"
             >
               Ürün Ekle
             </button>
@@ -327,7 +327,7 @@ export function OpportunityFormModal({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Kartvizit Fotoğrafı
           </label>
           <input
@@ -357,7 +357,7 @@ export function OpportunityFormModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full cursor-pointer rounded-[10px] border-2 border-dashed border-border px-4 py-6 text-center text-muted transition-colors hover:border-accent hover:text-accent"
+              className="w-full cursor-pointer rounded-[10px] border-2 border-dashed border-white/20 px-4 py-6 text-center text-white/60 transition-colors hover:border-violet-400/60 hover:text-violet-400"
             >
               📷 Fotoğraf Yükle
             </button>
@@ -365,8 +365,8 @@ export function OpportunityFormModal({
         </div>
 
         {isEdit && initial && (
-          <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-3">
-            <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted">
+          <div className="mt-2 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-3">
+            <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-white/60">
               Pipeline ve Aşama Geçmişi
             </p>
             <PipelineAndStageHistoryBlock

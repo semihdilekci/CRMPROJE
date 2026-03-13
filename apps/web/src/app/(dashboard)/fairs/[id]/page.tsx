@@ -50,8 +50,8 @@ export default function FairDetailPage() {
 
   if (isLoading || !fair) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg">
-        <p className="text-muted text-lg">Yükleniyor...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-white/60 text-lg">Yükleniyor...</p>
       </div>
     );
   }
@@ -59,12 +59,12 @@ export default function FairDetailPage() {
   const displayOpportunities = opportunities ?? allOpportunities;
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar breadcrumb={fair.name} />
       <ContentWrapper>
         <button
           onClick={() => router.push('/fairs')}
-          className="mb-4 cursor-pointer text-[14px] text-muted transition-colors hover:text-text"
+          className="mb-4 cursor-pointer text-[14px] text-white/60 transition-colors hover:text-white"
         >
           ← Fuarlara Dön
         </button>
@@ -111,18 +111,18 @@ export default function FairDetailPage() {
                   setEditingOpportunity(null);
                   setShowOpportunityModal(true);
                 }}
-                className="flex min-h-[110px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-muted transition-colors duration-200 hover:border-accent hover:text-accent"
+                className="flex min-h-[110px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 p-4 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
               >
                 <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
               </button>
             </div>
           </div>
         ) : search || rateFilter || stageFilter ? (
-          <p className="py-12 text-center text-muted">Arama sonucu bulunamadı.</p>
+          <p className="py-12 text-center text-white/60">Arama sonucu bulunamadı.</p>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-[48px]">💼</span>
-            <p className="mt-3 text-[14px] text-muted">
+            <p className="mt-3 text-[14px] text-white/60">
               Henüz fırsat eklenmemiş. Yukarıdaki butonu kullanarak fırsat ekleyin.
             </p>
           </div>

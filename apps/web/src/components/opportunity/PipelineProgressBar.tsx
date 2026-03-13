@@ -57,9 +57,9 @@ export function PipelineProgressBar({
               : '#6B7280';
 
           const circleClass = cn(
-            'flex h-7 w-7 items-center justify-center rounded-full border text-[12px] font-bold',
-            isClickable && 'cursor-pointer transition-colors hover:border-accent',
-            isCurrent && 'ring-2 ring-accent/30',
+            'flex h-7 w-7 items-center justify-center rounded-full border text-[12px] font-bold backdrop-blur-sm',
+            isClickable && 'cursor-pointer transition-colors hover:border-violet-400/60',
+            isCurrent && 'ring-2 ring-violet-400/30',
             !isClickable && !isCurrent && 'cursor-not-allowed opacity-80',
           );
 
@@ -74,7 +74,7 @@ export function PipelineProgressBar({
 
           const lineClass = cn(
             'h-[2px] flex-1 rounded-full',
-            isLineGreen ? 'bg-green' : 'bg-border',
+            isLineGreen ? 'bg-green-500' : 'bg-white/20',
           );
 
           return (
@@ -102,7 +102,7 @@ export function PipelineProgressBar({
                   <p
                     className={cn(
                       'truncate text-[12px] font-medium',
-                      isCurrent ? 'text-text' : 'text-muted',
+                      isCurrent ? 'text-white' : 'text-white/60',
                     )}
                   >
                     {getStageLabel(stage.value)}
@@ -115,13 +115,13 @@ export function PipelineProgressBar({
       </div>
 
       {currentStage === 'satisa_donustu' && !compact && (
-        <p className="mt-2 text-[12px] font-semibold text-green">
+        <p className="mt-2 text-[12px] font-semibold text-green-500">
           Satışa dönüştü
         </p>
       )}
 
       {currentStage === 'olumsuz' && !compact && (
-        <p className="mt-2 text-[12px] font-semibold text-danger">
+        <p className="mt-2 text-[12px] font-semibold text-red-400">
           Olumsuz sonuçlandı
         </p>
       )}

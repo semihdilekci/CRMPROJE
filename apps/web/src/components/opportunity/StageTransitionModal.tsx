@@ -90,14 +90,14 @@ export function StageTransitionModal({
   return (
     <Modal open={open} onClose={handleClose} title={title}>
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-border bg-surface px-3 py-2 text-[13px] text-muted">
-          <span className="font-semibold text-text">Mevcut Aşama:</span>{' '}
+        <div className="rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2 text-[13px] text-white/60">
+          <span className="font-semibold text-white">Mevcut Aşama:</span>{' '}
           {getStageLabel(currentStage)}
         </div>
 
         {isOlumsuz && (
           <div className="flex flex-col gap-2">
-            <label className="text-muted text-[12px] font-bold uppercase tracking-wider">
+            <label className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
               Kayıp Nedeni <span className="text-danger">*</span>
             </label>
             <Select

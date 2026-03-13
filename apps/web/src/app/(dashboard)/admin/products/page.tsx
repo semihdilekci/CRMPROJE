@@ -46,11 +46,11 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › Ürün Listesi" />
       <ContentWrapper>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-serif text-[22px] font-semibold text-text">İlgilenilen Ürünler</h1>
+          <h1 className="font-serif text-[22px] font-semibold text-white">İlgilenilen Ürünler</h1>
           <Button onClick={handleAdd}>+ Yeni Ürün</Button>
         </div>
 
@@ -64,22 +64,22 @@ export default function AdminProductsPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted">Yükleniyor...</p>
+          <p className="text-white/60">Yükleniyor...</p>
         ) : products && products.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
             <table className="w-full min-w-[400px] text-left text-[14px]">
               <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-4 py-3 font-semibold text-text">Ürün adı</th>
-                  <th className="px-4 py-3 font-semibold text-text">Açıklama</th>
-                  <th className="px-4 py-3 font-semibold text-text">İşlem</th>
+                <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
+                  <th className="px-4 py-3 font-semibold text-white">Ürün adı</th>
+                  <th className="px-4 py-3 font-semibold text-white">Açıklama</th>
+                  <th className="px-4 py-3 font-semibold text-white">İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-b border-border/70 hover:bg-surface/50">
-                    <td className="px-4 py-3 text-text">{product.name}</td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-muted">
+                  <tr key={product.id} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="px-4 py-3 text-white">{product.name}</td>
+                    <td className="max-w-[200px] truncate px-4 py-3 text-white/60">
                       {product.description || '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -87,7 +87,7 @@ export default function AdminProductsPage() {
                         <button
                           type="button"
                           onClick={() => handleEdit(product)}
-                          className="text-[13px] text-accent hover:underline"
+                          className="text-[13px] text-violet-400 hover:underline"
                         >
                           Düzenle
                         </button>
@@ -106,8 +106,8 @@ export default function AdminProductsPage() {
             </table>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-muted">
+          <div className="rounded-xl border border-dashed border-white/20 py-16 text-center">
+            <p className="text-white/60">
               {search ? 'Arama kriterine uygun ürün yok.' : 'Henüz ürün yok.'}
             </p>
             {!search && (

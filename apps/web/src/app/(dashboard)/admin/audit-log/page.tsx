@@ -73,15 +73,15 @@ export default function AdminAuditLogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › İşlem Geçmişi" />
       <ContentWrapper>
-        <h1 className="font-serif text-[22px] font-semibold text-text">İşlem Geçmişi</h1>
-        <p className="mt-2 text-[14px] text-muted">
+        <h1 className="font-serif text-[22px] font-semibold text-white">İşlem Geçmişi</h1>
+        <p className="mt-2 text-[14px] text-white/60">
           Fuar, fırsat, müşteri, kullanıcı, ürün ve ayar işlemleri. Salt okunur.
         </p>
 
-        <div className="mt-6 flex flex-wrap items-end gap-4 rounded-xl border border-border bg-surface/50 p-4">
+        <div className="mt-6 flex flex-wrap items-end gap-4 rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10 p-4">
           <Input
             label="Başlangıç tarihi"
             type="date"
@@ -104,13 +104,13 @@ export default function AdminAuditLogPage() {
             className="w-[180px]"
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-muted text-[12px] font-bold uppercase tracking-wider">
+            <label className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
               Kaynak tipi
             </label>
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="w-[160px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+              className="w-[160px] rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white focus:border-violet-400/60 focus:outline-none"
             >
               {ENTITY_TYPES.map((o) => (
                 <option key={o.value || 'all'} value={o.value}>
@@ -128,25 +128,25 @@ export default function AdminAuditLogPage() {
         </div>
 
         {isLoading ? (
-          <p className="mt-6 text-muted">Yükleniyor...</p>
+          <p className="mt-6 text-white/60">Yükleniyor...</p>
         ) : entries && entries.length > 0 ? (
-          <div className="mt-6 overflow-x-auto rounded-xl border border-border">
+          <div className="mt-6 overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
             <table className="w-full min-w-[700px] text-left text-[14px]">
               <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-4 py-3 font-semibold text-text">Tarih</th>
-                  <th className="px-4 py-3 font-semibold text-text">Kullanıcı</th>
-                  <th className="px-4 py-3 font-semibold text-text">İşlem</th>
-                  <th className="px-4 py-3 font-semibold text-text">Özet</th>
+                <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
+                  <th className="px-4 py-3 font-semibold text-white">Tarih</th>
+                  <th className="px-4 py-3 font-semibold text-white">Kullanıcı</th>
+                  <th className="px-4 py-3 font-semibold text-white">İşlem</th>
+                  <th className="px-4 py-3 font-semibold text-white">Özet</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((e) => (
-                  <tr key={e.id} className="border-b border-border/70 hover:bg-surface/50">
-                    <td className="whitespace-nowrap px-4 py-3 text-muted">
+                  <tr key={e.id} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="whitespace-nowrap px-4 py-3 text-white/60">
                       {formatDate(e.createdAt)}
                     </td>
-                    <td className="px-4 py-3 text-text">
+                    <td className="px-4 py-3 text-white">
                       {e.userEmail ?? (e.userId ? `ID: ${e.userId}` : '—')}
                     </td>
                     <td className="px-4 py-3">
@@ -156,14 +156,14 @@ export default function AdminAuditLogPage() {
                             ? 'text-danger'
                             : e.action === 'create'
                               ? 'text-green-600'
-                              : 'text-accent'
+                              : 'text-violet-400'
                         }
                       >
                         {ACTION_LABELS[e.action] ?? e.action}
                       </span>
-                      <span className="ml-1 text-muted">({e.entityType})</span>
+                      <span className="ml-1 text-white/60">({e.entityType})</span>
                     </td>
-                    <td className="max-w-[320px] truncate px-4 py-3 text-muted" title={summary(e)}>
+                    <td className="max-w-[320px] truncate px-4 py-3 text-white/60" title={summary(e)}>
                       {summary(e)}
                     </td>
                   </tr>
@@ -172,8 +172,8 @@ export default function AdminAuditLogPage() {
             </table>
           </div>
         ) : (
-          <div className="mt-6 rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-muted">
+          <div className="mt-6 rounded-xl border border-dashed border-white/20 py-16 text-center">
+            <p className="text-white/60">
               {Object.keys(filters).length > 0
                 ? 'Filtreye uygun kayıt yok.'
                 : 'Henüz işlem geçmişi kaydı yok.'}

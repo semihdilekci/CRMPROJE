@@ -73,15 +73,15 @@ export function CustomerSelectInput({
   if (selectedCustomerId && selectedCustomer) {
     return (
       <div>
-        <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+        <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
           Müşteri
         </label>
-        <div className="flex items-center justify-between rounded-[10px] border border-border bg-surface px-4 py-3">
+        <div className="flex items-center justify-between rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm px-4 py-3">
           <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-text">
+            <p className="text-[14px] font-semibold text-white">
               {selectedCustomer.company}
             </p>
-            <p className="text-[13px] text-muted">
+            <p className="text-[13px] text-white/60">
               {selectedCustomer.name}
               {selectedCustomer.phone && ` · ${selectedCustomer.phone}`}
               {selectedCustomer.email && ` · ${selectedCustomer.email}`}
@@ -101,7 +101,7 @@ export function CustomerSelectInput({
 
   return (
     <div>
-      <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+      <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
         Müşteri
       </label>
 
@@ -116,30 +116,30 @@ export function CustomerSelectInput({
               setShowDropdown(true);
             }}
             onFocus={() => setShowDropdown(true)}
-            className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-text transition-colors placeholder:text-muted/70 focus:border-accent focus:outline-none"
+            className="w-full rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white transition-colors placeholder:text-white/60/70 focus:border-violet-400/60 focus:outline-none"
           />
 
           {showDropdown && (searchText.length > 0 || customers.length > 0) && (
-            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-border bg-surface shadow-lg">
+            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg">
               {customers.length > 0 ? (
                 customers.map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => handleSelectCustomer(c)}
-                    className="flex w-full cursor-pointer flex-col px-4 py-2.5 text-left transition-colors hover:bg-card"
+                    className="flex w-full cursor-pointer flex-col px-4 py-2.5 text-left transition-colors hover:bg-white/10"
                   >
-                    <span className="text-[13px] font-semibold text-text">
+                    <span className="text-[13px] font-semibold text-white">
                       {c.company}
                     </span>
-                    <span className="text-[12px] text-muted">
+                    <span className="text-[12px] text-white/60">
                       {c.name}
                       {c.phone && ` · ${c.phone}`}
                     </span>
                   </button>
                 ))
               ) : debouncedSearch.length > 0 ? (
-                <div className="px-4 py-3 text-[13px] text-muted">
+                <div className="px-4 py-3 text-[13px] text-white/60">
                   Sonuç bulunamadı
                 </div>
               ) : null}
@@ -160,8 +160,8 @@ export function CustomerSelectInput({
           </div>
         </div>
       ) : (
-        <div className="rounded-[10px] border border-border bg-card p-4">
-          <p className="mb-3 text-[13px] font-semibold text-text">Yeni Müşteri</p>
+        <div className="rounded-[10px] border border-white/20 backdrop-blur-xl bg-white/10 p-4">
+          <p className="mb-3 text-[13px] font-semibold text-white">Yeni Müşteri</p>
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Firma Adı"

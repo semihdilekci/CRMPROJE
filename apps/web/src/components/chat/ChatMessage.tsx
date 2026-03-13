@@ -29,7 +29,7 @@ export function ChatMessage({
     >
       <div
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[16px] ${
-          isUser ? 'bg-accent/20' : 'bg-surface'
+          isUser ? 'bg-violet-500/20' : 'backdrop-blur-xl bg-white/5'
         }`}
       >
         {isUser ? '👤' : '🤖'}
@@ -43,10 +43,10 @@ export function ChatMessage({
           className={`rounded-xl px-4 py-3 ${
             isUser
               ? 'border border-accent/40 bg-accent/10'
-              : 'border border-border bg-surface'
+              : 'border border-white/20 backdrop-blur-xl bg-white/5'
           }`}
         >
-          <pre className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed text-text">
+          <pre className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed text-white">
             {content}
           </pre>
         </div>

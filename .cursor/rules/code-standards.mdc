@@ -177,7 +177,7 @@ CSS & STYLING
 
 - Use TailwindCSS utility classes for all styling.
 - Use design system tokens defined in tailwind.config — never hardcode hex colors.
-- Follow the color naming: bg, surface, card, border, accent, gold, muted, green, text.
+- Tasarım token'ları ve Glassmorphism kuralları için `docs/design-system.md`'e bakın.
 - Use shadcn/ui components as base — extend, don't rewrite.
 - Responsive design: use TailwindCSS breakpoints, prefer mobile-first.
 - Animations: use CSS transitions (0.15s–0.2s) — avoid heavy JS animations.

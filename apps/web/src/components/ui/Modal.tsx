@@ -30,15 +30,14 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: '#00000090' }}
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/60"
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[620px] max-h-[90vh] overflow-y-auto rounded-2xl bg-card p-6"
+        className="mx-4 w-full max-w-[620px] max-h-[90vh] overflow-y-auto rounded-2xl backdrop-blur-2xl bg-white/10 border border-white/20 p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-5 font-serif text-[20px] font-semibold text-text">{title}</h2>
+        <h2 className="mb-5 font-serif text-[20px] font-semibold text-white">{title}</h2>
         {children}
       </div>
     </div>

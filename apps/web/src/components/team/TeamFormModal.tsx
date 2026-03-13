@@ -89,7 +89,7 @@ export function TeamFormModal({ open, onClose, initial }: TeamFormModalProps) {
             onChange={(e) => setActive(e.target.checked)}
             className="h-4 w-4 accent-accent"
           />
-          <label htmlFor="team-active" className="text-[14px] text-text">
+          <label htmlFor="team-active" className="text-[14px] text-white">
             Aktif
           </label>
         </div>

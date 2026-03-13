@@ -77,13 +77,13 @@ export function ChatPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-border/50 px-6 py-4">
+      <div className="border-b border-white/10 px-6 py-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-serif text-[20px] font-semibold text-text">
+            <h1 className="font-serif text-[20px] font-semibold text-white">
               AI Analiz Asistanı
             </h1>
-            <p className="mt-1 text-[13px] text-muted">
+            <p className="mt-1 text-[13px] text-white/60">
               Fuar ve müşteri verilerinizi sorarak analiz edin.
             </p>
           </div>
@@ -102,7 +102,7 @@ export function ChatPanel() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
           {messages.length === 0 && !chatQuery.isPending && (
-            <div className="py-12 text-center text-muted">
+            <div className="py-12 text-center text-white/60">
               <p className="text-[14px]">
                 Bir soru yazın. Örn: &quot;Fuarlarımın fırsat dağılımı nasıl?&quot;
               </p>
@@ -120,7 +120,7 @@ export function ChatPanel() {
           ))}
           {chatQuery.isPending && (
             <div className="flex items-center justify-center gap-2 py-6">
-              <span className="animate-pulse text-[14px] text-muted">
+              <span className="animate-pulse text-[14px] text-white/60">
                 Analiz Hazırlanıyor
               </span>
               <span className="flex gap-1">
@@ -133,7 +133,7 @@ export function ChatPanel() {
         </div>
       </div>
 
-      <div className="border-t border-border/50 px-6 py-4">
+      <div className="border-t border-white/10 px-6 py-4">
         <div className="mx-auto flex w-full max-w-[960px] items-end gap-3">
           <div className="min-w-0 flex-1">
             <Textarea

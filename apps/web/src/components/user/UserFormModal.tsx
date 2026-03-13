@@ -97,10 +97,10 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
         />
         {isEdit ? (
           <div className="flex flex-col gap-1.5">
-            <label className="text-muted text-[12px] font-bold uppercase tracking-wider">
+            <label className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
               E-posta
             </label>
-            <p className="rounded-[10px] border border-border bg-muted/20 px-3 py-2.5 text-[14px] text-muted">
+            <p className="rounded-[10px] border border-white/20 bg-white/5 px-3 py-2.5 text-[14px] text-white/60">
               {initial?.email}
             </p>
           </div>
@@ -131,11 +131,11 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
           />
         )}
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Rol
           </label>
           <select
-            className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+            className="w-full rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white focus:border-violet-400/60 focus:outline-none"
             {...register('role')}
           >
             {ROLES.map((r) => (
@@ -146,14 +146,14 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
           </select>
         </div>
         <div>
-          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-muted">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Ekip
           </label>
           <select
-            className={`w-full rounded-[10px] border bg-surface px-3 py-2.5 text-text focus:border-accent focus:outline-none ${
+            className={`w-full rounded-[10px] border bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white focus:border-violet-400/60 focus:outline-none ${
               (errors as Record<string, { message?: string }>).teamId?.message
                 ? 'border-danger'
-                : 'border-border'
+                : 'border-white/20'
             }`}
             {...register('teamId')}
           >

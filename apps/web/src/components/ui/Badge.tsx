@@ -9,18 +9,24 @@ interface BadgeProps {
   className?: string;
 }
 
-export function Badge({ children, color = '#8a8aa0', className }: BadgeProps) {
+export function Badge({ children, color, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-[6px] px-2 py-0.5 text-[12px] font-medium',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium',
+        'backdrop-blur-xl border',
+        !color && 'bg-white/10 border-white/20 text-white/90',
         className
       )}
-      style={{
-        backgroundColor: `${color}20`,
-        border: `1px solid ${color}40`,
-        color,
-      }}
+      style={
+        color
+          ? {
+              backgroundColor: `${color}20`,
+              borderColor: `${color}40`,
+              color,
+            }
+          : undefined
+      }
     >
       {children}
     </span>

@@ -26,7 +26,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      <p className="mb-6 text-muted">{message}</p>
+      <p className="mb-6 text-white/80">{message}</p>
       {error && (
         <p className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</p>
       )}

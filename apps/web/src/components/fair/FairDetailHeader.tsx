@@ -15,9 +15,9 @@ export function FairDetailHeader({ fair, onEdit, onDelete }: FairDetailHeaderPro
     <div className="mb-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-serif text-[28px] font-semibold text-text">{fair.name}</h1>
-          <p className="mt-1.5 text-[14px] text-muted">📍 {fair.address}</p>
-          <p className="mt-1 text-[14px] text-muted">
+          <h1 className="font-serif text-[28px] font-semibold text-white">{fair.name}</h1>
+          <p className="mt-1.5 text-[14px] text-white/80">📍 {fair.address}</p>
+          <p className="mt-1 text-[14px] text-white/80">
             📅 {formatDate(fair.startDate)} — {formatDate(fair.endDate)}
           </p>
         </div>
