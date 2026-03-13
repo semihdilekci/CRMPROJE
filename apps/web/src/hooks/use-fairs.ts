@@ -53,6 +53,7 @@ export function useUpdateFair() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.byId(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fairs.metrics(id) });
     },
   });
 }

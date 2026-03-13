@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -26,6 +26,33 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
     initial?.startDate ? initial.startDate.slice(0, 10) : ''
   );
   const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : '');
+  const [targetLeadCount, setTargetLeadCount] = useState(
+    initial?.targetLeadCount != null ? String(initial.targetLeadCount) : ''
+  );
+  const [targetTonnage, setTargetTonnage] = useState(
+    initial?.targetTonnage != null ? String(initial.targetTonnage) : ''
+  );
+  const [targetBudgetRaw, setTargetBudgetRaw] = useState(initial?.targetBudget ?? '');
+
+  useEffect(() => {
+    if (open && initial) {
+      setName(initial.name);
+      setAddress(initial.address);
+      setStartDate(initial.startDate ? initial.startDate.slice(0, 10) : '');
+      setEndDate(initial.endDate ? initial.endDate.slice(0, 10) : '');
+      setTargetLeadCount(
+        initial.targetLeadCount != null ? String(initial.targetLeadCount) : ''
+      );
+      setTargetTonnage(
+        initial.targetTonnage != null ? String(initial.targetTonnage) : ''
+      );
+      setTargetBudgetRaw(initial.targetBudget ?? '');
+    } else if (open) {
+      setTargetLeadCount('');
+      setTargetTonnage('');
+      setTargetBudgetRaw('');
+    }
+  }, [open, initial]);
 
   const dateError = useMemo(() => {
     if (!startDate || !endDate) return '';
@@ -46,6 +73,13 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
       address: address.trim(),
       startDate: new Date(startDate).toISOString(),
       endDate: new Date(endDate).toISOString(),
+      targetLeadCount: targetLeadCount.trim()
+        ? parseInt(targetLeadCount, 10)
+        : null,
+      targetTonnage: targetTonnage.trim()
+        ? parseFloat(targetTonnage.replace(',', '.'))
+        : null,
+      targetBudget: targetBudgetRaw.trim() || null,
     };
 
     if (isEdit && initial) {
@@ -63,9 +97,21 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
       setAddress('');
       setStartDate('');
       setEndDate('');
+      setTargetLeadCount('');
+      setTargetTonnage('');
+      setTargetBudgetRaw('');
     }
     onClose();
   };
+
+  const handleTargetBudgetChange = (value: string) => {
+    const raw = value.replace(/[^0-9]/g, '');
+    setTargetBudgetRaw(raw);
+  };
+
+  const targetBudgetDisplay = targetBudgetRaw
+    ? parseInt(targetBudgetRaw, 10).toLocaleString('tr-TR')
+    : '';
 
   return (
     <Modal
@@ -106,6 +152,44 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
         {dateError && (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{dateError}</p>
         )}
+        <div className="border-t border-white/10 pt-4">
+          <p className="mb-3 text-[12px] font-bold uppercase tracking-wider text-white/60">
+            KPI Hedefleri (Opsiyonel)
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Input
+              label="Fırsat Hedefi"
+              type="number"
+              min={0}
+              placeholder="Örn: 50"
+              value={targetLeadCount}
+              onChange={(e) => setTargetLeadCount(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+            <Input
+              label="Tonaj Hedefi (ton)"
+              type="text"
+              inputMode="decimal"
+              placeholder="Örn: 1000"
+              value={targetTonnage}
+              onChange={(e) =>
+                setTargetTonnage(e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))
+              }
+            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
+                Bütçe Hedefi
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Örn: 1.000.000"
+                value={targetBudgetDisplay}
+                onChange={(e) => handleTargetBudgetChange(e.target.value)}
+                className="rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white placeholder:text-white/50 transition-colors duration-200 focus:border-violet-400/60 focus:outline-none focus:ring-1 focus:ring-violet-400/30"
+              />
+            </div>
+          </div>
+        </div>
         <div className="mt-2 flex gap-3">
           <Button variant="secondary" className="flex-1" onClick={resetAndClose} disabled={loading}>
             İptal

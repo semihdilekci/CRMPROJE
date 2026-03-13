@@ -8,6 +8,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
 import { FairStats } from '@/components/fair/FairStats';
+import { FairKPIDrawer } from '@/components/fair/FairKPIDrawer';
 import { OpportunityToolbar } from '@/components/fair/OpportunityToolbar';
 import { FairFormModal } from '@/components/fair/FairFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -95,6 +96,16 @@ export default function FairDetailPage() {
           opportunities={allOpportunities}
           selectedRates={selectedRates}
           onRateToggle={handleRateToggle}
+        />
+
+        <FairKPIDrawer
+          fairId={fairId}
+          targets={{
+            targetBudget: fair.targetBudget ?? null,
+            targetTonnage: fair.targetTonnage ?? null,
+            targetLeadCount: fair.targetLeadCount ?? null,
+          }}
+          onEditFair={() => setShowEditModal(true)}
         />
 
         <OpportunityToolbar
