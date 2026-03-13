@@ -449,7 +449,7 @@ Her branch kendi içinde sıralıdır, branch'ler arası sıra yukarıda belirti
 Her feature tamamlandığında Durum alanı [x] olarak işaretlenir.
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 1: ÜRÜN TONAJ                                   ║
+║  BRANCH 1: ÜRÜN TONAJ                                    ║
 ║  Branch: feature/F32-F33-urun-tonaj                      ║
 ║  Bağımlılık: Yok (ilk branch)                            ║
 ╚══════════════════════════════════════════════════════════╝
@@ -847,7 +847,7 @@ Durum: [x]
 ║  BRANCH 2.5: AI ANALİTİK CHATBOT                         ║
 ║  Branch: feature/F46-F47-ai-chatbot                      ║
 ║  Bağımlılık: Branch 1 + Branch 2                        ║
-║  Plan: F46 → F47 → F46a (model seçimi) → F47b (grafik)   ║
+║  Plan: F46 → F47 → F46a → F47b → F47c (uyarlanabilir veri) ║
 ╚══════════════════════════════════════════════════════════╝
 
 ----------------------------------------------------------------------
@@ -910,6 +910,11 @@ Yapılacaklar:
      backend Excel oluşturur (exceljs).
    - Geçici dosya veya signed URL ile indirme sağlanır.
    - GET /chat/export/:exportId — Excel dosyası indirilir.
+
+8. (F47c ile) Uyarlanabilir veri kapsamı:
+   - Adım 1: LLM veri kataloğu ile scope belirler (minimal/customers/opportunities/full)
+   - gatherContextData(scope, filters) scope'a göre farklı veri döner
+   - Detay: docs/ai-chat-data-scope.md
 
 Etkilenen dosyalar:
   YENİ: modules/chat/*

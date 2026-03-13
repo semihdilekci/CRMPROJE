@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-[400px] rounded-2xl border border-white/20 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 p-8">
         <div className="mb-8 text-center">
-          <h1 className="font-serif text-[28px] font-semibold text-white">Fuar CRM</h1>
+          <h1 className="text-3xl font-semibold text-white">Fuar CRM</h1>
           <p className="mt-2 text-[14px] text-white/60">Yönetim paneline giriş yapın</p>
         </div>
 

@@ -37,116 +37,19 @@ export class ChatService {
     userId: string,
     input: ChatQueryInput,
   ): Promise<ChatQueryResponse> {
-    const provider = input.provider ?? 'claude';
-    const contextData = await this.gatherContextData();
-    const wantsExport = this.detectExportIntent(input.message);
-    const systemPrompt = this.buildSystemPrompt(contextData, wantsExport);
-
-    if (provider === 'ollama') {
-      return this.queryOllama(userId, input, systemPrompt, wantsExport);
-    }
-    return this.queryClaude(userId, input, systemPrompt, wantsExport);
-  }
-
-  private async queryOllama(
-    userId: string,
-    input: ChatQueryInput,
-    systemPrompt: string,
-    wantsExport: boolean,
-  ): Promise<ChatQueryResponse> {
-    const baseUrl =
-      this.config.get<string>('OLLAMA_BASE_URL')?.trim() ?? 'http://localhost:11434';
-    const model =
-      this.config.get<string>('OLLAMA_MODEL')?.trim() ?? 'qwen2.5-coder:32b';
-
-    this.logger.log(`Ollama isteği: model=${model}, baseUrl=${baseUrl}`);
-
-    const ollamaMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemPrompt },
-      ...(input.messages?.length
-        ? input.messages.slice(-10).map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          }))
-        : []),
-      { role: 'user', content: input.message },
-    ];
-
-    try {
-      const res = await fetch(`${baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: ollamaMessages, stream: false }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        this.logger.error('Ollama API hatası', res.status, errText);
-        throw new Error(`Ollama ${res.status}: ${errText}`);
-      }
-
-      const json = (await res.json()) as { message?: { content?: string } };
-      const text = json?.message?.content;
-
-      if (!text || typeof text !== 'string') {
-        this.logger.warn('Ollama boş yanıt', json);
-        throw new InternalServerErrorException('AI yanıt üretilemedi');
-      }
-
-      const parsed = this.parseAiResponse(text);
-      const result: ChatQueryResponse = {
-        text: parsed.text ?? text,
-        charts: parsed.charts,
-        tables: parsed.tables,
-      };
-
-      if (wantsExport && parsed.tables?.length) {
-        const exportId = await this.createExcelExport(parsed.tables, userId);
-        result.exportId = exportId;
-        result.exportDescription = 'Analiz verisi Excel dosyası';
-      }
-
-      return result;
-    } catch (error) {
-      if (error instanceof InternalServerErrorException) {
-        throw error;
-      }
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      const errStr = String(error);
-      this.logger.error('Ollama hatası', errStr, error instanceof Error ? error.stack : undefined);
-
-      if (
-        errStr.includes('ECONNREFUSED') ||
-        errStr.includes('fetch failed') ||
-        errStr.includes('Failed to fetch')
-      ) {
-        throw new BadRequestException(
-          'Ollama çalışmıyor. Lütfen "ollama serve" ile başlatın veya Claude seçin.',
-        );
-      }
-
-      throw new InternalServerErrorException(
-        'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
-      );
-    }
-  }
-
-  private async queryClaude(
-    userId: string,
-    input: ChatQueryInput,
-    systemPrompt: string,
-    wantsExport: boolean,
-  ): Promise<ChatQueryResponse> {
     const apiKey = this.config.get<string>('ANTHROPIC_API_KEY')?.trim();
     if (!apiKey) {
       throw new BadRequestException(
-        'AI analiz servisi yapılandırılmamış. apps/api/.env içinde ANTHROPIC_API_KEY=... tanımlayın (console.anthropic.com adresinden key alın).',
+        'AI analiz servisi yapılandırılmamış. apps/api/.env içinde ANTHROPIC_API_KEY=... tanımlayın (claude.com/console adresinden key alın).',
       );
     }
 
+    const contextData = await this.gatherContextData();
+    const wantsExport = this.detectExportIntent(input.message);
+
+    const systemPrompt = this.buildSystemPrompt(contextData, wantsExport);
     const client = new Anthropic({ apiKey });
+
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> =
       input.messages?.length
         ? [
@@ -175,7 +78,19 @@ export class ChatService {
         throw new InternalServerErrorException('AI yanıt üretilemedi');
       }
 
-      const parsed = this.parseAiResponse(text);
+      let parsed: {
+        text?: string;
+        charts?: ChartData[];
+        tables?: TableData[];
+      };
+
+      const jsonStr = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+      try {
+        parsed = JSON.parse(jsonStr) as typeof parsed;
+      } catch {
+        parsed = { text };
+      }
+
       const result: ChatQueryResponse = {
         text: parsed.text ?? text,
         charts: parsed.charts,
@@ -218,19 +133,6 @@ export class ChatService {
       throw new InternalServerErrorException(
         'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
       );
-    }
-  }
-
-  private parseAiResponse(text: string): {
-    text?: string;
-    charts?: ChartData[];
-    tables?: TableData[];
-  } {
-    const jsonStr = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    try {
-      return JSON.parse(jsonStr) as { text?: string; charts?: ChartData[]; tables?: TableData[] };
-    } catch {
-      return { text };
     }
   }
 

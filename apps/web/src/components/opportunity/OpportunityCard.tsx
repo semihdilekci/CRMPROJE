@@ -103,35 +103,39 @@ export function OpportunityCard({
 
   return (
     <>
-      <div className="rounded-xl border border-white/20 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 transition-all duration-300 hover:border-white/30">
+      <div className="relative min-h-[144px] overflow-hidden rounded-xl border border-white/20 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 transition-transform duration-300 hover:scale-[1.01]">
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex w-full cursor-pointer items-start justify-between p-4 text-left"
+          className="flex h-[144px] w-full cursor-pointer items-stretch justify-between p-4 text-left"
         >
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
             <p className="text-[15px] font-bold text-white">{customer.name}</p>
-            <p className="text-[13px] font-semibold text-violet-400">
+            <p className="text-[13px] font-semibold text-white/80">
               {customer.company}
             </p>
-            <div className="mt-2 flex gap-1.5 overflow-hidden">
+            <div className="mt-auto flex flex-wrap gap-1.5">
               {opportunity.conversionRate && (
-                <Badge color={rateColor}>{rateLabel}</Badge>
+                <Badge color={rateColor} className="whitespace-nowrap shrink-0">
+                  {rateLabel}
+                </Badge>
               )}
-              <Badge color={stageColor}>{stageLabel}</Badge>
+              <Badge color={stageColor} className="whitespace-nowrap shrink-0">
+                {stageLabel}
+              </Badge>
               {displayProducts.slice(0, 2).map((p, i) => (
-                <Badge key={`${p.productName}-${i}`}>
+                <Badge key={`${p.productName}-${i}`} className="whitespace-nowrap shrink-0">
                   {p.quantity != null && p.quantity > 0
                     ? `${p.productName} (${formatTonnageShort(p.quantity, p.unit)})`
                     : p.productName}
                 </Badge>
               ))}
               {displayProducts.length > 2 && (
-                <Badge>+{displayProducts.length - 2}</Badge>
+                <Badge className="whitespace-nowrap shrink-0">+{displayProducts.length - 2}</Badge>
               )}
             </div>
           </div>
-          <div className="ml-3 flex shrink-0 items-center gap-2">
+          <div className="ml-3 flex shrink-0 items-center gap-2 self-center">
             {opportunity.cardImage && (
               <span title="Kartvizit mevcut" className="text-[14px]">
                 📇
@@ -163,7 +167,7 @@ export function OpportunityCard({
               {opportunity.budgetRaw && (
                 <p>
                   <span className="text-white/60">Tahmini Bütçe: </span>
-                  <span className="font-semibold text-amber-400">
+                  <span className="font-semibold text-white">
                     {formatBudget(opportunity.budgetRaw)}{' '}
                     {opportunity.budgetCurrency ?? ''}
                   </span>
@@ -179,7 +183,7 @@ export function OpportunityCard({
                   {customer.phone && (
                     <a
                       href={`tel:${customer.phone}`}
-                      className="text-white hover:text-violet-400"
+                      className="text-white/90 hover:text-white"
                       onClick={(e) => e.stopPropagation()}
                     >
                       📞 {customer.phone}
@@ -188,7 +192,7 @@ export function OpportunityCard({
                   {customer.email && (
                     <a
                       href={`mailto:${customer.email}`}
-                      className="break-all text-white hover:text-violet-400"
+                      className="break-all text-white/90 hover:text-white"
                       onClick={(e) => e.stopPropagation()}
                     >
                       ✉️ {customer.email}
@@ -198,8 +202,8 @@ export function OpportunityCard({
               )}
 
               {hasProducts && (
-                <div className="mt-1">
-                  <p className="mb-1.5 text-white/60">İlgilenilen Ürünler:</p>
+                <div className="mt-1 rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2">
+                  <p className="mb-1.5 text-[12px] font-bold uppercase tracking-wider text-white/60">İlgilenilen Ürünler</p>
                   <div className="flex flex-wrap gap-1.5">
                     {displayProducts.map((p, i) => {
                       const line =
@@ -207,7 +211,7 @@ export function OpportunityCard({
                           ? `${p.productName} — ${formatTonnageLine(p.quantity, p.unit)}`
                           : p.productName;
                       return (
-                        <Badge key={`${p.productName}-${i}`} color="#a78bfa">
+                        <Badge key={`${p.productName}-${i}`}>
                           {line}
                         </Badge>
                       );
@@ -217,7 +221,7 @@ export function OpportunityCard({
               )}
 
               {opportunity.cardImage && (
-                <div className="mt-2">
+                <div className="mt-2 rounded-xl border border-white/20 overflow-hidden bg-white/5 p-2">
                   <img
                     src={opportunity.cardImage}
                     alt="Kartvizit"
@@ -226,7 +230,7 @@ export function OpportunityCard({
                 </div>
               )}
 
-              <div className="mt-2">
+              <div className="mt-2 rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2">
                 <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-white/60">
                   Aşama Geçmişi
                 </p>

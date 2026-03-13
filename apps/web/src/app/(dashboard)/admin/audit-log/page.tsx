@@ -76,7 +76,7 @@ export default function AdminAuditLogPage() {
     <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › İşlem Geçmişi" />
       <ContentWrapper>
-        <h1 className="font-serif text-[22px] font-semibold text-white">İşlem Geçmişi</h1>
+        <h1 className="text-2xl font-semibold text-white">İşlem Geçmişi</h1>
         <p className="mt-2 text-[14px] text-white/60">
           Fuar, fırsat, müşteri, kullanıcı, ürün ve ayar işlemleri. Salt okunur.
         </p>

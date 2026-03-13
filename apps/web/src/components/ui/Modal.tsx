@@ -37,7 +37,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         className="mx-4 w-full max-w-[620px] max-h-[90vh] overflow-y-auto rounded-2xl backdrop-blur-2xl bg-white/10 border border-white/20 p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-5 font-serif text-[20px] font-semibold text-white">{title}</h2>
+        <h2 className="mb-5 text-xl font-semibold text-white">{title}</h2>
         {children}
       </div>
     </div>

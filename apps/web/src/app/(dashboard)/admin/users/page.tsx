@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
       <TopBar breadcrumb="Yönetim › Kullanıcı Yönetimi" />
       <ContentWrapper>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-serif text-[22px] font-semibold text-white">Kullanıcı Yönetimi</h1>
+          <h1 className="text-2xl font-semibold text-white">Kullanıcı Yönetimi</h1>
           <Button onClick={handleAdd}>+ Yeni Kullanıcı</Button>
         </div>
 

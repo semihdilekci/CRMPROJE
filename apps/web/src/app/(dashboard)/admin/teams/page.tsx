@@ -61,7 +61,7 @@ export default function AdminTeamsPage() {
       <TopBar breadcrumb="Yönetim › Ekipler" />
       <ContentWrapper>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-serif text-[22px] font-semibold text-white">Ekipler</h1>
+          <h1 className="text-2xl font-semibold text-white">Ekipler</h1>
           <Button onClick={handleAdd}>+ Yeni Ekip</Button>
         </div>
 

@@ -27,6 +27,10 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - [ ] **ANTHROPIC_API_KEY** (AI analiz — Claude) — console.anthropic.com'dan alınır; Claude seçildiğinde zorunlu.
 - [ ] **OLLAMA_BASE_URL**, **OLLAMA_MODEL** (AI analiz — Ollama) — opsiyonel; Ollama seçildiğinde local'de `ollama serve` çalışıyor olmalı.
 
+**AI Chat — Local model (Ollama) kullanıldığında:**
+- Token maliyeti yok; tam veri kapsamı (full) kullanılabilir.
+- Veri dışarı çıkmaz → KVKK endişesi yok.
+
 ### Frontend (Web)
 
 - [ ] **NEXT_PUBLIC_API_URL** build öncesi set edildi (canlı API base URL).  

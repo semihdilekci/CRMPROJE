@@ -30,7 +30,7 @@ export default function AdminSettingsPage() {
     <div className="min-h-screen">
       <TopBar breadcrumb="Yönetim › Sistem Ayarları" />
       <ContentWrapper>
-        <h1 className="font-serif text-[22px] font-semibold text-white">Sistem Ayarları</h1>
+        <h1 className="text-2xl font-semibold text-white">Sistem Ayarları</h1>
         <p className="mt-2 text-[14px] text-white/60">
           Varsayılan para birimi ve sözlük değerleri (dönüşüm oranı etiketleri) bu sayfadan
           düzenlenir.

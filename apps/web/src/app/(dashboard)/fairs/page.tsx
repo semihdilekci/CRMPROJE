@@ -37,7 +37,7 @@ export default function FairsPage() {
               {fairs.length} fuar · {totalOpportunities} toplam fırsat
             </p>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {fairs.map((fair) => (
                 <FairCard
                   key={fair.id}
@@ -49,16 +49,16 @@ export default function FairsPage() {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="flex min-h-[160px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-white/20 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
+                className="flex h-[240px] min-w-0 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-white/20 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
               >
-                <span className="text-[15px] font-medium">+ Yeni Fuar Ekle</span>
+                <span className="text-base font-medium">+ Yeni Fuar Ekle</span>
               </button>
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <span className="text-[56px]">🏛</span>
-            <h2 className="mt-4 font-serif text-[22px] font-semibold text-white">
+            <h2 className="mt-4 text-2xl font-semibold text-white">
               Henüz fuar eklenmemiş
             </h2>
             <p className="mt-2 max-w-[320px] text-[14px] text-white/60">

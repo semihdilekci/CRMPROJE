@@ -120,7 +120,7 @@ export function CustomerSelectInput({
           />
 
           {showDropdown && (searchText.length > 0 || customers.length > 0) && (
-            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg">
+            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-white/20 bg-[rgba(13,13,13,0.9)] backdrop-blur-sm shadow-lg">
               {customers.length > 0 ? (
                 customers.map((c) => (
                   <button

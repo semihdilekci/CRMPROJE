@@ -24,7 +24,7 @@ export default function FairDetailPage() {
   const deleteFair = useDeleteFair();
 
   const [search, setSearch] = useState('');
-  const [rateFilter, setRateFilter] = useState('');
+  const [selectedRates, setSelectedRates] = useState<string[]>([]);
   const [stageFilter, setStageFilter] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -34,7 +34,7 @@ export default function FairDetailPage() {
   const { data: opportunities } = useOpportunitiesByFair(
     fairId,
     search,
-    rateFilter,
+    '',
     stageFilter,
   );
 
@@ -42,6 +42,24 @@ export default function FairDetailPage() {
     () => fair?.opportunities ?? [],
     [fair?.opportunities],
   );
+
+  const handleRateToggle = (rate: string | null) => {
+    if (rate === null) {
+      setSelectedRates([]);
+      return;
+    }
+    setSelectedRates((prev) =>
+      prev.includes(rate) ? prev.filter((r) => r !== rate) : [...prev, rate],
+    );
+  };
+
+  const baseOpportunities = opportunities ?? allOpportunities;
+  const displayOpportunities = useMemo(() => {
+    if (selectedRates.length === 0) return baseOpportunities;
+    return baseOpportunities.filter(
+      (o) => o.conversionRate && selectedRates.includes(o.conversionRate),
+    );
+  }, [baseOpportunities, selectedRates]);
 
   const handleDeleteFair = async () => {
     await deleteFair.mutateAsync(fairId);
@@ -55,8 +73,6 @@ export default function FairDetailPage() {
       </div>
     );
   }
-
-  const displayOpportunities = opportunities ?? allOpportunities;
 
   return (
     <div className="min-h-screen">
@@ -75,13 +91,15 @@ export default function FairDetailPage() {
           onDelete={() => setShowDeleteDialog(true)}
         />
 
-        <FairStats opportunities={allOpportunities} />
+        <FairStats
+          opportunities={allOpportunities}
+          selectedRates={selectedRates}
+          onRateToggle={handleRateToggle}
+        />
 
         <OpportunityToolbar
           search={search}
           onSearchChange={setSearch}
-          rateFilter={rateFilter}
-          onRateFilterChange={setRateFilter}
           stageFilter={stageFilter}
           onStageFilterChange={setStageFilter}
           onAddOpportunity={() => {
@@ -111,13 +129,13 @@ export default function FairDetailPage() {
                   setEditingOpportunity(null);
                   setShowOpportunityModal(true);
                 }}
-                className="flex min-h-[110px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 p-4 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
+                className="flex h-[144px] min-h-[144px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 p-4 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
               >
                 <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
               </button>
             </div>
           </div>
-        ) : search || rateFilter || stageFilter ? (
+        ) : search || selectedRates.length > 0 || stageFilter ? (
           <p className="py-12 text-center text-white/60">Arama sonucu bulunamadı.</p>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -15,8 +15,8 @@ Bu doküman, Fuar CRM web uygulamasının Glassmorphism tabanlı tasarım sistem
 ## Renk Paleti
 
 ### Arka Plan
-- **Ana gradient:** `from-slate-950 via-slate-900 to-slate-950` (statik, animasyon yok)
-- **Body:** `globals.css` içinde `linear-gradient` ile tanımlı
+- **Ana gradient:** Koyu taban (#030712) + mor glow (sol üst) + turkuaz glow (sağ alt)
+- **Body:** `globals.css` içinde çok katmanlı `radial-gradient` + `linear-gradient` ile tanımlı
 
 ### Vurgu Renkleri (Mor–Turkuaz)
 - **Primary gradient:** `from-violet-500 to-cyan-500`
@@ -26,6 +26,23 @@ Bu doküman, Fuar CRM web uygulamasının Glassmorphism tabanlı tasarım sistem
 ### Metin
 - **Ana metin:** `text-white` veya `#f8fafc`
 - **İkincil metin:** `text-white/60` veya `text-white/80`
+
+### Font
+- **Font stack:** `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
+- **Body:** 16px, `font-sans`
+- **Başlıklar:** h1 (32px), h2 (24px), h3 (18px), h4 (16px)
+
+### Font Boyutları (Token)
+| Sınıf | Boyut |
+|-------|-------|
+| `text-xs` | 12px |
+| `text-sm` | 14px |
+| `text-base` | 16px |
+| `text-lg` | 18px |
+| `text-xl` | 20px |
+| `text-2xl` | 24px |
+| `text-3xl` | 30px |
+| `text-4xl` | 32px |
 
 ### Glass Token'ları
 - **Glass arka plan:** `bg-white/5` veya `bg-white/10`

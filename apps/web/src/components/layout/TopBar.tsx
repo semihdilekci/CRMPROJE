@@ -39,11 +39,11 @@ export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair, actio
 
   return (
     <header className="sticky top-0 z-[100] border-b border-white/10 backdrop-blur-xl bg-slate-950/30">
-      <div className="mx-auto flex max-w-[960px] items-center justify-between px-6 py-3">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-3">
         <div className="flex items-center gap-4">
           <Link
             href="/fairs"
-            className="font-serif text-[18px] font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hover:opacity-90"
+            className="text-xl font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hover:opacity-90"
           >
             Fuar CRM
           </Link>
