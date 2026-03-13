@@ -14,6 +14,7 @@ import {
   ApiSuccessResponse,
   Fair,
   FairWithOpportunities,
+  FairMetrics,
   createFairSchema,
   updateFairSchema,
   CreateFairDto,
@@ -42,6 +43,12 @@ export class FairController {
   async findAll(): Promise<ApiSuccessResponse<Fair[]>> {
     const data = await this.fairService.findAll();
     return { success: true, message: 'Fuarlar başarıyla getirildi', data };
+  }
+
+  @Get(':id/metrics')
+  async getMetrics(@Param('id') id: string): Promise<ApiSuccessResponse<FairMetrics>> {
+    const data = await this.fairService.getMetrics(id);
+    return { success: true, message: 'Fuar metrikleri başarıyla getirildi', data };
   }
 
   @Get(':id')

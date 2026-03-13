@@ -46,6 +46,10 @@ model Fair {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  targetBudget    String?
+  targetTonnage   Float?
+  targetLeadCount Int?
+
   createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
   createdById String
 

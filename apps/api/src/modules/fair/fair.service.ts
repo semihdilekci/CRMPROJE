@@ -1,5 +1,14 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Fair, FairWithOpportunities, CreateFairDto, UpdateFairDto, Currency, ConversionRate } from '@crm/shared';
+import {
+  Fair,
+  FairWithOpportunities,
+  FairMetrics,
+  CreateFairDto,
+  UpdateFairDto,
+  Currency,
+  ConversionRate,
+  parseBudgetToNumber,
+} from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 
@@ -25,6 +34,9 @@ export class FairService {
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         createdById,
+        targetBudget: dto.targetBudget ?? null,
+        targetTonnage: dto.targetTonnage ?? null,
+        targetLeadCount: dto.targetLeadCount ?? null,
       },
     });
     const result = this.toFairResponse(fair);
@@ -133,6 +145,9 @@ export class FairService {
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data['startDate'] = new Date(dto.startDate);
     if (dto.endDate) data['endDate'] = new Date(dto.endDate);
+    if (dto.targetBudget !== undefined) data['targetBudget'] = dto.targetBudget;
+    if (dto.targetTonnage !== undefined) data['targetTonnage'] = dto.targetTonnage;
+    if (dto.targetLeadCount !== undefined) data['targetLeadCount'] = dto.targetLeadCount;
 
     const fair = await this.prisma.fair.update({
       where: { id },
@@ -167,6 +182,90 @@ export class FairService {
     this.logger.log(`Fair deleted: ${id}`);
   }
 
+  async getMetrics(fairId: string): Promise<FairMetrics> {
+    const fair = await this.prisma.fair.findUnique({
+      where: { id: fairId },
+      include: {
+        opportunities: {
+          include: { opportunityProducts: true },
+        },
+      },
+    });
+
+    if (!fair) {
+      throw new NotFoundException('Fuar bulunamadı');
+    }
+
+    const opportunities = fair.opportunities;
+    const totalOpportunities = opportunities.length;
+
+    const wonOpportunities = opportunities.filter((o) => o.currentStage === 'satisa_donustu').length;
+    const lostOpportunities = opportunities.filter((o) => o.currentStage === 'olumsuz').length;
+    const openOpportunities = opportunities.filter(
+      (o) => o.currentStage !== 'satisa_donustu' && o.currentStage !== 'olumsuz',
+    ).length;
+    const proposalSentCount = opportunities.filter((o) => o.currentStage === 'teklif').length;
+
+    let totalTonnage = 0;
+    let wonTonnage = 0;
+    for (const opp of opportunities) {
+      const oppTonnage =
+        opp.opportunityProducts?.reduce((sum, op) => sum + (op.quantity ?? 0), 0) ?? 0;
+      totalTonnage += oppTonnage;
+      if (opp.currentStage === 'satisa_donustu') {
+        wonTonnage += oppTonnage;
+      }
+    }
+
+    let totalPipelineValue = 0;
+    let wonPipelineValue = 0;
+    for (const opp of opportunities) {
+      const budget = parseBudgetToNumber(opp.budgetRaw);
+      if (opp.currentStage !== 'satisa_donustu' && opp.currentStage !== 'olumsuz') {
+        totalPipelineValue += budget;
+      }
+      if (opp.currentStage === 'satisa_donustu') {
+        wonPipelineValue += budget;
+      }
+    }
+
+    const conversionRate =
+      totalOpportunities > 0 ? Math.round((wonOpportunities / totalOpportunities) * 1000) / 10 : 0;
+
+    const targetBudget = fair.targetBudget ? parseBudgetToNumber(fair.targetBudget) : null;
+    const targetTonnage = fair.targetTonnage;
+    const targetLeadCount = fair.targetLeadCount;
+
+    const targetBudgetProgress =
+      targetBudget != null && targetBudget > 0
+        ? Math.round((wonPipelineValue / targetBudget) * 1000) / 10
+        : null;
+    const targetTonnageProgress =
+      targetTonnage != null && targetTonnage > 0
+        ? Math.round((wonTonnage / targetTonnage) * 1000) / 10
+        : null;
+    const targetLeadCountProgress =
+      targetLeadCount != null && targetLeadCount > 0
+        ? Math.round((totalOpportunities / targetLeadCount) * 1000) / 10
+        : null;
+
+    return {
+      totalOpportunities,
+      wonOpportunities,
+      lostOpportunities,
+      openOpportunities,
+      proposalSentCount,
+      totalTonnage,
+      wonTonnage,
+      totalPipelineValue,
+      wonPipelineValue,
+      conversionRate,
+      targetBudgetProgress,
+      targetTonnageProgress,
+      targetLeadCountProgress,
+    };
+  }
+
   private toFairResponse(fair: {
     id: string;
     name: string;
@@ -176,6 +275,9 @@ export class FairService {
     createdById: string;
     createdAt: Date;
     updatedAt: Date;
+    targetBudget?: string | null;
+    targetTonnage?: number | null;
+    targetLeadCount?: number | null;
   }): Fair {
     return {
       id: fair.id,
@@ -186,6 +288,9 @@ export class FairService {
       createdById: fair.createdById,
       createdAt: fair.createdAt.toISOString(),
       updatedAt: fair.updatedAt.toISOString(),
+      targetBudget: fair.targetBudget ?? null,
+      targetTonnage: fair.targetTonnage ?? null,
+      targetLeadCount: fair.targetLeadCount ?? null,
     };
   }
 }
