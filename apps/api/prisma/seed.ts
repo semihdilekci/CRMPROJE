@@ -13,7 +13,6 @@ const prisma = new PrismaClient();
 const PIPELINE_STAGES = [
   'tanisma',
   'toplanti',
-  'proje',
   'teklif',
   'sozlesme',
   'satisa_donustu',
@@ -105,21 +104,20 @@ async function main(): Promise<void> {
 
   // --- ÜRÜNLER ---
   const productNames = [
-    'Endüstriyel Pompalar',
-    'Vana Sistemleri',
-    'Kompresörler',
-    'Filtre Üniteleri',
-    'Otomasyon Yazılımı',
-    'Sensörler & Ölçüm',
-    'Boru & Fitting',
-    'Isı Eşanjörleri',
-    'Proses Ekipmanları',
-    'Kontrol Panelleri',
-    'Soğutma Grupları',
-    'Klima Santralleri',
-    'Fan Coil Üniteleri',
-    'VRF Sistemleri',
-    'Chiller Üniteleri',
+    'Everwell Gıda Takviyesi',
+    'Everwell Force',
+    'Oneo - Sakız',
+    'Yıldız - Sakız',
+    'Yupo - Sakız',
+    'Yupo - Jelly',
+    'Yupo - Licorice',
+    'Kremini - Yumuşak Şeker',
+    'Bonbon - Sert Şeker',
+    'Yupo - Sert Şeker',
+    'Pastil - Sert Şeker Şekersiz',
+    'Bonbon - İkramlık',
+    'Toffe - İkramlık',
+    'Lokumcuk - İkramlık',
   ];
 
   const products: { id: string; name: string }[] = [];
@@ -269,11 +267,10 @@ async function main(): Promise<void> {
   console.log(`   ✓ ${customers.length} müşteri`);
 
   // --- FIRSATLAR (raporlama için zengin dağılım) ---
-  // Pipeline dağılımı: tanisma, toplanti, proje, teklif, sozlesme, satisa_donustu, olumsuz
+  // Pipeline dağılımı: tanisma, toplanti, teklif, sozlesme, satisa_donustu, olumsuz
   const stageDistribution: Record<string, number> = {
     tanisma: 35,
     toplanti: 40,
-    proje: 25,
     teklif: 30,
     sozlesme: 20,
     satisa_donustu: 45,
@@ -372,7 +369,7 @@ async function main(): Promise<void> {
   console.log(`   - ${fairs.length} fuar (geçmiş + gelecek)`);
   console.log(`   - ${customers.length} müşteri`);
   console.log(`   - ${oppCount} fırsat`);
-  console.log(`   - Pipeline: tanışma, toplantı, proje, teklif, sözleşme, satışa dönüşme, olumsuz`);
+  console.log(`   - Pipeline: tanışma, toplantı, teklif, sözleşme, satışa dönüşme, olumsuz`);
   console.log(`   - Bütçe: USD, EUR, TRY, GBP`);
   console.log(`   - Dönüşüm oranları: very_high → very_low`);
   console.log(`   - Ürün tonajları (OpportunityProduct)`);

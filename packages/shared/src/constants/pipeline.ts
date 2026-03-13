@@ -24,14 +24,12 @@ export type PipelineStageValue = (typeof PIPELINE_STAGE_VALUES)[number];
 export type LossReasonValue = (typeof LOSS_REASON_VALUES)[number];
 
 export function getStageLabel(value: string): string {
-  if (value === 'proje') return 'Proje';
   if (value === 'olumsuz') return 'Olumsuz Sonuçlandı';
   const stage = PIPELINE_STAGES.find((s) => s.value === value);
   return stage?.label ?? value;
 }
 
 export function getStageOrder(value: string): number {
-  if (value === 'proje') return 3;
   if (value === 'olumsuz') return 7;
   const stage = PIPELINE_STAGES.find((s) => s.value === value);
   return stage?.order ?? 0;

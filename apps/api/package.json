@@ -15,7 +15,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "migrate:opportunity-products": "ts-node -r tsconfig-paths/register prisma/scripts/migrate-opportunity-products.ts"
+    "migrate:opportunity-products": "ts-node -r tsconfig-paths/register prisma/scripts/migrate-opportunity-products.ts",
+    "seed:stage-logs": "ts-node -r tsconfig-paths/register prisma/scripts/seed-stage-logs.ts",
+    "update:product-names": "ts-node -r tsconfig-paths/register prisma/scripts/update-product-names.ts"
   },
   "dependencies": {
     "@crm/shared": "*",

@@ -228,17 +228,16 @@ Product (yeni relation):
 PİPELINE AŞAMALARI
 ==============================
 
-Fırsat pipeline'ı 7 aşamadan oluşur:
+Fırsat pipeline'ı 6 aşamadan oluşur:
 
   Sıra  Enum Değeri       Görünen Ad              Tür
   ────  ──────────────    ──────────────────────  ──────────
   1     tanisma           Tanışma                 Normal
   2     toplanti          Toplantı                Normal
-  3     proje             Proje                   Normal
-  4     teklif            Teklif                  Normal
-  5     sozlesme          Sözleşme                Normal
-  6     satisa_donustu    Satışa Dönüştü          Terminal (+)
-  7     olumsuz           Olumsuz Sonuçlandı      Terminal (−)
+  3     teklif            Teklif                  Normal
+  4     sozlesme          Sözleşme                Normal
+  5     satisa_donustu    Satışa Dönüştü          Terminal (+)
+  6     olumsuz           Olumsuz Sonuçlandı      Terminal (−)
 
 Aşama geçiş kuralları:
   - Yeni fırsat oluşturulduğunda varsayılan aşama: "tanisma"
@@ -624,11 +623,10 @@ Yapılacaklar:
    - PIPELINE_STAGES dizisi:
      [{ value: 'tanisma', label: 'Tanışma', order: 1, terminal: false },
       { value: 'toplanti', label: 'Toplantı', order: 2, terminal: false },
-      { value: 'proje', label: 'Proje', order: 3, terminal: false },
-      { value: 'teklif', label: 'Teklif', order: 4, terminal: false },
-      { value: 'sozlesme', label: 'Sözleşme', order: 5, terminal: false },
-      { value: 'satisa_donustu', label: 'Satışa Dönüştü', order: 6, terminal: true },
-      { value: 'olumsuz', label: 'Olumsuz Sonuçlandı', order: 7, terminal: true }]
+      { value: 'teklif', label: 'Teklif', order: 3, terminal: false },
+      { value: 'sozlesme', label: 'Sözleşme', order: 4, terminal: false },
+      { value: 'satisa_donustu', label: 'Satışa Dönüştü', order: 5, terminal: true },
+      { value: 'olumsuz', label: 'Olumsuz Sonuçlandı', order: 6, terminal: true }]
    - PIPELINE_STAGE_VALUES: string[] (Zod enum için)
    - LOSS_REASONS dizisi:
      [{ value: 'price_high', label: 'Fiyat yüksek' }, ...]
