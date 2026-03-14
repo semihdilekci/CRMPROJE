@@ -39,8 +39,13 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
     resolver: zodResolver(isEdit ? updateUserSchema : createUserSchema),
     mode: 'onTouched',
     defaultValues: isEdit
-      ? { name: initial.name, role: initial.role, teamId: initial.teamId ?? '' }
-      : { name: '', email: '', password: '', role: 'user', teamId: '' },
+      ? {
+          name: initial.name,
+          role: initial.role,
+          teamId: initial.teamId ?? '',
+          phone: initial.phone ?? '',
+        }
+      : { name: '', email: '', password: '', role: 'user', teamId: '', phone: '' },
   });
 
   useEffect(() => {
@@ -49,9 +54,14 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
       return;
     }
     if (initial) {
-      reset({ name: initial.name, role: initial.role, teamId: initial.teamId ?? '' });
+      reset({
+        name: initial.name,
+        role: initial.role,
+        teamId: initial.teamId ?? '',
+        phone: initial.phone ?? '',
+      });
     } else {
-      reset({ name: '', email: '', password: '', role: 'user', teamId: '' });
+      reset({ name: '', email: '', password: '', role: 'user', teamId: '', phone: '' });
     }
   }, [open, initial, reset]);
 
@@ -66,9 +76,16 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
         if ((data as EditFormData).teamId) {
           dto.teamId = (data as EditFormData).teamId;
         }
+        if ((data as EditFormData).phone !== undefined) {
+          dto.phone = (data as EditFormData).phone?.trim() || undefined;
+        }
         await updateUser.mutateAsync({ id: initial.id, dto });
       } else {
-        await createUser.mutateAsync(data as CreateUserDto);
+        const createData = data as CreateUserDto;
+        await createUser.mutateAsync({
+          ...createData,
+          phone: createData.phone?.trim() || undefined,
+        });
       }
       onClose();
     } catch (err) {
@@ -113,6 +130,13 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
             error={(errors as Record<string, { message?: string }>).email?.message}
           />
         )}
+        <Input
+          label="Telefon (MFA için)"
+          type="tel"
+          placeholder="+905551234567"
+          {...register('phone')}
+          error={(errors as Record<string, { message?: string }>).phone?.message}
+        />
         {!isEdit ? (
           <Input
             label="Parola"

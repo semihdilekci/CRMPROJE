@@ -55,7 +55,7 @@ Avantajları:
 - Bir branch'te sorun çıkarsa sadece o branch geri alınır.
 - Her merge sonrası main her zaman çalışır durumda kalır.
 
-Toplam: 14 feature (F32–F45), 7 branch, 5 bağımsız DB migration.
+Toplam: 16 feature (F32–F47), 8 branch, 6 bağımsız DB migration.
 
 ==============================
 ETKİLENEN DOSYALAR (TAM LİSTE)
@@ -83,6 +83,9 @@ Shared Package (packages/shared/src/):
     - schemas/index.ts (yeni export'lar)
     - constants/api-endpoints.ts (yeni endpoint'ler)
     - constants/index.ts (yeni export'lar)
+    - types/auth.ts (MfaRequiredResponse, VerifyMfaDto)
+    - types/user.ts (phone alanı)
+    - schemas/auth.ts (verifyMfaSchema)
 
 Veritabanı (apps/api/prisma/):
   DEĞİŞECEK:
@@ -93,19 +96,26 @@ Veritabanı (apps/api/prisma/):
     - migrations/YYYYMMDD_notlar/          (Branch 3)
     - migrations/YYYYMMDD_etiketler/       (Branch 4)
     - migrations/YYYYMMDD_fuar_kpi/        (Branch 5)
+    - migrations/YYYYMMDD_mfa_sms/         (Branch 6)
 
 Backend (apps/api/src/):
   YENİ:
     - modules/tag/tag.module.ts
     - modules/tag/tag.service.ts
     - modules/tag/tag.controller.ts
+    - modules/sms/sms.module.ts
+    - modules/sms/sms.service.ts
+    - common/guards/dynamic-throttler.guard.ts
   DEĞİŞECEK:
     - modules/opportunity/opportunity.service.ts (her branch'te genişleyecek)
     - modules/opportunity/opportunity.controller.ts (her branch'te genişleyecek)
     - modules/opportunity/opportunity.module.ts (import'lar)
     - modules/fair/fair.service.ts (KPI metrikleri)
     - modules/fair/fair.controller.ts (KPI endpoint)
-    - app.module.ts (TagModule eklenecek)
+    - modules/auth/auth.service.ts (MFA 2-step flow)
+    - modules/auth/auth.controller.ts (verify-mfa endpoint)
+    - modules/settings/settings.service.ts (MFA, rate limit ayarları)
+    - app.module.ts (TagModule, SmsModule, ThrottlerModule eklenecek)
 
 Frontend (apps/web/src/):
   YENİ:
@@ -116,6 +126,7 @@ Frontend (apps/web/src/):
     - components/opportunity/OpportunityNotes.tsx
     - components/opportunity/ActivityTimeline.tsx
     - components/fair/FairKPIDrawer.tsx
+    - components/auth/MfaCodeInput.tsx
     - components/tag/TagCategoryManager.tsx
     - components/tag/TagManager.tsx
     - app/(dashboard)/admin/tags/page.tsx
@@ -133,8 +144,11 @@ Frontend (apps/web/src/):
     - lib/query-keys.ts (yeni key'ler)
     - app/(dashboard)/fairs/[id]/page.tsx (KPI drawer, timeline entegrasyonu)
     - components/layout/ (admin menüsüne "Etiketler" ekleme)
+    - app/(auth)/login/page.tsx (2 aşamalı MFA akışı)
+    - stores/auth-store.ts (verifyMfa)
+    - components/user/UserFormModal.tsx (phone alanı)
 
-Toplam tahmini etki: ~30 yeni dosya, ~20 değişen dosya, 5 migration dosyası.
+Toplam tahmini etki: ~35 yeni dosya, ~25 değişen dosya, 6 migration dosyası.
 
 ==============================
 VERİ MODELİ DEĞİŞİKLİĞİ
@@ -354,6 +368,11 @@ Seed script ile varsayılan 4 kategori ve 11 etiket oluşturulur.
 Basit alan ekleme, data migration gerekmez.
 Fair modeline targetBudget, targetTonnage, targetLeadCount alanları eklenir.
 
+--- Migration 6: MFA SMS (Branch 6) ---
+
+User modeline phone String? alanı eklenir (E.164 format).
+Mevcut kullanıcılar için phone null kalır; admin UserFormModal üzerinden girebilir.
+
 ==============================
 BRANCH YÖNETİMİ STRATEJİSİ
 ==============================
@@ -367,6 +386,7 @@ BRANCH YÖNETİMİ STRATEJİSİ
   feature/F37-F38-notlar             F37, F38      Yok
   feature/F39-F41-etiketler          F39, F40, F41 Yok
   feature/F42-F43-fuar-kpi           F42, F43      Branch 1 + 2
+  feature/F46-F47-mfa-sms            F46, F47      Yok
   feature/F44-timeline               F44           Branch 2 + 3 + 4
   feature/F45-test                   F45           Hepsi
 
@@ -387,10 +407,13 @@ Zorunlu uygulama sırası:
   5. Branch 5 (Fuar KPI)      → main'e merge
      Branch 1'den tonaj toplamı ve Branch 2'den pipeline verileri gerekir.
 
-  6. Branch 6 (Timeline)      → main'e merge
+  6. Branch 6 (MFA SMS)       → main'e merge
+     Login sırasında SMS OTP ile iki faktörlü kimlik doğrulama.
+
+  7. Branch 7 (Timeline)      → main'e merge
      Branch 2, 3, 4'ten aşama, not ve etiket verileri gerekir.
 
-  7. Branch 7 (Test)          → main'e merge
+  8. Branch 8 (Test)          → main'e merge
      Uçtan uca entegrasyon testi.
 
 Her branch merge öncesi zorunlu kontroller:
@@ -401,7 +424,7 @@ Her branch merge öncesi zorunlu kontroller:
   [ ] Migration sonrası veri doğrulaması yapıldı (varsa)
 
 Her branch merge öncesi DB yedeği:
-  Migration içeren branch'lerde (1, 2, 3, 4, 5) merge öncesi
+  Migration içeren branch'lerde (1, 2, 3, 4, 5, 6) merge öncesi
   pg_dump ile veritabanı yedeği alınır.
 
 ==============================
@@ -425,6 +448,8 @@ büyüklükte tasarlanmıştır. Tahmini boyutlar:
   F41      ~200 satır                  ~5 dosya      Küçük
   F42      ~300 satır                  ~6 dosya      Orta
   F43      ~350 satır                  ~5 dosya      Orta
+  F46      ~450 satır                  ~12 dosya     Orta–Büyük ⚠
+  F47      ~350 satır                  ~6 dosya      Orta
   F44      ~400 satır                  ~6 dosya      Orta
   F45      Test — dosya değişikliği minimal         Küçük
 
@@ -440,7 +465,7 @@ F36 (Frontend Pipeline) özellikle büyüktür (5 bileşen). Gerekirse:
   - Session B: StageHistory + OpportunityCard/Toolbar güncellemeleri
 
 ==============================
-FEATURE LİSTESİ (F32 — F45)
+FEATURE LİSTESİ (F32 — F47)
 ==============================
 
 Önemli: Feature'lar branch'ler içinde sırayla uygulanır.
@@ -1677,9 +1702,204 @@ Commit: feat(web): integrate KPI drawer in Fair detail page
 Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 6: AKTİVİTE ZAMAN ÇİZELGESİ                    ║
-║  Branch: feature/F44-timeline                            ║
-║  Bağımlılık: Branch 2 + 3 + 4                           ║
+║  BRANCH 6: MFA SMS OTP                                  ║
+║  Branch: feature/F46-F47-mfa-sms                        ║
+║  Bağımlılık: Yok                                        ║
+╚══════════════════════════════════════════════════════════╝
+
+----------------------------------------------------------------------
+F46 — MFA SMS OTP: Shared + DB + Backend + Sistem Ayarları
+----------------------------------------------------------------------
+
+Amaç: Login sırasında Twilio Verify API ile 6 haneli SMS OTP doğrulaması
+eklemek. MFA açık/kapalı ve rate limit parametrelerini sistem ayarlarından
+yönetmek. Kurumsal güvenlik standartlarına uygun yapı kurmak.
+
+Yapılacaklar:
+
+1. packages/shared/src/types/auth.ts (veya mevcut auth types) güncelle:
+   - MfaRequiredResponse interface:
+     tempToken: string
+     requiresMfa: true
+   - VerifyMfaDto type (verifyMfaSchema'dan infer)
+   - LoginResponse union: LoginResponse | MfaRequiredResponse
+     (MFA açıkken requiresMfa: true dönüldüğünde tokens yok, tempToken var)
+
+2. packages/shared/src/schemas/auth.ts güncelle:
+   - verifyMfaSchema:
+     tempToken: z.string().min(1, 'Geçersiz oturum')
+     code: z.string().length(6, 'Kod 6 haneli olmalıdır').regex(/^\d{6}$/, 'Sadece rakam giriniz')
+   - Export VerifyMfaDto type
+
+3. packages/shared/src/types/user.ts güncelle:
+   - User interface'e phone: string | null ekle (E.164 format)
+
+4. packages/shared/src/types/index.ts ve schemas/index.ts export'ları güncelle
+
+5. apps/api/prisma/schema.prisma güncelle:
+   - User modeline phone String? ekle (E.164: +905551234567)
+   - Migration: npx prisma migrate dev --name add_user_phone_mfa
+
+6. modules/settings/settings.service.ts güncelle — DEFAULTS'a ekle:
+   - MFA_SMS_ENABLED: 'false' — SMS OTP açık (true) / kapalı (false)
+   - RATE_LIMIT_LOGIN_ATTEMPTS: '5' — Login max deneme sayısı
+   - RATE_LIMIT_LOGIN_WINDOW_MINUTES: '1' — Login rate limit penceresi (dakika)
+   - RATE_LIMIT_MFA_ATTEMPTS: '5' — OTP doğrulama max deneme
+   - RATE_LIMIT_MFA_WINDOW_MINUTES: '5' — OTP rate limit penceresi
+   - RATE_LIMIT_REGISTER_ATTEMPTS: '3' — Kayıt max deneme
+   - RATE_LIMIT_REGISTER_WINDOW_MINUTES: '1' — Kayıt rate limit penceresi
+
+7. twilio paketi kur: npm install twilio -w apps/api
+
+8. apps/api/.env.example güncelle:
+   - TWILIO_ACCOUNT_SID
+   - TWILIO_AUTH_TOKEN
+   - TWILIO_VERIFY_SERVICE_SID (Verify Service oluştur: Twilio Console → Verify → Services)
+
+9. modules/sms/ oluştur (veya auth içinde):
+   - sms.module.ts: Twilio client provider
+   - sms.service.ts: sendOtp(phone: string): Promise<void>
+     Twilio Verify v2: client.verify.v2.services(serviceSid).verifications.create({
+       channel: 'sms', to: phone
+     })
+   - SmsModule'ü AppModule'e ekle
+
+10. modules/auth/auth.service.ts güncelle:
+    - SettingsService inject et
+    - login() başında: mfaEnabled = await settings.get('MFA_SMS_ENABLED') === 'true'
+    - mfaEnabled false ise: mevcut davranış (parola doğru → direkt tokens dön)
+    - mfaEnabled true ise:
+      a. Parola doğru → user.phone kontrol et
+      b. phone yok/boş → throw UnauthorizedException('Telefon numaranız kayıtlı değil. Yöneticinize başvurun.')
+      c. Twilio Verify API ile OTP gönder (SmsService)
+      d. tempToken üret (JWT, sub: userId, 5 dk süre, farklı secret veya claim)
+      e. return { tempToken, requiresMfa: true }
+    - verifyMfa(tempToken, code) metodu ekle:
+      a. tempToken verify et → userId al
+      b. user.phone ile Twilio verificationChecks.create({ to: phone, code })
+      c. status === 'approved' ise → generateTokens, return { user, tokens }
+      d. değilse → UnauthorizedException('Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.')
+
+11. modules/auth/auth.controller.ts güncelle:
+    - POST /auth/verify-mfa endpoint ekle
+    - Body: { tempToken, code } — ZodValidationPipe(verifyMfaSchema)
+    - Response: ApiSuccessResponse<LoginResponse>
+
+12. @nestjs/throttler kur: npm install @nestjs/throttler -w apps/api
+
+13. common/guards/dynamic-throttler.guard.ts oluştur (veya ThrottlerGuard extend):
+    - SettingsService'den RATE_LIMIT_* değerlerini oku
+    - Path'a göre (login, verify-mfa, register) farklı limit uygula
+    - IP bazlı sayaç (memory veya Redis)
+    - Limit aşımında ThrottlerException (429)
+
+14. auth.controller.ts'e throttle guard uygula:
+    - @UseGuards(DynamicThrottlerGuard) login, verify-mfa, register endpoint'lerinde
+
+15. Güvenlik — Kullanıcı enumeration önleme:
+    - login: email/parola hatalı → her zaman "E-posta veya parola hatalı" (aynı mesaj)
+    - verify-mfa: kod hatalı/süresi dolmuş → "Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın."
+
+16. Audit log: Başarısız login ve OTP denemelerini logla (IP, timestamp, email — parola loglanmaz)
+
+17. components/user/UserFormModal.tsx güncelle:
+    - phone alanı ekle (Input, placeholder: +905551234567)
+    - E.164 format validasyonu (Zod: regex veya refine)
+    - Admin kullanıcı oluştururken/düzenlerken telefon girebilmeli
+
+18. docs/deployment-and-env-strategy.md güncelle:
+    - TWILIO_* env değişkenleri
+    - MFA ve rate limit ayarlarının sistem ayarlarından yönetildiği notu
+
+Etkilenen dosyalar:
+  YENİ: schemas/mfa.ts (veya auth schema genişletme), modules/sms/, common/guards/dynamic-throttler.guard.ts
+  DEĞİŞEN: types/auth.ts, types/user.ts, schema.prisma, settings.service.ts,
+            auth.service.ts, auth.controller.ts, UserFormModal.tsx,
+            app.module.ts, deployment-and-env-strategy.md
+  YENİ: migrations/YYYYMMDD_add_user_phone_mfa/
+
+Bağımlılık: Yok
+Commit: feat(shared): add MFA types and verifyMfaSchema
+Commit: feat(prisma): add User.phone for MFA
+Commit: feat(api): add MFA SMS settings, Twilio Verify, auth 2-step flow
+Commit: feat(api): add dynamic rate limiting for auth endpoints
+Commit: feat(web): add phone field to UserFormModal
+
+Durum: [x]
+
+----------------------------------------------------------------------
+F47 — MFA SMS OTP: Frontend
+----------------------------------------------------------------------
+
+Amaç: Login sayfasında 2 aşamalı akış (email/parola → OTP), hata mesajları
+ve sistem ayarları sayfasında MFA/rate limit ayarlarının görünmesi.
+
+Yapılacaklar:
+
+1. components/auth/MfaCodeInput.tsx oluştur:
+   - Props: value, onChange, error?, disabled?, onComplete? (6 hane dolunca)
+   - 6 haneli OTP input (6 ayrı kutu veya tek input maxLength 6)
+   - Sadece rakam kabul (type="tel" veya inputMode="numeric")
+   - Otomatik focus: ilk kutuya, sonra sırayla
+   - Paste desteği: 6 haneli kod yapıştırıldığında tüm kutulara dağıt
+   - Tasarım: mevcut Input stiliyle uyumlu, glassmorphism
+
+2. app/(auth)/login/page.tsx güncelle:
+   - State: step 'credentials' | 'otp', tempToken, email, password
+   - login() çağrısı → response.requiresMfa === true ise:
+     step = 'otp', tempToken sakla, OTP ekranı göster
+   - response.requiresMfa !== true ise: mevcut davranış (tokens, redirect)
+   - OTP ekranı: "Telefonunuza gelen 6 haneli kodu girin" + MfaCodeInput
+   - "Doğrula" butonu → POST /auth/verify-mfa { tempToken, code }
+   - Başarı: tokens, redirect /fairs
+   - Hata: setError ile ekranda göster
+
+3. stores/auth-store.ts güncelle:
+   - login: response tipi kontrol et, requiresMfa ise { tempToken } dön (tokens set etme)
+   - verifyMfa(tempToken, code) metodu ekle:
+     POST /auth/verify-mfa → { user, tokens } → localStorage + set state
+
+4. Hata mesajları (ekranda gösterilecek):
+   - E-posta veya parola hatalı (login)
+   - Telefon numaranız kayıtlı değil. Yöneticinize başvurun. (MFA açık, phone yok)
+   - Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın. (OTP hatalı)
+   - Çok fazla deneme. Lütfen birkaç dakika bekleyin. (429 rate limit)
+   - E-posta zorunludur / Geçerli e-posta giriniz (validation)
+   - Parola en az 6 karakter olmalıdır (validation)
+   - Kod 6 haneli olmalıdır (validation)
+   - API 401/403/429/500 için Axios interceptor: uygun Türkçe mesaj
+
+5. Sistem ayarları sayfası (app/(dashboard)/admin/settings/page.tsx):
+   - Mevcut tablo bu branch'te değişmez; settings.service DEFAULTS'a eklenen
+     MFA_SMS_ENABLED, RATE_LIMIT_* anahtarları otomatik tabloda görünür
+   - Admin "Düzenle" ile değerleri değiştirebilir (MFA_SMS_ENABLED: true/false)
+   - Opsiyonel: Boolean ayarlar için dropdown (Açık/Kapalı) — SettingFormModal
+     value tipine göre farklı input render edebilir
+
+6. lib/api.ts güncelle (eğer yoksa):
+   - 429 response → error message: "Çok fazla deneme. Lütfen birkaç dakika bekleyin."
+   - 401 → "Oturumunuz sona erdi. Lütfen tekrar giriş yapın." (login sayfasında farklı)
+
+7. Login sayfası validasyon:
+   - E-posta: boş, hatalı format → inline hata
+   - Parola: 6 karakterden az → inline hata
+   - OTP: 6 hane değilse "Doğrula" disabled
+
+Etkilenen dosyalar:
+  YENİ: components/auth/MfaCodeInput.tsx
+  DEĞİŞEN: app/(auth)/login/page.tsx, stores/auth-store.ts, lib/api.ts
+
+Bağımlılık: F46 (backend + settings hazır)
+Commit: feat(web): add MfaCodeInput and 2-step login flow
+Commit: feat(web): add verifyMfa to auth store, error messages
+Commit: feat(web): handle rate limit and auth errors in login
+
+Durum: [x]
+
+╔══════════════════════════════════════════════════════════╗
+║  BRANCH 7: AKTİVİTE ZAMAN ÇİZELGESİ                     ║
+║  Branch: feature/F44-timeline                             ║
+║  Bağımlılık: Branch 2 + 3 + 4                            ║
 ╚══════════════════════════════════════════════════════════╝
 
 ----------------------------------------------------------------------
@@ -1784,7 +2004,7 @@ Commit: feat(web): integrate timeline in OpportunityCard
 Durum: [ ]
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 7: TEST & DOĞRULAMA                             ║
+║  BRANCH 8: TEST & DOĞRULAMA                             ║
 ║  Branch: feature/F45-test                                ║
 ║  Bağımlılık: Tüm branch'ler                             ║
 ╚══════════════════════════════════════════════════════════╝
@@ -1796,6 +2016,18 @@ F45 — Entegrasyon, Test & Doğrulama
 Amaç: Tüm Faz 3 özelliklerinin uçtan uca doğru çalıştığını test etmek.
 
 Test senaryoları:
+
+MFA SMS OTP:
+  [ ] MFA kapalı: email+parola → direkt giriş
+  [ ] MFA açık: email+parola doğru → OTP ekranı
+  [ ] MFA açık: OTP doğru → giriş başarılı
+  [ ] MFA açık: OTP yanlış → hata mesajı
+  [ ] MFA açık: OTP süresi dolmuş → yeniden login
+  [ ] Telefonu olmayan kullanıcı (MFA açık) → uygun hata
+  [ ] Admin: MFA_SMS_ENABLED değiştir → login davranışı güncellenir
+  [ ] Admin: RATE_LIMIT_LOGIN_ATTEMPTS değiştir → limit uygulanır
+  [ ] Rate limit aşımı → 429 mesajı
+  [ ] Login sayfası: tüm hata mesajları ekranda görünüyor
 
 Ürün Tonaj:
   [ ] Fırsat oluşturma: ürün seçimi + tonaj girişi çalışıyor
@@ -1866,7 +2098,7 @@ Edge case'ler:
   [ ] Uzun not metni düzgün görünüyor
   [ ] Boş fuar (0 fırsat) KPI drawer'da uygun mesaj
 
-Bağımlılık: F32 — F44 tamamlanmış olmalı
+Bağımlılık: F32 — F44, F46, F47 tamamlanmış olmalı
 Commit: test: verify Phase 3 features end-to-end
 
 Durum: [ ]
@@ -1897,13 +2129,17 @@ Branch 5: Fuar KPI
   F42 → Shared + DB + Backend (Fair KPI alanları + metrik hesaplama)
   F43 → Frontend (FairKPIDrawer + hedef form)
 
-Branch 6: Timeline
+Branch 6: MFA SMS OTP
+  F46 → Shared + DB + Backend (Twilio Verify, sistem ayarları, rate limit)
+  F47 → Frontend (2 aşamalı login, MfaCodeInput, hata mesajları)
+
+Branch 7: Timeline
   F44 → Backend (timeline endpoint) + Frontend (ActivityTimeline bileşeni)
 
-Branch 7: Test
+Branch 8: Test
   F45 → Uçtan uca entegrasyon testi
 
-Toplam: 14 feature, 7 branch, 5 DB migration
+Toplam: 16 feature, 8 branch, 6 DB migration
 Tahmini etki: ~30 yeni dosya, ~20 değişen dosya
 
 Bağımlılık grafiği:
@@ -1911,12 +2147,14 @@ Bağımlılık grafiği:
   Branch 1 (Ürün Tonaj) ──┐
                            ├──→ Branch 5 (Fuar KPI) ──┐
   Branch 2 (Pipeline)   ──┤                            │
-                           ├──→ Branch 6 (Timeline) ──┼──→ Branch 7 (Test)
+                           ├──→ Branch 7 (Timeline) ──┼──→ Branch 8 (Test)
   Branch 3 (Notlar)     ──┤                            │
                            │                            │
   Branch 4 (Etiketler)  ──┘                            │
-                                                        │
-  Branch 1–4 bağımsız ──────────────────────────────────┘
+                           │
+  Branch 6 (MFA SMS)    ───┘ (bağımsız)
+
+  Branch 1–4, 6 bağımsız
 
 ==============================
 ÖNEMLİ NOTLAR

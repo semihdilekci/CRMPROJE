@@ -31,6 +31,37 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
     value: 'Çok düşük (0-20%)',
     description: 'Dönüşüm oranı etiketi',
   },
+  { key: 'MFA_SMS_ENABLED', value: 'false', description: 'SMS OTP açık (true) / kapalı (false)' },
+  {
+    key: 'RATE_LIMIT_LOGIN_ATTEMPTS',
+    value: '5',
+    description: 'Login max deneme sayısı (dakika başına)',
+  },
+  {
+    key: 'RATE_LIMIT_LOGIN_WINDOW_MINUTES',
+    value: '1',
+    description: 'Login rate limit penceresi (dakika)',
+  },
+  {
+    key: 'RATE_LIMIT_MFA_ATTEMPTS',
+    value: '5',
+    description: 'OTP doğrulama max deneme sayısı',
+  },
+  {
+    key: 'RATE_LIMIT_MFA_WINDOW_MINUTES',
+    value: '5',
+    description: 'OTP rate limit penceresi (dakika)',
+  },
+  {
+    key: 'RATE_LIMIT_REGISTER_ATTEMPTS',
+    value: '3',
+    description: 'Kayıt max deneme sayısı (dakika başına)',
+  },
+  {
+    key: 'RATE_LIMIT_REGISTER_WINDOW_MINUTES',
+    value: '1',
+    description: 'Kayıt rate limit penceresi (dakika)',
+  },
 ];
 
 @Injectable()

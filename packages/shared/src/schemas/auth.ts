@@ -20,3 +20,13 @@ export const refreshTokenSchema = z.object({
 });
 
 export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;
+
+export const verifyMfaSchema = z.object({
+  tempToken: z.string().min(1, 'Geçersiz oturum'),
+  code: z
+    .string()
+    .length(6, 'Kod 6 haneli olmalıdır')
+    .regex(/^\d{6}$/, 'Sadece rakam giriniz'),
+});
+
+export type VerifyMfaDto = z.infer<typeof verifyMfaSchema>;

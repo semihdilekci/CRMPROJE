@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import * as path from 'path';
 import { AppController } from './app.controller';
 import { PrismaModule } from '@prisma/prisma.module';
@@ -26,6 +28,9 @@ import { ChatModule } from '@modules/chat/chat.module';
         '.env',
       ],
     }),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60000, limit: 10 }],
+    }),
     PrismaModule,
     AuthModule,
     UserModule,
@@ -41,5 +46,6 @@ import { ChatModule } from '@modules/chat/chat.module';
     TeamModule,
   ],
   controllers: [AppController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

@@ -20,6 +20,7 @@ const USER_SELECT = {
   email: true,
   name: true,
   role: true,
+  phone: true,
   teamId: true,
   team: { select: { id: true, name: true } },
   createdAt: true,
@@ -77,6 +78,7 @@ export class UserService {
         name: dto.name,
         role: dto.role ?? 'user',
         teamId: dto.teamId,
+        phone: dto.phone ?? null,
       },
       select: USER_SELECT,
     });
@@ -117,6 +119,7 @@ export class UserService {
     if (dto.name !== undefined) updateData['name'] = dto.name;
     if (dto.role !== undefined) updateData['role'] = dto.role;
     if (dto.teamId !== undefined) updateData['teamId'] = dto.teamId;
+    if (dto.phone !== undefined) updateData['phone'] = dto.phone ?? null;
     if (dto.password) {
       updateData['password'] = await argon2.hash(dto.password);
     }
@@ -171,6 +174,7 @@ export class UserService {
     email: string;
     name: string;
     role: string;
+    phone: string | null;
     teamId: string | null;
     team: { id: string; name: string } | null;
     createdAt: Date | string;
@@ -181,6 +185,7 @@ export class UserService {
       email: user.email,
       name: user.name,
       role: user.role as User['role'],
+      phone: user.phone ?? null,
       teamId: user.teamId,
       teamName: user.team?.name ?? null,
       createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,

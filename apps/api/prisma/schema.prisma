@@ -13,6 +13,7 @@ model User {
   password           String
   role               String   @default("user")
   name               String
+  phone              String?
   hashedRefreshToken String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

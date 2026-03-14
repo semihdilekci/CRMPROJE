@@ -5,9 +5,11 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-   /**
-    * Kullanıcının bağlı olduğu ekip (nullable: eski kayıtlar için).
-    */
+  /** E.164 format (örn: +905551234567). MFA SMS için kullanılır. */
+  phone?: string | null;
+  /**
+   * Kullanıcının bağlı olduğu ekip (nullable: eski kayıtlar için).
+   */
   teamId?: string | null;
   teamName?: string | null;
   createdAt: string;

@@ -2,14 +2,25 @@ import { Injectable, UnauthorizedException, ConflictException, Logger } from '@n
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { LoginDto, RegisterDto, AuthTokens, LoginResponse, User, JwtPayload } from '@crm/shared';
+import {
+  LoginDto,
+  RegisterDto,
+  AuthTokens,
+  LoginResponse,
+  MfaRequiredResponse,
+  User,
+  JwtPayload,
+} from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
+import { SettingsService } from '@modules/settings/settings.service';
+import { SmsService } from '@modules/sms/sms.service';
 
 const USER_SELECT = {
   id: true,
   email: true,
   name: true,
   role: true,
+  phone: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -21,7 +32,9 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly settingsService: SettingsService,
+    private readonly smsService: SmsService
   ) {}
 
   async register(dto: RegisterDto): Promise<LoginResponse> {
@@ -52,7 +65,7 @@ export class AuthService {
     return { user: this.toUserResponse(user), tokens };
   }
 
-  async login(dto: LoginDto): Promise<LoginResponse> {
+  async login(dto: LoginDto): Promise<LoginResponse | MfaRequiredResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       select: { ...USER_SELECT, password: true },
@@ -69,14 +82,71 @@ export class AuthService {
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
 
+    const mfaEnabled = (await this.settingsService.get('MFA_SMS_ENABLED')) === 'true';
+
+    if (!mfaEnabled) {
+      const tokens = await this.generateTokens(user.id, user.role);
+      await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+      this.logger.log(`User logged in: ${user.email}`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- password excluded from response
+      const { password: _pw, ...userWithoutPassword } = user;
+      return { user: this.toUserResponse(userWithoutPassword), tokens };
+    }
+
+    const phone = user.phone?.trim();
+    if (!phone) {
+      throw new UnauthorizedException(
+        'Telefon numaranız kayıtlı değil. Yöneticinize başvurun.'
+      );
+    }
+
+    await this.smsService.sendOtp(phone);
+    const tempToken = await this.generateTempToken(user.id);
+    this.logger.log(`MFA OTP sent to ${user.email}`);
+    return { tempToken, requiresMfa: true };
+  }
+
+  async verifyMfa(tempToken: string, code: string): Promise<LoginResponse> {
+    let payload: { sub: string; mfa: boolean };
+
+    try {
+      payload = this.jwtService.verify<{ sub: string; mfa: boolean }>(tempToken, {
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException(
+        'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
+      );
+    }
+
+    if (!payload.mfa) {
+      throw new UnauthorizedException(
+        'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: USER_SELECT,
+    });
+
+    if (!user || !user.phone?.trim()) {
+      throw new UnauthorizedException(
+        'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
+      );
+    }
+
+    const valid = await this.smsService.verifyOtp(user.phone.trim(), code);
+    if (!valid) {
+      throw new UnauthorizedException(
+        'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
+      );
+    }
+
     const tokens = await this.generateTokens(user.id, user.role);
     await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
-
-    this.logger.log(`User logged in: ${user.email}`);
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- password excluded from response
-    const { password: _pw, ...userWithoutPassword } = user;
-    return { user: this.toUserResponse(userWithoutPassword), tokens };
+    this.logger.log(`User logged in (MFA verified): ${user.email}`);
+    return { user: this.toUserResponse(user), tokens };
   }
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
@@ -120,6 +190,16 @@ export class AuthService {
     this.logger.log(`User logged out: ${userId}`);
   }
 
+  private async generateTempToken(userId: string): Promise<string> {
+    return this.jwtService.signAsync(
+      { sub: userId, mfa: true },
+      {
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: '5m',
+      }
+    );
+  }
+
   private async generateTokens(userId: string, role: string): Promise<AuthTokens> {
     const accessPayload = { sub: userId, role };
     const refreshPayload = { sub: userId };
@@ -156,6 +236,7 @@ export class AuthService {
     email: string;
     name: string;
     role: string;
+    phone?: string | null;
     createdAt: Date | string;
     updatedAt: Date | string;
   }): User {
@@ -164,6 +245,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role as User['role'],
+      phone: user.phone ?? null,
       createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
       updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
     };
