@@ -23,16 +23,19 @@ import {
 import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useProducts } from '@/hooks/use-products';
 import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
+import { OfferDownloadButton } from '@/components/opportunity/OfferDownloadButton';
 import { getNextStageInSequence, isTerminalStage } from '@crm/shared';
 
 function PipelineAndStageHistoryBlock({
   opportunityId,
   initialCurrentStage,
   fairId,
+  opportunity,
 }: {
   opportunityId: string;
   initialCurrentStage: string;
   fairId: string;
+  opportunity?: OpportunityWithCustomer | null;
 }) {
   const [showStageModal, setShowStageModal] = useState(false);
   const [targetStage, setTargetStage] = useState('');
@@ -59,15 +62,16 @@ function PipelineAndStageHistoryBlock({
         compact={false}
         interactive
       />
-      <div className="mt-3">
-        <StageHistory
-          opportunityId={opportunityId}
-          compact={false}
-          editable
-          allowDeleteLast
-          fairId={fairId}
-        />
-      </div>
+              <div className="mt-3">
+                <StageHistory
+                  opportunityId={opportunityId}
+                  compact={false}
+                  editable
+                  allowDeleteLast
+                  fairId={fairId}
+                />
+                <OfferDownloadButton opportunityId={opportunityId} />
+              </div>
       <StageTransitionModal
         open={showStageModal}
         onClose={() => setShowStageModal(false)}
@@ -75,6 +79,7 @@ function PipelineAndStageHistoryBlock({
         fairId={fairId}
         currentStage={currentStage}
         targetStage={targetStage}
+        opportunity={opportunity}
       />
     </>
   );
@@ -373,6 +378,7 @@ export function OpportunityFormModal({
               opportunityId={initial.id}
               initialCurrentStage={initial.currentStage}
               fairId={fairId}
+              opportunity={initial}
             />
           </div>
         )}

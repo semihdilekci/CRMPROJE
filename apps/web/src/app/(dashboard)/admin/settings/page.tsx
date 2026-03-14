@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useSettings } from '@/hooks/use-settings';
 import { SettingFormModal } from '@/components/settings/SettingFormModal';
 import type { SystemSetting } from '@crm/shared';
+import api from '@/lib/api';
 
 function formatDate(iso: string) {
   try {
@@ -22,9 +23,40 @@ function formatDate(iso: string) {
   }
 }
 
+const TEKLIF_PLACEHOLDERS = [
+  '{{customer_name}}',
+  '{{customer_company}}',
+  '{{customer_address}}',
+  '{{customer_phone}}',
+  '{{customer_email}}',
+  '{{product_list}}',
+  '{{total_amount}}',
+  '{{total_currency}}',
+];
+
 export default function AdminSettingsPage() {
   const [editing, setEditing] = useState<SystemSetting | null>(null);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const { data: settings, isLoading } = useSettings();
+
+  const handleDownloadTemplate = async () => {
+    try {
+      setDownloadingTemplate(true);
+      const { data } = await api.get<Blob>('/upload/teklif-template/default', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'default-teklif-template.docx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // Hata toast gösterilebilir
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -35,6 +67,37 @@ export default function AdminSettingsPage() {
           Varsayılan para birimi ve sözlük değerleri (dönüşüm oranı etiketleri) bu sayfadan
           düzenlenir.
         </p>
+
+        <div className="mt-8 rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10 p-6">
+          <h2 className="text-lg font-semibold text-white">Teklif Template</h2>
+          <p className="mt-2 text-[14px] text-white/60">
+            Teklif dokümanları oluşturulurken kullanılan Word (.docx) template. Template içinde
+            aşağıdaki placeholder&apos;lar otomatik doldurulur.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {TEKLIF_PLACEHOLDERS.map((p) => (
+              <code
+                key={p}
+                className="rounded bg-white/10 px-2 py-1 text-[12px] text-violet-300"
+              >
+                {p}
+              </code>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleDownloadTemplate}
+              disabled={downloadingTemplate}
+              className="self-start"
+            >
+              {downloadingTemplate ? 'İndiriliyor...' : 'Varsayılan Template İndir'}
+            </Button>
+            <p className="text-[13px] text-white/50">
+              Dosya konumu: apps/api/assets/teklif-templates/default-teklif-template.docx
+            </p>
+          </div>
+        </div>
 
         {isLoading ? (
           <p className="mt-6 text-white/60">Yükleniyor...</p>

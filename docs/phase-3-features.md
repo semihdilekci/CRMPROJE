@@ -55,7 +55,7 @@ Avantajları:
 - Bir branch'te sorun çıkarsa sadece o branch geri alınır.
 - Her merge sonrası main her zaman çalışır durumda kalır.
 
-Toplam: 16 feature (F32–F47), 8 branch, 6 bağımsız DB migration.
+Toplam: 16 feature (F32–F47), 8 branch, 8 bağımsız DB migration.
 
 ==============================
 ETKİLENEN DOSYALAR (TAM LİSTE)
@@ -67,7 +67,7 @@ Shared Package (packages/shared/src/):
     - types/opportunity-stage.ts
     - types/opportunity-note.ts
     - types/tag.ts
-    - types/timeline.ts
+    - types/offer.ts
     - schemas/opportunity-product.ts
     - schemas/opportunity-stage.ts
     - schemas/opportunity-note.ts
@@ -97,6 +97,8 @@ Veritabanı (apps/api/prisma/):
     - migrations/YYYYMMDD_etiketler/       (Branch 4)
     - migrations/YYYYMMDD_fuar_kpi/        (Branch 5)
     - migrations/YYYYMMDD_mfa_sms/         (Branch 6)
+    - migrations/YYYYMMDD_customer_address/      (Branch 7)
+    - migrations/YYYYMMDD_opportunity_offer_document/ (Branch 7)
 
 Backend (apps/api/src/):
   YENİ:
@@ -124,7 +126,7 @@ Frontend (apps/web/src/):
     - components/opportunity/StageTransitionModal.tsx
     - components/opportunity/StageHistory.tsx
     - components/opportunity/OpportunityNotes.tsx
-    - components/opportunity/ActivityTimeline.tsx
+    - components/opportunity/OfferProductPriceList.tsx
     - components/fair/FairKPIDrawer.tsx
     - components/auth/MfaCodeInput.tsx
     - components/tag/TagCategoryManager.tsx
@@ -132,23 +134,23 @@ Frontend (apps/web/src/):
     - app/(dashboard)/admin/tags/page.tsx
     - hooks/use-opportunity-stages.ts
     - hooks/use-opportunity-notes.ts
-    - hooks/use-opportunity-timeline.ts
+    - hooks/use-offer.ts
     - hooks/use-tags.ts
     - hooks/use-fair-metrics.ts
   DEĞİŞECEK:
     - components/opportunity/OpportunityFormModal.tsx (ürün tonaj UI, etiket seçimi)
-    - components/opportunity/OpportunityCard.tsx (aşama badge, not ikonu, etiket noktaları, timeline)
+    - components/opportunity/OpportunityCard.tsx (aşama badge, not ikonu, etiket noktaları, teklif indirme)
     - components/fair/OpportunityToolbar.tsx (aşama filtresi, etiket filtresi)
     - components/fair/FairStats.tsx (KPI entegrasyonu, opsiyonel)
     - hooks/use-opportunities.ts (response type güncellemeleri)
     - lib/query-keys.ts (yeni key'ler)
-    - app/(dashboard)/fairs/[id]/page.tsx (KPI drawer, timeline entegrasyonu)
+    - app/(dashboard)/fairs/[id]/page.tsx (KPI drawer, teklif entegrasyonu)
     - components/layout/ (admin menüsüne "Etiketler" ekleme)
     - app/(auth)/login/page.tsx (2 aşamalı MFA akışı)
     - stores/auth-store.ts (verifyMfa)
     - components/user/UserFormModal.tsx (phone alanı)
 
-Toplam tahmini etki: ~35 yeni dosya, ~25 değişen dosya, 6 migration dosyası.
+Toplam tahmini etki: ~37 yeni dosya, ~27 değişen dosya, 8 migration dosyası.
 
 ==============================
 VERİ MODELİ DEĞİŞİKLİĞİ
@@ -387,7 +389,7 @@ BRANCH YÖNETİMİ STRATEJİSİ
   feature/F39-F41-etiketler          F39, F40, F41 Yok
   feature/F42-F43-fuar-kpi           F42, F43      Branch 1 + 2
   feature/F46-F47-mfa-sms            F46, F47      Yok
-  feature/F44-timeline               F44           Branch 2 + 3 + 4
+  feature/F44-teklif-dokumani       F44           Branch 2
   feature/F45-test                   F45           Hepsi
 
 Zorunlu uygulama sırası:
@@ -410,8 +412,8 @@ Zorunlu uygulama sırası:
   6. Branch 6 (MFA SMS)       → main'e merge
      Login sırasında SMS OTP ile iki faktörlü kimlik doğrulama.
 
-  7. Branch 7 (Timeline)      → main'e merge
-     Branch 2, 3, 4'ten aşama, not ve etiket verileri gerekir.
+  7. Branch 7 (Teklif Dokümanı)  → main'e merge
+     Branch 2'den pipeline (Teklif aşaması) verileri gerekir.
 
   8. Branch 8 (Test)          → main'e merge
      Uçtan uca entegrasyon testi.
@@ -424,7 +426,7 @@ Her branch merge öncesi zorunlu kontroller:
   [ ] Migration sonrası veri doğrulaması yapıldı (varsa)
 
 Her branch merge öncesi DB yedeği:
-  Migration içeren branch'lerde (1, 2, 3, 4, 5, 6) merge öncesi
+  Migration içeren branch'lerde (1, 2, 3, 4, 5, 6, 7) merge öncesi
   pg_dump ile veritabanı yedeği alınır.
 
 ==============================
@@ -450,7 +452,7 @@ büyüklükte tasarlanmıştır. Tahmini boyutlar:
   F43      ~350 satır                  ~5 dosya      Orta
   F46      ~450 satır                  ~12 dosya     Orta–Büyük ⚠
   F47      ~350 satır                  ~6 dosya      Orta
-  F44      ~400 satır                  ~6 dosya      Orta
+  F44      ~550 satır                  ~12 dosya     Orta–Büyük ⚠
   F45      Test — dosya değişikliği minimal         Küçük
 
 ⚠ işaretli feature'lar context window sınırına yaklaşabilir.
@@ -463,6 +465,10 @@ Bu durumda şu strateji uygulanır:
 F36 (Frontend Pipeline) özellikle büyüktür (5 bileşen). Gerekirse:
   - Session A: PipelineProgressBar + StageTransitionModal
   - Session B: StageHistory + OpportunityCard/Toolbar güncellemeleri
+
+F44 (Teklif Dokümanı) Orta–Büyük. Gerekirse:
+  - Session A: Shared + DB + Backend (offer endpoints, template, upload)
+  - Session B: Frontend (StageTransitionModal teklif UI, OfferProductPriceList, indirme)
 
 ==============================
 FEATURE LİSTESİ (F32 — F47)
@@ -1897,109 +1903,83 @@ Commit: feat(web): handle rate limit and auth errors in login
 Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 7: AKTİVİTE ZAMAN ÇİZELGESİ                     ║
-║  Branch: feature/F44-timeline                             ║
-║  Bağımlılık: Branch 2 + 3 + 4                            ║
+║  BRANCH 7: TEKLİF DOKÜMANI                              ║
+║  Branch: feature/F44-teklif-dokumani                     ║
+║  Bağımlılık: Branch 2 (Pipeline)                         ║
 ╚══════════════════════════════════════════════════════════╝
 
 ----------------------------------------------------------------------
-F44 — Aktivite Zaman Çizelgesi (Backend + Frontend)
+F44 — Teklif Dokümanı (Backend + Frontend)
 ----------------------------------------------------------------------
 
-Amaç: Fırsat detayında tüm aktiviteleri (aşama geçişleri, notlar,
-etiket değişiklikleri) kronolojik tek bir akışta göstermek.
+Amaç: Teklif aşamasına geçerken kullanıcının Word/PDF teklif dokümanı
+oluşturması, sistem ayarlarındaki template ile doldurulması ve fırsat
+detayında her zaman indirilebilir olması.
 
 Yapılacaklar:
 
-1. packages/shared/src/types/timeline.ts oluştur:
-   - TimelineEntryType: 'stage_change' | 'note' | 'tag_added' | 'tag_removed'
-   - TimelineEntry interface:
-     id: string
-     type: TimelineEntryType
-     date: string (ISO)
-     user: { id, name, email }
-     content: StageChangeContent | NoteContent | TagChangeContent
-   - StageChangeContent: { fromStage, toStage, note?, lossReason? }
-   - NoteContent: { noteId, content (kırpılmış, max 200 char) }
-   - TagChangeContent: { tagId, tagName, tagColor }
+1. Veri modeli ve migration:
+   - Customer modeline address String? @db.Text ekle (migration: add-customer-address)
+   - OpportunityOfferDocument modeli:
+     id, opportunityId (unique), content (Bytes, gzip), format ("pdf"|"docx"), createdAt
+     Opportunity ile 1:1, cascade delete
+   - Migration: add-opportunity-offer-document
 
-2. Export'ları güncelle
+2. packages/shared/src/types/offer.ts oluştur:
+   - CreateOfferInput: format, outputFormat, productItems: [{ productId, productName, price, currency }]
+   - OfferDocumentResponse (indirme için)
 
-3. modules/opportunity/opportunity.service.ts'e ekle:
-   - getTimeline(opportunityId, page?, limit?):
-     3 kaynaktan veri topla:
-       a. OpportunityStageLog → stage_change entry'leri
-       b. OpportunityNote → note entry'leri
-       c. AuditLog (entityType: 'opportunity', action: 'update',
-          before/after'da tags farkı olan) → tag_added/tag_removed entry'leri
-     Birleştir, tarihe göre sırala (yeniden eskiye), sayfalama uygula.
+3. packages/shared/src/schemas/offer.ts oluştur:
+   - createOfferSchema (Zod)
 
-4. modules/opportunity/opportunity.controller.ts'e ekle:
-   - GET /opportunities/:id/timeline?page=1&limit=20 → getTimeline
+4. Sistem ayarları:
+   - TEKLIF_TEMPLATE_URL: Template dosya yolu (uploads/teklif-templates/)
+   - POST /upload/teklif-template — Admin Word (.docx) yükler
+   - Template placeholder'ları: {{customer_name}}, {{customer_company}}, {{customer_address}},
+     {{customer_phone}}, {{customer_email}}, {{product_list}}, {{total_amount}}, {{total_currency}}
 
-5. hooks/use-opportunity-timeline.ts oluştur:
-   - useOpportunityTimeline(opportunityId, page?):
-     GET /opportunities/:id/timeline
+5. Backend — OfferService (veya opportunity.service içinde):
+   - createOffer(opportunityId, dto): Template oku, placeholder doldur (docxtemplater),
+     outputFormat PDF ise Word→PDF dönüştür, gzip sıkıştır, eski dokümanı sil, yeni kaydet
+   - getOfferDocument(opportunityId): Sıkıştırılmış binary döndür (Content-Disposition: attachment)
+   - Template bellek önbelleği (ilk okumada cache, upload sonrası invalidate)
 
-6. lib/query-keys.ts güncelle: opportunityTimeline key'i
+6. Backend endpoint'ler:
+   - POST /opportunities/:id/create-offer — Teklif oluştur, kaydet, binary döndür
+   - GET /opportunities/:id/offer-document — Son teklif dokümanını indir
 
-7. components/opportunity/ActivityTimeline.tsx oluştur:
+7. StageTransitionModal (targetStage === 'teklif') özel UI:
+   - Format seçimi: Word veya PDF (radio/select)
+   - İlgilenilen ürünler: OfferProductPriceList — her satır Ürün | Fiyat | Para birimi
+   - "Teklifi Oluştur" butonu → API çağrısı, blob indir
+   - "Onayla" butonu → Aşama geçişi (transition) + modal kapanır
+   - Akış: Önce Teklifi Oluştur (indir), sonra Onayla
 
-   Props:
-     opportunityId: string
-     compact?: boolean
+8. components/opportunity/OfferProductPriceList.tsx:
+   - ProductQuantityList benzeri; her satır: ürün adı (readonly), fiyat input, para birimi select
+   - CURRENCIES kullan, design system token'ları
 
-   Tasarım — Dikey zaman çizelgesi:
-     - Sol taraf: dikey çizgi (2px, border rengi) + noktalar (8px, tip renginde)
-     - Sağ taraf: entry kartları
+9. Fırsat detay (OpportunityCard genişletilmiş / OpportunityFormModal):
+   - Teklif aşaması tamamlandıysa "Teklif Dokümanı İndir" linki/butonu
+   - GET /opportunities/:id/offer-document ile indirme
 
-     Entry tipleri ve görünümleri:
-
-     stage_change (mavi):
-       🔄 ikon + "Tanışma → Toplantı" (badge'ler) + not (varsa, kırpılmış)
-       Olumsuz: kırmızı, kayıp nedeni label'ı
-       Satışa Dönüştü: yeşil, kutlama stili
-
-     note (gri):
-       📝 ikon + not içeriği (kırpılmış, tıkla genişlet)
-
-     tag_added (yeşil):
-       🏷 ikon + etiket chip'i + "eklendi"
-
-     tag_removed (kırmızı):
-       🏷 ikon + etiket chip'i (üstü çizili) + "kaldırıldı"
-
-     Her satırda sağda:
-       Tarih + saat (muted, 12px)
-       Kullanıcı adı (muted, 11px)
-
-     Compact mod:
-       Son 8 entry + "Tüm geçmişi göster" butonu
-
-     Pagination:
-       "Daha fazla göster" butonu (lazy load, sayfa arttır)
-
-8. components/opportunity/OpportunityCard.tsx güncelle:
-   - Genişletilmiş kart düzenini yeniden organize et:
-     Üst:     PipelineProgressBar (compact)
-     Orta:    Detay bilgileri (bütçe, ürünler+tonaj, etiketler, iletişim)
-     Alt:     ActivityTimeline (compact) — Notlar bölümünü kapsayacak şekilde
-              (Ayrı OpportunityNotes bölümü kaldırılabilir, timeline zaten
-              notları gösterir. Ancak "not ekle" butonu korunur.)
-
-   NOT: OpportunityNotes bileşeni not EKLEME için korunur.
-   Timeline sadece GÖRÜNTÜLEME içindir. Ekleme ayrıdır.
+10. Sistem ayarları sayfası (opsiyonel ayrı bölüm):
+    - Teklif template upload (Word .docx)
+    - Placeholder listesi dokümantasyonu
 
 Etkilenen dosyalar:
-  YENİ: types/timeline.ts, ActivityTimeline.tsx, use-opportunity-timeline.ts
-  DEĞİŞEN: types/index.ts, opportunity.service.ts, opportunity.controller.ts,
-            OpportunityCard.tsx, query-keys.ts
+  YENİ: types/offer.ts, schemas/offer.ts, OfferProductPriceList.tsx, use-offer.ts,
+        upload/teklif-template endpoint, offer.service veya opportunity.service genişletmesi
+  DEĞİŞEN: schema.prisma (Customer.address, OpportunityOfferDocument),
+            StageTransitionModal.tsx (teklif özel UI), OpportunityCard.tsx, OpportunityFormModal.tsx,
+            settings.service.ts (TEKLIF_TEMPLATE_URL), query-keys.ts
 
-Bağımlılık: Branch 2 (stages), Branch 3 (notes), Branch 4 (tags)
-Commit: feat(shared): add Timeline types
-Commit: feat(api): add timeline aggregation endpoint
-Commit: feat(web): add ActivityTimeline component
-Commit: feat(web): integrate timeline in OpportunityCard
+Bağımlılık: Branch 2 (Pipeline — Teklif aşaması)
+Commit: feat(shared): add offer types and schemas
+Commit: feat(prisma): add customer address, OpportunityOfferDocument
+Commit: feat(api): add offer creation and document download endpoints
+Commit: feat(web): add Teklif UI in StageTransitionModal, OfferProductPriceList
+Commit: feat(web): add offer download in opportunity detail
 
 Durum: [ ]
 
@@ -2072,16 +2052,17 @@ Fuar KPI:
   [ ] Hedef tanımsızken uygun mesaj
   [ ] Metrik kartları doğru hesaplanıyor
 
-Aktivite Timeline:
-  [ ] Aşama geçişleri timeline'da görünüyor
-  [ ] Notlar timeline'da görünüyor
-  [ ] Etiket değişiklikleri timeline'da görünüyor
+Teklif Dokümanı:
+  [ ] Teklif aşamasına geçiş modalında Word/PDF seçimi, ürün+fiyat+para birimi
+  [ ] Teklifi oluştur → indirme çalışıyor
+  [ ] Onayla → Teklif aşamasına geçiş + doküman kaydediliyor
+  [ ] Fırsat detayında "Teklif İndir" çalışıyor
   [ ] Kronolojik sıralama doğru
   [ ] "Daha fazla göster" pagination çalışıyor
 
 Entegrasyon:
   [ ] Tüm özellikler birlikte çalışıyor (fırsat oluştur → ürün+tonaj →
-      aşama geçir → not ekle → etiket ata → timeline'da hepsi görünür)
+      aşama geçir → teklif oluştur → indir → onayla)
   [ ] Fuar silme: tüm ilişkili veriler (opportunities, products, stages,
       notes, tags) cascade siliniyor
   [ ] Responsive tasarım (1-3 kolon geçişleri)
@@ -2133,28 +2114,25 @@ Branch 6: MFA SMS OTP
   F46 → Shared + DB + Backend (Twilio Verify, sistem ayarları, rate limit)
   F47 → Frontend (2 aşamalı login, MfaCodeInput, hata mesajları)
 
-Branch 7: Timeline
-  F44 → Backend (timeline endpoint) + Frontend (ActivityTimeline bileşeni)
+Branch 7: Teklif Dokümanı
+  F44 → Backend (offer endpoints) + Frontend (StageTransitionModal teklif UI, indirme)
 
 Branch 8: Test
   F45 → Uçtan uca entegrasyon testi
 
-Toplam: 16 feature, 8 branch, 6 DB migration
+Toplam: 16 feature, 8 branch, 8 DB migration
 Tahmini etki: ~30 yeni dosya, ~20 değişen dosya
 
 Bağımlılık grafiği:
 
   Branch 1 (Ürün Tonaj) ──┐
                            ├──→ Branch 5 (Fuar KPI) ──┐
-  Branch 2 (Pipeline)   ──┤                            │
-                           ├──→ Branch 7 (Timeline) ──┼──→ Branch 8 (Test)
-  Branch 3 (Notlar)     ──┤                            │
-                           │                            │
-  Branch 4 (Etiketler)  ──┘                            │
-                           │
-  Branch 6 (MFA SMS)    ───┘ (bağımsız)
+  Branch 2 (Pipeline)   ──┼──→ Branch 7 (Teklif Dokümanı) ──┼──→ Branch 8 (Test)
+  Branch 3 (Notlar)     ──┤                                │
+  Branch 4 (Etiketler)  ──┘                                │
+  Branch 6 (MFA SMS)    ───────────────────────────────────┘ (bağımsız)
 
-  Branch 1–4, 6 bağımsız
+  Branch 1–4, 6 bağımsız. Branch 7 sadece Branch 2'ye bağlıdır.
 
 ==============================
 ÖNEMLİ NOTLAR
@@ -2172,8 +2150,8 @@ Bağımlılık grafiği:
   Kullanıcılar sadece mevcut etiketleri fırsatlara atayabilir.
 - Fuar KPI hedefleri opsiyoneldir — tanımlanmamışsa ilgili UI
   "hedef belirlenmemiş" mesajı gösterir.
-- ActivityTimeline salt okunurdur — not ekleme ve aşama geçişi
-  kendi ayrı UI bileşenleriyle yapılır.
+- Teklif dokümanı sadece son hazırlanan tutulur; yenisi oluşturulunca eskisi silinir.
+  Template dosya sisteminde (uploads/teklif-templates/), bellek önbelleği ile performans sağlanır.
 - Context window dolması riski olan feature'lar (F36, F39) gerekirse
   iki session'a bölünebilir, aynı branch üzerinde devam edilir.
 - Mobil uygulama bu fazın kapsamı dışındadır.

@@ -19,6 +19,7 @@ import { useDeleteOpportunity } from '@/hooks/use-opportunities';
 import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useDisplayConfig } from '@/hooks/use-display-config';
 import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
+import { OfferDownloadButton } from '@/components/opportunity/OfferDownloadButton';
 import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
 import { StageHistory } from '@/components/opportunity/StageHistory';
 
@@ -236,6 +237,8 @@ export function OpportunityCard({
                 </p>
                 <StageHistory opportunityId={opportunity.id} compact />
               </div>
+
+              <OfferDownloadButton opportunityId={opportunity.id} />
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -279,6 +282,7 @@ export function OpportunityCard({
         fairId={fairId}
         currentStage={opportunity.currentStage}
         targetStage={targetStage}
+        opportunity={opportunity}
       />
     </>
   );

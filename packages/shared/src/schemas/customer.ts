@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const createCustomerSchema = z.object({
   company: z.string().min(1, 'Firma adı zorunludur'),
   name: z.string().min(1, 'Ad soyad zorunludur'),
+  address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   email: z.string().email('Geçerli bir e-posta adresi giriniz').nullable().optional(),
 });

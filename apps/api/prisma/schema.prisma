@@ -74,6 +74,7 @@ model Customer {
   id        String   @id @default(cuid())
   company   String
   name      String
+  address   String?  @db.Text
   phone     String?
   email     String?
   createdAt DateTime @default(now())
@@ -102,6 +103,7 @@ model Opportunity {
 
   opportunityProducts OpportunityProduct[]
   stageLogs          OpportunityStageLog[]
+  lastOfferDocument  OpportunityOfferDocument?
 
   @@index([fairId])
   @@index([customerId])
@@ -150,6 +152,18 @@ model SystemSetting {
   value       String   @db.Text
   description String?  @db.Text
   updatedAt   DateTime @updatedAt
+}
+
+model OpportunityOfferDocument {
+  id             String   @id @default(cuid())
+  opportunityId  String   @unique
+  content        Bytes
+  format         String
+  createdAt      DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
 }
 
 model AuditLog {

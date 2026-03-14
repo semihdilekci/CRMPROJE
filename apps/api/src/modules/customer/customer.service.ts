@@ -105,6 +105,7 @@ export class CustomerService {
     id: string;
     company: string;
     name: string;
+    address: string | null;
     phone: string | null;
     email: string | null;
     createdAt: Date;
@@ -114,6 +115,7 @@ export class CustomerService {
       id: customer.id,
       company: customer.company,
       name: customer.name,
+      address: customer.address ?? null,
       phone: customer.phone,
       email: customer.email,
       createdAt: customer.createdAt.toISOString(),

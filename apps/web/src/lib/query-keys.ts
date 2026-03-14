@@ -30,5 +30,7 @@ export const queryKeys = {
     ) => ['opportunities', 'fair', fairId, { search, rate, currentStage }] as const,
     stageHistory: (opportunityId: string) =>
       ['opportunities', opportunityId, 'stages'] as const,
+    hasOffer: (opportunityId: string) =>
+      ['opportunities', opportunityId, 'has-offer'] as const,
   },
 } as const;

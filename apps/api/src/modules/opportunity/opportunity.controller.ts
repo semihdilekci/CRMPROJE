@@ -10,7 +10,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Res,
+  StreamableFile,
+  NotFoundException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiSuccessResponse,
   OpportunityWithDetails,
@@ -18,16 +22,19 @@ import {
   updateOpportunitySchema,
   stageTransitionSchema,
   updateStageLogSchema,
+  createOfferSchema,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
   type StageTransitionInput,
   type UpdateStageLogInput,
+  type CreateOfferInput,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { OpportunityService } from './opportunity.service';
+import { OfferService } from './offer.service';
 
 type StageLogResponse = {
   id: string;
@@ -42,7 +49,10 @@ type StageLogResponse = {
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class OpportunityController {
-  constructor(private readonly opportunityService: OpportunityService) {}
+  constructor(
+    private readonly opportunityService: OpportunityService,
+    private readonly offerService: OfferService,
+  ) {}
 
   @Post('fairs/:fairId/opportunities')
   async create(
@@ -135,6 +145,57 @@ export class OpportunityController {
   ): Promise<ApiSuccessResponse<OpportunityWithDetails>> {
     const data = await this.opportunityService.update(id, dto, user);
     return { success: true, message: 'Fırsat başarıyla güncellendi', data };
+  }
+
+  @Post('opportunities/:id/create-offer')
+  async createOffer(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(createOfferSchema)) dto: CreateOfferInput,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { buffer, format, filename } =
+      await this.offerService.createOffer(id, dto);
+    const mime =
+      format === 'pdf'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    res.set({
+      'Content-Type': mime,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    return new StreamableFile(buffer);
+  }
+
+  @Get('opportunities/:id/has-offer')
+  async hasOfferDocument(
+    @Param('id') id: string,
+  ): Promise<ApiSuccessResponse<{ hasOffer: boolean }>> {
+    const hasOffer = await this.offerService.hasOfferDocument(id);
+    return {
+      success: true,
+      message: hasOffer ? 'Teklif mevcut' : 'Teklif yok',
+      data: { hasOffer },
+    };
+  }
+
+  @Get('opportunities/:id/offer-document')
+  async getOfferDocument(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.offerService.getOfferDocument(id);
+    if (!result) {
+      throw new NotFoundException('Teklif dokümanı bulunamadı');
+    }
+    const mime =
+      result.format === 'pdf'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    res.set({
+      'Content-Type': mime,
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
+    });
+    return new StreamableFile(result.buffer);
   }
 
   @Delete('opportunities/:id')

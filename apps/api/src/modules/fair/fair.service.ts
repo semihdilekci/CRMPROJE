@@ -105,6 +105,7 @@ export class FairService {
           id: o.customer.id,
           company: o.customer.company,
           name: o.customer.name,
+          address: o.customer.address ?? null,
           phone: o.customer.phone,
           email: o.customer.email,
           createdAt: o.customer.createdAt.toISOString(),

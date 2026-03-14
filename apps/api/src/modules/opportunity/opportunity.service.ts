@@ -560,6 +560,7 @@ export class OpportunityService {
       id: string;
       company: string;
       name: string;
+      address?: string | null;
       phone: string | null;
       email: string | null;
       createdAt: Date;
@@ -606,6 +607,7 @@ export class OpportunityService {
         id: opportunity.customer.id,
         company: opportunity.customer.company,
         name: opportunity.customer.name,
+        address: opportunity.customer.address ?? null,
         phone: opportunity.customer.phone,
         email: opportunity.customer.email,
         createdAt: opportunity.customer.createdAt.toISOString(),

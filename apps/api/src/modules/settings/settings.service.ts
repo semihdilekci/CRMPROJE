@@ -62,6 +62,11 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
     value: '1',
     description: 'Kayıt rate limit penceresi (dakika)',
   },
+  {
+    key: 'TEKLIF_TEMPLATE_URL',
+    value: 'assets/teklif-templates/default-teklif-template.docx',
+    description: 'Teklif template dosya yolu (varsayılan: assets/teklif-templates/)',
+  },
 ];
 
 @Injectable()
