@@ -2,12 +2,11 @@
 
 import axios from 'axios';
 
-const BACKEND_URL = 'http://localhost:3001/api/v1';
-
+/** Tarayıcıda proxy kullan (CORS önlenir). Sunucu tarafında env veya localhost. */
 const getBaseURL = () => {
+  if (typeof window !== 'undefined') return '/api/v1';
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (envUrl) return envUrl;
-  return BACKEND_URL;
+  return envUrl || 'http://localhost:3001/api/v1';
 };
 
 const api = axios.create({

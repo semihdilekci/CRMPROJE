@@ -2,7 +2,7 @@
  * OpportunityStageLog tablosunu boşaltıp yeniden doldurur.
  *
  * Kurallar:
- * - Her fırsat rastgele 1-4 arası bir stage'de (tanisma, toplanti, teklif, sozlesme)
+ * - Her fırsat rastgele 1-5 arası bir stage'de (tanisma, toplanti, teklif, sozlesme, satisa_donustu)
  * - Fırsatların %5'i olumsuz
  * - Olumsuz fırsatlar: 1-4 aşama geçtikten sonra olumsuz
  * - Olumsuz olmayan fırsatlar: mevcut stage'e kadar sırayla log (örn: stage 3 ise 1,2,3 logları)
@@ -15,7 +15,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const STAGES_1_TO_4 = ['tanisma', 'toplanti', 'teklif', 'sozlesme'] as const;
+const STAGES_1_TO_5 = ['tanisma', 'toplanti', 'teklif', 'sozlesme', 'satisa_donustu'] as const;
 const LOSS_REASONS = [
   'price_high',
   'competitor',
@@ -79,12 +79,12 @@ async function main(): Promise<void> {
     if (isOlumsuz) {
       currentStage = 'olumsuz';
       lossReason = pickRandom(LOSS_REASONS);
-      const stagesBeforeOlumsuz = randomBetween(1, 4);
-      stagesToLog = [...STAGES_1_TO_4.slice(0, stagesBeforeOlumsuz), 'olumsuz'];
+      const stagesBeforeOlumsuz = randomBetween(1, 4); // tanisma..sozlesme arası, satisa_donustu olmadan
+      stagesToLog = [...STAGES_1_TO_5.slice(0, stagesBeforeOlumsuz), 'olumsuz'];
     } else {
-      const stageIndex = randomBetween(0, 3);
-      currentStage = STAGES_1_TO_4[stageIndex]!;
-      stagesToLog = STAGES_1_TO_4.slice(0, stageIndex + 1);
+      const stageIndex = randomBetween(0, 4);
+      currentStage = STAGES_1_TO_5[stageIndex]!;
+      stagesToLog = STAGES_1_TO_5.slice(0, stageIndex + 1);
     }
 
     const baseDate = new Date(opp.fair.startDate);

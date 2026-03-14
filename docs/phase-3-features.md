@@ -1584,7 +1584,7 @@ Commit: feat(shared): add Fair KPI types and schema fields
 Commit: feat(prisma): add Fair KPI target fields
 Commit: feat(api): add Fair metrics calculation endpoint
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 F43 — Fuar KPI: Frontend (Çekmece)
@@ -1674,7 +1674,7 @@ Commit: feat(web): add FairKPIDrawer with animated collapse
 Commit: feat(web): add KPI target fields to Fair form
 Commit: feat(web): integrate KPI drawer in Fair detail page
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 6: AKTİVİTE ZAMAN ÇİZELGESİ                    ║
