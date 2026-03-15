@@ -9,7 +9,6 @@ export const createOpportunitySchema = z.object({
   conversionRate: z.enum(CONVERSION_RATES).nullable().optional(),
   products: z.array(z.string()).optional().default([]),
   opportunityProducts: opportunityProductsSchema,
-  cardImage: z.string().nullable().optional(),
 });
 
 export type CreateOpportunityDto = z.infer<typeof createOpportunitySchema>;

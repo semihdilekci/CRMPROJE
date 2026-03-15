@@ -11,7 +11,6 @@ export interface Opportunity {
   budgetCurrency: Currency | null;
   conversionRate: ConversionRate | null;
   products: string[];
-  cardImage: string | null;
   currentStage: string;
   lossReason: string | null;
   createdAt: string;

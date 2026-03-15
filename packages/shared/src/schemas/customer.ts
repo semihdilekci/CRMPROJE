@@ -6,6 +6,7 @@ export const createCustomerSchema = z.object({
   address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   email: z.string().email('Geçerli bir e-posta adresi giriniz').nullable().optional(),
+  cardImage: z.string().nullable().optional(),
 });
 
 export type CreateCustomerDto = z.infer<typeof createCustomerSchema>;

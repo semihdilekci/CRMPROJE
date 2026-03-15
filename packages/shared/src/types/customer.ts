@@ -5,6 +5,7 @@ export interface Customer {
   address: string | null;
   phone: string | null;
   email: string | null;
+  cardImage: string | null;
   createdAt: string;
   updatedAt: string;
 }
