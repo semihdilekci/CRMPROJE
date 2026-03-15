@@ -108,6 +108,7 @@ export class CustomerService {
     address: string | null;
     phone: string | null;
     email: string | null;
+    cardImage: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Customer {
@@ -118,6 +119,7 @@ export class CustomerService {
       address: customer.address ?? null,
       phone: customer.phone,
       email: customer.email,
+      cardImage: customer.cardImage ?? null,
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
     };

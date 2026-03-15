@@ -46,7 +46,6 @@ export class OpportunityService {
           budgetCurrency: dto.budgetCurrency ?? null,
           conversionRate: dto.conversionRate ?? null,
           products: dto.products ?? [],
-          cardImage: dto.cardImage ?? null,
           currentStage: 'tanisma',
           opportunityProducts: dto.opportunityProducts
             ? {
@@ -179,7 +178,6 @@ export class OpportunityService {
           ...(dto.budgetCurrency !== undefined && { budgetCurrency: dto.budgetCurrency }),
           ...(dto.conversionRate !== undefined && { conversionRate: dto.conversionRate }),
           ...(dto.products !== undefined && { products: dto.products }),
-          ...(dto.cardImage !== undefined && { cardImage: dto.cardImage }),
         },
         include: {
           customer: true,
@@ -551,7 +549,6 @@ export class OpportunityService {
     budgetCurrency: string | null;
     conversionRate: string | null;
     products: string[];
-    cardImage: string | null;
     currentStage: string;
     lossReason: string | null;
     createdAt: Date;
@@ -563,6 +560,7 @@ export class OpportunityService {
       address?: string | null;
       phone: string | null;
       email: string | null;
+      cardImage?: string | null;
       createdAt: Date;
       updatedAt: Date;
     };
@@ -598,7 +596,6 @@ export class OpportunityService {
       budgetCurrency: opportunity.budgetCurrency as OpportunityWithDetails['budgetCurrency'],
       conversionRate: opportunity.conversionRate as OpportunityWithDetails['conversionRate'],
       products: opportunity.products,
-      cardImage: opportunity.cardImage,
       currentStage: opportunity.currentStage,
       lossReason: opportunity.lossReason,
       createdAt: opportunity.createdAt.toISOString(),
@@ -610,6 +607,7 @@ export class OpportunityService {
         address: opportunity.customer.address ?? null,
         phone: opportunity.customer.phone,
         email: opportunity.customer.email,
+        cardImage: opportunity.customer.cardImage ?? null,
         createdAt: opportunity.customer.createdAt.toISOString(),
         updatedAt: opportunity.customer.updatedAt.toISOString(),
       },
