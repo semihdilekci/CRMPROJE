@@ -20,6 +20,11 @@ import {
   useCreateOpportunity,
   useUpdateOpportunity,
 } from '@/hooks/use-opportunities';
+import { useUpdateCustomer } from '@/hooks/use-customers';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
+import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
+import api from '@/lib/api';
 import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useProducts } from '@/hooks/use-products';
 import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
@@ -104,6 +109,8 @@ export function OpportunityFormModal({
   const isEdit = !!initial;
   const createOpportunity = useCreateOpportunity(fairId);
   const updateOpportunity = useUpdateOpportunity(fairId);
+  const updateCustomer = useUpdateCustomer();
+  const queryClient = useQueryClient();
   const { data: productList = [] } = useProducts();
   const { data: displayConfig } = useDisplayConfig();
   const loading = createOpportunity.isPending || updateOpportunity.isPending;
@@ -127,7 +134,7 @@ export function OpportunityFormModal({
       setBudgetRaw(initial.budgetRaw ?? '');
       setBudgetCurrency(initial.budgetCurrency ?? defaultCurrency);
       setConversionRate(initial.conversionRate ?? '');
-      setCardImage(initial.cardImage ?? '');
+      setCardImage(initial.customer?.cardImage ?? '');
       setSubmitError('');
       if (initial.opportunityProducts && initial.opportunityProducts.length > 0) {
         setOpportunityProducts(
@@ -158,6 +165,12 @@ export function OpportunityFormModal({
     }
   }, [open, initial, defaultCurrency, productList]);
 
+  useEffect(() => {
+    if (open && !initial && selectedCustomer) {
+      setCardImage(selectedCustomer.cardImage ?? '');
+    }
+  }, [open, initial, selectedCustomer?.id]);
+
   const resetForm = () => {
     setSelectedCustomer(null);
     setBudgetRaw('');
@@ -177,18 +190,28 @@ export function OpportunityFormModal({
     ? parseInt(budgetRaw, 10).toLocaleString('tr-TR')
     : '';
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setCardImage(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post<ApiSuccessResponse<{ url: string }>>(
+        API_ENDPOINTS.UPLOAD.CARD_IMAGE,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      if (data.success && data.data?.url) setCardImage(data.data.url);
+    } catch {
+      // Error handled by api interceptor
+    }
+    e.target.value = '';
   };
 
   const handleSubmit = async () => {
     if (!selectedCustomer) return;
 
-    const dto = {
+    const opportunityDto = {
       customerId: selectedCustomer.id,
       budgetRaw: budgetRaw || null,
       budgetCurrency: budgetRaw ? (budgetCurrency as Currency) : null,
@@ -197,20 +220,32 @@ export function OpportunityFormModal({
       opportunityProducts: opportunityProducts
         .filter((p) => p.productId)
         .map((p) => ({
-        productId: p.productId,
-        quantity: p.quantity,
-        unit: p.unit as 'ton' | 'kg' | 'adet',
-        note: p.note,
-      })),
-      cardImage: cardImage || null,
+          productId: p.productId,
+          quantity: p.quantity,
+          unit: p.unit as 'ton' | 'kg' | 'adet',
+          note: p.note,
+        })),
     };
 
     try {
       setSubmitError('');
+      const customerCardImage = selectedCustomer.cardImage ?? '';
+      if (cardImage !== customerCardImage) {
+        await updateCustomer.mutateAsync({
+          id: selectedCustomer.id,
+          dto: { cardImage: cardImage || null },
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.opportunities.byFair(fairId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.fairs.byId(fairId),
+        });
+      }
       if (isEdit && initial) {
-        await updateOpportunity.mutateAsync({ id: initial.id, dto });
+        await updateOpportunity.mutateAsync({ id: initial.id, dto: opportunityDto });
       } else {
-        await createOpportunity.mutateAsync(dto);
+        await createOpportunity.mutateAsync(opportunityDto);
       }
       onClose();
     } catch {

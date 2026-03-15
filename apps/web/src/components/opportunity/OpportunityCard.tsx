@@ -137,7 +137,7 @@ export function OpportunityCard({
             </div>
           </div>
           <div className="ml-3 flex shrink-0 items-center gap-2 self-center">
-            {opportunity.cardImage && (
+            {customer.cardImage && (
               <span title="Kartvizit mevcut" className="text-[14px]">
                 📇
               </span>
@@ -221,10 +221,10 @@ export function OpportunityCard({
                 </div>
               )}
 
-              {opportunity.cardImage && (
+              {customer.cardImage && (
                 <div className="mt-2 rounded-xl border border-white/20 overflow-hidden bg-white/5 p-2">
                   <img
-                    src={opportunity.cardImage}
+                    src={customer.cardImage}
                     alt="Kartvizit"
                     className="max-h-[120px] rounded-lg object-contain"
                   />
