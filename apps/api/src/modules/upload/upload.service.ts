@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -20,7 +19,7 @@ export class UploadService {
   private readonly logger = new Logger(UploadService.name);
   private readonly uploadDir: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
     this.uploadDir = path.join(process.cwd(), 'uploads', 'card-images');
     this.ensureUploadDir();
   }
@@ -35,8 +34,7 @@ export class UploadService {
     fs.writeFileSync(filePath, file.buffer);
     this.logger.log(`Card image uploaded: ${filename}`);
 
-    const port = this.configService.get<string>('PORT', '3001');
-    return `http://localhost:${port}/uploads/card-images/${filename}`;
+    return `/uploads/card-images/${filename}`;
   }
 
   private validateFile(file: Express.Multer.File): void {

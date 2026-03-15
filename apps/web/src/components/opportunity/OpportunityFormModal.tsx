@@ -166,10 +166,10 @@ export function OpportunityFormModal({
   }, [open, initial, defaultCurrency, productList]);
 
   useEffect(() => {
-    if (open && !initial && selectedCustomer) {
+    if (open && selectedCustomer) {
       setCardImage(selectedCustomer.cardImage ?? '');
     }
-  }, [open, initial, selectedCustomer?.id]);
+  }, [open, selectedCustomer?.id, selectedCustomer?.cardImage]);
 
   const resetForm = () => {
     setSelectedCustomer(null);

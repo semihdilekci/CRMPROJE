@@ -10,7 +10,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 |------|-----|------|
 | **Web → API adresi** | `NEXT_PUBLIC_API_URL` yoksa `http://localhost:3001/api/v1` kullanılır | **Zorunlu:** `NEXT_PUBLIC_API_URL` canlı API base URL olarak set edilmeli (örn. `https://api.uygulama.com/api/v1`) |
 | **API CORS** | Tüm `http(s)://localhost:*` origin’lere izin verilir | Sadece `CORS_ORIGIN` ile belirtilen origin(ler) kabul edilir |
-| **Next.js rewrites** | `/api/v1/*` → `http://localhost:3001/api/v1/*` (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
+| **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
 
 ---

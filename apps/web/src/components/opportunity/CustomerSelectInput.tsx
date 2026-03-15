@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Customer, CreateCustomerDto } from '@crm/shared';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -34,9 +34,23 @@ export function CustomerSelectInput({
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
+  const [createError, setCreateError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { scanBusinessCard, isLoading: isOcrLoading } = useBusinessCardOcr();
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
 
   const resetCreateForm = () => {
     setNewCompany('');
@@ -44,15 +58,18 @@ export function CustomerSelectInput({
     setNewPhone('');
     setNewEmail('');
     setCardImageUrl(null);
+    setCreateError('');
     setShowCreateForm(false);
   };
 
-  const handleCreateCustomer = async () => {
+  const handleCreateCustomer = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     const dto: CreateCustomerDto = {
       company: newCompany.trim(),
       name: newName.trim(),
-      phone: newPhone.trim() || null,
-      email: newEmail.trim() || null,
+      phone: newPhone.trim(),
+      email: newEmail.trim(),
       cardImage: cardImageUrl || undefined,
     };
     try {
@@ -61,8 +78,15 @@ export function CustomerSelectInput({
       resetCreateForm();
       setSearchText('');
       setShowDropdown(false);
-    } catch {
-      // mutation error handled by react-query
+    } catch (err: unknown) {
+      const res = (err as { response?: { data?: { message?: string; details?: Array<{ field?: string; message?: string }> } } })
+        ?.response?.data;
+      const emailDetail = res?.details?.find((d) => d.field === 'email');
+      const msg =
+        emailDetail?.message ??
+        res?.message ??
+        'Müşteri kaydedilemedi. Lütfen alanları kontrol edin.';
+      setCreateError(msg);
     }
   };
 
@@ -142,7 +166,7 @@ export function CustomerSelectInput({
       </label>
 
       {!showCreateForm ? (
-        <div className="relative">
+        <div ref={containerRef} className="relative">
           <input
             type="text"
             placeholder="Müşteri adı veya firma ara..."
@@ -203,13 +227,19 @@ export function CustomerSelectInput({
               label="Firma Adı"
               placeholder="Firma adı"
               value={newCompany}
-              onChange={(e) => setNewCompany(e.target.value)}
+              onChange={(e) => {
+                setNewCompany(e.target.value);
+                setCreateError('');
+              }}
             />
             <Input
               label="Ad Soyad"
               placeholder="Ad soyad"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setCreateError('');
+              }}
             />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -218,19 +248,31 @@ export function CustomerSelectInput({
               type="tel"
               placeholder="+90 555 000 00 00"
               value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
+              onChange={(e) => {
+                setNewPhone(e.target.value);
+                setCreateError('');
+              }}
             />
             <Input
               label="E-posta"
               type="email"
               placeholder="ornek@email.com"
               value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
+              onChange={(e) => {
+                setNewEmail(e.target.value);
+                setCreateError('');
+              }}
             />
           </div>
+          {createError && (
+            <p className="mt-2 rounded-lg bg-danger/20 px-3 py-2 text-[13px] text-danger">
+              {createError}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-2">
               <Button
+                type="button"
                 variant="secondary"
                 className="text-[13px]"
                 onClick={resetCreateForm}
@@ -238,11 +280,14 @@ export function CustomerSelectInput({
                 İptal
               </Button>
               <Button
+                type="button"
                 className="text-[13px]"
-                onClick={handleCreateCustomer}
+                onClick={(e) => handleCreateCustomer(e)}
                 disabled={
                   !newCompany.trim() ||
                   !newName.trim() ||
+                  !newPhone.trim() ||
+                  !newEmail.trim() ||
                   createCustomer.isPending ||
                   isOcrLoading
                 }
@@ -265,7 +310,7 @@ export function CustomerSelectInput({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isOcrLoading}
               >
-                {isOcrLoading ? 'Okunuyor...' : 'Kart Vizit Tara'}
+                {isOcrLoading ? 'Okunuyor...' : 'Kartvizit Tara'}
               </Button>
             </div>
           </div>

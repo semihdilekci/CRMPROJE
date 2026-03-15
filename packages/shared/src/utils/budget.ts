@@ -17,9 +17,11 @@ export function parseBudgetRaw(display: string): string {
 }
 
 /** budgetRaw string'ini sayıya çevirir. Geçersiz veya boş ise 0 döner. */
+/** TR format: 250.000 = 250.000 TL (nokta binlik ayırıcı), 250,50 = ondalık */
 export function parseBudgetToNumber(raw: string | null | undefined): number {
   if (!raw) return 0;
-  const cleaned = String(raw).replace(/[^0-9.,]/g, '').replace(/,/g, '.');
-  const num = parseFloat(cleaned);
+  const cleaned = String(raw).replace(/[^0-9.,]/g, '');
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(normalized);
   return isNaN(num) ? 0 : num;
 }
