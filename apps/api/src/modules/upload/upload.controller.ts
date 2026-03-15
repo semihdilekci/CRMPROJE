@@ -56,6 +56,27 @@ export class UploadController {
     };
   }
 
+  @Post('teklif-template-reset')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async resetTeklifTemplateToDefault(
+    @CurrentUser() user: { id: string; email: string },
+  ): Promise<ApiSuccessResponse<{ path: string }>> {
+    const defaultPath = 'assets/teklif-templates/default-teklif-template.docx';
+    await this.settingsService.set(
+      'TEKLIF_TEMPLATE_URL',
+      defaultPath,
+      'Teklif template dosya yolu',
+      { id: user.id, email: user.email },
+    );
+    this.offerService.invalidateTemplateCache();
+    return {
+      success: true,
+      message: 'Teklif template varsayılana döndürüldü',
+      data: { path: defaultPath },
+    };
+  }
+
   @Post('teklif-template')
   @UseGuards(RolesGuard)
   @Roles('admin')

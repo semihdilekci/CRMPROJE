@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { Button } from '@/components/ui/Button';
-import { useSettings } from '@/hooks/use-settings';
+import { useSettings, useResetTeklifTemplate } from '@/hooks/use-settings';
 import { SettingFormModal } from '@/components/settings/SettingFormModal';
 import type { SystemSetting } from '@crm/shared';
 import api from '@/lib/api';
@@ -38,6 +38,7 @@ export default function AdminSettingsPage() {
   const [editing, setEditing] = useState<SystemSetting | null>(null);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const { data: settings, isLoading } = useSettings();
+  const resetTemplate = useResetTeklifTemplate();
 
   const handleDownloadTemplate = async () => {
     try {
@@ -85,16 +86,25 @@ export default function AdminSettingsPage() {
             ))}
           </div>
           <div className="mt-4 flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleDownloadTemplate}
-              disabled={downloadingTemplate}
-              className="self-start"
-            >
-              {downloadingTemplate ? 'İndiriliyor...' : 'Varsayılan Template İndir'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={handleDownloadTemplate}
+                disabled={downloadingTemplate}
+              >
+                {downloadingTemplate ? 'İndiriliyor...' : 'Varsayılan Template İndir'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => resetTemplate.mutate()}
+                disabled={resetTemplate.isPending}
+              >
+                {resetTemplate.isPending ? 'Sıfırlanıyor...' : 'Varsayılana Dön'}
+              </Button>
+            </div>
             <p className="text-[13px] text-white/50">
-              Dosya konumu: apps/api/assets/teklif-templates/default-teklif-template.docx
+              Eski veya yanlış template kullanılıyorsa &quot;Varsayılana Dön&quot; ile güncel template
+              etkinleştirilir. Dosya: apps/api/assets/teklif-templates/default-teklif-template.docx
             </p>
           </div>
         </div>

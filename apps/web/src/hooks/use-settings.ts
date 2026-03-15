@@ -27,3 +27,18 @@ export function useSetSetting() {
     },
   });
 }
+
+export function useResetTeklifTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSuccessResponse<{ path: string }>>(
+        '/upload/teklif-template-reset',
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SETTINGS_KEY });
+    },
+  });
+}

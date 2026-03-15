@@ -8,11 +8,15 @@ import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { SettingsService } from './settings.service';
+import { OfferService } from '@modules/opportunity/offer.service';
 
 @Controller('settings')
 @UseGuards(JwtAuthGuard)
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly offerService: OfferService,
+  ) {}
 
   /** Giriş yapmış herkesin okuyabildiği görüntü config (varsayılan para birimi, dönüşüm oranı etiketleri). */
   @Get('config')
@@ -48,6 +52,9 @@ export class SettingsController {
       dto.description,
       { id: user.id, email: user.email }
     );
+    if (dto.key === 'TEKLIF_TEMPLATE_URL') {
+      this.offerService.invalidateTemplateCache();
+    }
     return { success: true, message: 'Ayar kaydedildi', data };
   }
 }
