@@ -55,7 +55,7 @@ Avantajları:
 - Bir branch'te sorun çıkarsa sadece o branch geri alınır.
 - Her merge sonrası main her zaman çalışır durumda kalır.
 
-Toplam: 16 feature (F32–F47), 8 branch, 8 bağımsız DB migration.
+Toplam: 18 feature (F32–F49), 9 branch, 9 bağımsız DB migration.
 
 ==============================
 ETKİLENEN DOSYALAR (TAM LİSTE)
@@ -63,6 +63,7 @@ ETKİLENEN DOSYALAR (TAM LİSTE)
 
 Shared Package (packages/shared/src/):
   YENİ:
+    - utils/parse-business-card.ts (Branch 9 — OCR metin parse)
     - types/opportunity-product.ts
     - types/opportunity-stage.ts
     - types/opportunity-note.ts
@@ -75,10 +76,12 @@ Shared Package (packages/shared/src/):
     - constants/pipeline.ts
     - constants/tags.ts
   DEĞİŞECEK:
-    - types/opportunity.ts (currentStage, lossReason, relations eklenecek)
+    - types/opportunity.ts (currentStage, lossReason, relations eklenecek; cardImage kaldırılır Branch 9)
+    - types/customer.ts (cardImage eklenir Branch 9)
     - types/fair.ts (KPI hedef alanları eklenecek)
     - types/index.ts (yeni export'lar)
-    - schemas/opportunity.ts (products alanı kaldırılacak, opportunityProducts eklenecek)
+    - schemas/opportunity.ts (products alanı kaldırılacak, opportunityProducts eklenecek; cardImage kaldırılır Branch 9)
+    - schemas/customer.ts (cardImage eklenir Branch 9)
     - schemas/fair.ts (KPI alanları eklenecek)
     - schemas/index.ts (yeni export'lar)
     - constants/api-endpoints.ts (yeni endpoint'ler)
@@ -99,6 +102,7 @@ Veritabanı (apps/api/prisma/):
     - migrations/YYYYMMDD_mfa_sms/         (Branch 6)
     - migrations/YYYYMMDD_customer_address/      (Branch 7)
     - migrations/YYYYMMDD_opportunity_offer_document/ (Branch 7)
+    - migrations/YYYYMMDD_card_image_to_customer/ (Branch 9)
 
 Backend (apps/api/src/):
   YENİ:
@@ -109,7 +113,9 @@ Backend (apps/api/src/):
     - modules/sms/sms.service.ts
     - common/guards/dynamic-throttler.guard.ts
   DEĞİŞECEK:
-    - modules/opportunity/opportunity.service.ts (her branch'te genişleyecek)
+    - modules/customer/customer.service.ts (cardImage create/update Branch 9)
+    - modules/opportunity/opportunity.service.ts (her branch'te genişleyecek; cardImage kaldırılır Branch 9)
+    - modules/fair/fair.service.ts (opportunity listesinde customer.cardImage Branch 9)
     - modules/opportunity/opportunity.controller.ts (her branch'te genişleyecek)
     - modules/opportunity/opportunity.module.ts (import'lar)
     - modules/fair/fair.service.ts (KPI metrikleri)
@@ -137,9 +143,11 @@ Frontend (apps/web/src/):
     - hooks/use-offer.ts
     - hooks/use-tags.ts
     - hooks/use-fair-metrics.ts
+    - hooks/use-business-card-ocr.ts (Branch 9)
   DEĞİŞECEK:
-    - components/opportunity/OpportunityFormModal.tsx (ürün tonaj UI, etiket seçimi)
-    - components/opportunity/OpportunityCard.tsx (aşama badge, not ikonu, etiket noktaları, teklif indirme)
+    - components/opportunity/OpportunityFormModal.tsx (ürün tonaj UI, etiket seçimi; Kartvizit customer.cardImage Branch 9)
+    - components/opportunity/OpportunityCard.tsx (aşama badge, not ikonu, etiket noktaları, teklif indirme; customer.cardImage Branch 9)
+    - components/opportunity/CustomerSelectInput.tsx (Kart Vizit Tara butonu + OCR Branch 9)
     - components/fair/OpportunityToolbar.tsx (aşama filtresi, etiket filtresi)
     - components/fair/FairStats.tsx (KPI entegrasyonu, opsiyonel)
     - hooks/use-opportunities.ts (response type güncellemeleri)
@@ -166,11 +174,15 @@ VERİ MODELİ DEĞİŞİKLİĞİ
 SONRASI — Opportunity Modeli (Phase 3 sonrası):
   id, fairId, customerId,
   budgetRaw, budgetCurrency, conversionRate,
-  cardImage,
   currentStage (String, default: "tanisma"),    ← YENİ
   lossReason (String?),                          ← YENİ
   createdAt, updatedAt
-  ─── İlişkiler ───
+  (cardImage KALDIRILDI — Customer'a taşındı, Branch 9)
+
+Customer (Branch 9 ile güncellenir):
+  + cardImage (String?)                         ← YENİ (kartvizit fotoğrafı URL)
+
+Opportunity ─── İlişkiler ───
   opportunityProducts: OpportunityProduct[]      ← YENİ (products[] yerine)
   stageLogs: OpportunityStageLog[]               ← YENİ
   notes: OpportunityNote[]                       ← YENİ
@@ -391,6 +403,7 @@ BRANCH YÖNETİMİ STRATEJİSİ
   feature/F46-F47-mfa-sms            F46, F47      Yok
   feature/F44-teklif-dokumani       F44           Branch 2
   feature/F45-test                   F45           Hepsi
+  feature/F48-F49-kartvizit-ocr     F48, F49      Yok
 
 Zorunlu uygulama sırası:
 
@@ -417,6 +430,9 @@ Zorunlu uygulama sırası:
 
   8. Branch 8 (Test)          → main'e merge
      Uçtan uca entegrasyon testi.
+
+  9. Branch 9 (Kartvizit OCR) → main'e merge
+     cardImage Customer'a taşınır, Kart Vizit Tara OCR özelliği eklenir.
 
 Her branch merge öncesi zorunlu kontroller:
   [ ] npm run build -w packages/shared — hatasız
@@ -1981,108 +1997,71 @@ Commit: feat(api): add offer creation and document download endpoints
 Commit: feat(web): add Teklif UI in StageTransitionModal, OfferProductPriceList
 Commit: feat(web): add offer download in opportunity detail
 
-Durum: [ ]
+Durum: [x]
+
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 8: TEST & DOĞRULAMA                             ║
-║  Branch: feature/F45-test                                ║
-║  Bağımlılık: Tüm branch'ler                             ║
+║  BRANCH 9: KARTVİZİT OCR                                 ║
+║  Branch: feature/F48-F49-kartvizit-ocr                    ║
+║  Bağımlılık: Yok                                         ║
 ╚══════════════════════════════════════════════════════════╝
 
-----------------------------------------------------------------------
-F45 — Entegrasyon, Test & Doğrulama
-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+F48 — cardImage Customer'a Taşıma
+-----------------------------------------------------------------------
 
-Amaç: Tüm Faz 3 özelliklerinin uçtan uca doğru çalıştığını test etmek.
+Amaç: Kartvizit fotoğrafı müşteriye ait veri olduğu için Opportunity'den
+Customer tablosuna taşınır. Fırsat düzenleme/detay ekranlarında müşterinin
+kartviziti görünür ve düzenlenebilir.
 
-Test senaryoları:
+Adımlar:
+  1. Shared: Customer type/schema'a cardImage ekle, Opportunity'den kaldır
+  2. Prisma: Customer.cardImage ekle, Opportunity.cardImage kaldır
+  3. Migration: Mevcut Opportunity.cardImage → ilgili Customer.cardImage
+  4. Backend: Customer create/update cardImage, Opportunity cardImage kaldır
+  5. FairService: opportunity listesinde customer.cardImage
+  6. Frontend: OpportunityFormModal/OpportunityCard customer.cardImage kullan
+  7. OpportunityFormModal: Kartvizit değişikliğinde Customer PATCH
 
-MFA SMS OTP:
-  [ ] MFA kapalı: email+parola → direkt giriş
-  [ ] MFA açık: email+parola doğru → OTP ekranı
-  [ ] MFA açık: OTP doğru → giriş başarılı
-  [ ] MFA açık: OTP yanlış → hata mesajı
-  [ ] MFA açık: OTP süresi dolmuş → yeniden login
-  [ ] Telefonu olmayan kullanıcı (MFA açık) → uygun hata
-  [ ] Admin: MFA_SMS_ENABLED değiştir → login davranışı güncellenir
-  [ ] Admin: RATE_LIMIT_LOGIN_ATTEMPTS değiştir → limit uygulanır
-  [ ] Rate limit aşımı → 429 mesajı
-  [ ] Login sayfası: tüm hata mesajları ekranda görünüyor
+Etkilenen dosyalar:
+  DEĞİŞEN: types/customer.ts, types/opportunity.ts, schemas/customer.ts,
+            schemas/opportunity.ts, schema.prisma,
+            customer.service.ts, opportunity.service.ts, fair.service.ts,
+            OpportunityFormModal.tsx, OpportunityCard.tsx, use-customers.ts,
+            use-opportunities.ts
+  YENİ: migrations/YYYYMMDD_card_image_to_customer/
 
-Ürün Tonaj:
-  [ ] Fırsat oluşturma: ürün seçimi + tonaj girişi çalışıyor
-  [ ] Birden fazla ürün farklı tonajlarla seçilebiliyor
-  [ ] Tonajsız ürün seçimi mümkün (quantity = null)
-  [ ] Fırsat güncelleme: ürün ekleme/kaldırma/tonaj değiştirme
-  [ ] Kart: ürünlerin yanında tonaj bilgisi gösteriliyor
-  [ ] Toplam tonaj özeti formda görünüyor
-
-Pipeline:
-  [ ] Yeni fırsat: varsayılan aşama "Tanışma"
-  [ ] Aşama geçişi: ileri yönde atlamalı geçiş (Tanışma → Teklif)
-  [ ] Aşama geçişi: not yazılabiliyor
-  [ ] Olumsuz Sonuçlandı: kayıp nedeni zorunlu
-  [ ] Terminal aşamadan geri dönüş engeli
-  [ ] Aşama geçiş geçmişi doğru görünüyor
-  [ ] Pipeline progress bar doğru vurgulama
-  [ ] Fırsat listesinde aşamaya göre filtreleme
-  [ ] Pipeline istatistikleri doğru
-
-Notlar:
-  [ ] Not ekleme çalışıyor
-  [ ] Not düzenleme (sadece yazan + admin)
-  [ ] Not silme (sadece yazan + admin)
-  [ ] Kart üzerinde not sayısı ikonu doğru
-  [ ] Not listesi kronolojik sırada
-
-Etiketler:
-  [ ] Admin: kategori CRUD çalışıyor
-  [ ] Admin: etiket CRUD çalışıyor (renk seçiciyle)
-  [ ] Admin: etiket silme uyarısı (kullanan fırsat sayısı)
-  [ ] Fırsat: etiket atama/kaldırma çalışıyor
-  [ ] Kart kapalı: renkli noktalar görünüyor
-  [ ] Kart açık: etiket chip'leri görünüyor
-  [ ] Fırsat listesinde etiket filtreleme
-
-Fuar KPI:
-  [ ] Fuar düzenleme: KPI hedef alanları kaydediliyor
-  [ ] Çekmece: açma/kapama animasyonu akıcı
-  [ ] Progress bar'lar doğru yüzde gösteriyor
-  [ ] Hedef aşıldığında özel gösterim
-  [ ] Hedef tanımsızken uygun mesaj
-  [ ] Metrik kartları doğru hesaplanıyor
-
-Teklif Dokümanı:
-  [ ] Teklif aşamasına geçiş modalında Word/PDF seçimi, ürün+fiyat+para birimi
-  [ ] Teklifi oluştur → indirme çalışıyor
-  [ ] Onayla → Teklif aşamasına geçiş + doküman kaydediliyor
-  [ ] Fırsat detayında "Teklif İndir" çalışıyor
-  [ ] Kronolojik sıralama doğru
-  [ ] "Daha fazla göster" pagination çalışıyor
-
-Entegrasyon:
-  [ ] Tüm özellikler birlikte çalışıyor (fırsat oluştur → ürün+tonaj →
-      aşama geçir → teklif oluştur → indir → onayla)
-  [ ] Fuar silme: tüm ilişkili veriler (opportunities, products, stages,
-      notes, tags) cascade siliniyor
-  [ ] Responsive tasarım (1-3 kolon geçişleri)
-
-Build kontrolü:
-  [ ] npm run build -w packages/shared — hatasız
-  [ ] npm run build -w apps/api — hatasız
-  [ ] npm run build -w apps/web — hatasız
-
-Edge case'ler:
-  [ ] Ürünsüz fırsat oluşturulabilir
-  [ ] Notlu aşama geçişi + notsuz geçiş
-  [ ] Çok sayıda etiket atanmış fırsat kartı taşmıyor
-  [ ] Uzun not metni düzgün görünüyor
-  [ ] Boş fuar (0 fırsat) KPI drawer'da uygun mesaj
-
-Bağımlılık: F32 — F44, F46, F47 tamamlanmış olmalı
-Commit: test: verify Phase 3 features end-to-end
+Bağımlılık: Yok
+Commit: feat(shared): move cardImage from Opportunity to Customer
+Commit: feat(prisma): add cardImage to Customer, remove from Opportunity
+Commit: feat(api): update Customer/Opportunity services for cardImage
+Commit: feat(web): use customer.cardImage in Opportunity form and card
 
 Durum: [ ]
+
+-----------------------------------------------------------------------
+F49 — Kart Vizit Tara (OCR)
+-----------------------------------------------------------------------
+
+Amaç: Yeni Müşteri formuna "Kart Vizit Tara" butonu. Kullanıcı kartvizit
+fotoğrafı yükler, Tesseract.js (ücretsiz) ile OCR yapılır, firma/ad/telefon/
+e-posta form alanlarına doldurulur. Fotoğraf upload edilip Customer.cardImage
+olarak kaydedilir.
+
+Adımlar:
+  1. Shared: parse-business-card.ts (metinden firma, ad, telefon, e-posta çıkarma)
+  2. Web: tesseract.js, @tesseract.js-data/tur, @tesseract.js-data/eng
+  3. Web: use-business-card-ocr.ts hook
+  4. CustomerSelectInput: Kart Vizit Tara butonu, OCR + upload + form doldurma
+
+Etkilenen dosyalar:
+  YENİ: utils/parse-business-card.ts, hooks/use-business-card-ocr.ts
+  DEĞİŞEN: CustomerSelectInput.tsx, package.json (web)
+
+Bağımlılık: F48 (Customer.cardImage mevcut olmalı)
+Commit: feat(shared): add parse-business-card utility
+Commit: feat(web): add Kart Vizit Tara with Tesseract.js OCR
+
 
 ==============================
 ÖZET — İŞ SIRASI
@@ -2120,7 +2099,11 @@ Branch 7: Teklif Dokümanı
 Branch 8: Test
   F45 → Uçtan uca entegrasyon testi
 
-Toplam: 16 feature, 8 branch, 8 DB migration
+Branch 9: Kartvizit OCR
+  F48 → cardImage Customer'a taşıma (DB migration, backend, shared, frontend)
+  F49 → Kart Vizit Tara (Tesseract.js OCR, parse utility, CustomerSelectInput UI)
+
+Toplam: 18 feature, 9 branch, 9 DB migration
 Tahmini etki: ~30 yeni dosya, ~20 değişen dosya
 
 Bağımlılık grafiği:
@@ -2130,9 +2113,10 @@ Bağımlılık grafiği:
   Branch 2 (Pipeline)   ──┼──→ Branch 7 (Teklif Dokümanı) ──┼──→ Branch 8 (Test)
   Branch 3 (Notlar)     ──┤                                │
   Branch 4 (Etiketler)  ──┘                                │
-  Branch 6 (MFA SMS)    ───────────────────────────────────┘ (bağımsız)
+  Branch 6 (MFA SMS)    ───────────────────────────────────┘
+  Branch 9 (Kartvizit OCR) ────────────────────────────────┘ (bağımsız)
 
-  Branch 1–4, 6 bağımsız. Branch 7 sadece Branch 2'ye bağlıdır.
+  Branch 1–4, 6, 9 bağımsız. Branch 7 sadece Branch 2'ye bağlıdır.
 
 ==============================
 ÖNEMLİ NOTLAR
@@ -2156,3 +2140,6 @@ Bağımlılık grafiği:
   iki session'a bölünebilir, aynı branch üzerinde devam edilir.
 - Mobil uygulama bu fazın kapsamı dışındadır.
 - Phase 3 tamamlandıktan sonra future-vision.md'deki özellikler değerlendirilir.
+- Kartvizit fotoğrafı müşteriye aittir (Customer.cardImage). Fırsat düzenleme/detay ekranlarında
+  müşterinin kartviziti görünür ve düzenlenebilir. Kart Vizit Tara (Branch 9) Tesseract.js ile
+  ücretsiz client-side OCR kullanır.
