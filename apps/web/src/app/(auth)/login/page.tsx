@@ -8,13 +8,20 @@ import { Button } from '@/components/ui/Button';
 import { MfaCodeInput } from '@/components/auth/MfaCodeInput';
 
 function getErrorMessage(err: unknown): string {
-  const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+  const axiosErr = err as {
+    response?: { status?: number; data?: { message?: string } };
+    message?: string;
+    code?: string;
+  };
   const status = axiosErr?.response?.status;
   const message = axiosErr?.response?.data?.message;
 
   if (status === 429) return 'Çok fazla deneme. Lütfen birkaç dakika bekleyin.';
   if (status === 401 && message) return message;
   if (message) return message;
+  if (axiosErr?.code === 'ERR_NETWORK')
+    return 'Sunucuya bağlanılamıyor. API çalışıyor mu kontrol edin.';
+  if (axiosErr?.message) return axiosErr.message;
   return 'Bir hata oluştu. Lütfen tekrar deneyin.';
 }
 
