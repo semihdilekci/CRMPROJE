@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Customer, CreateCustomerDto } from '@crm/shared';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCustomers, useCreateCustomer } from '@/hooks/use-customers';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
+import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
+import api from '@/lib/api';
 
 interface CustomerSelectInputProps {
   selectedCustomerId: string | null;
@@ -30,12 +33,17 @@ export function CustomerSelectInput({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { scanBusinessCard, isLoading: isOcrLoading } = useBusinessCardOcr();
 
   const resetCreateForm = () => {
     setNewCompany('');
     setNewName('');
     setNewPhone('');
     setNewEmail('');
+    setCardImageUrl(null);
     setShowCreateForm(false);
   };
 
@@ -45,6 +53,7 @@ export function CustomerSelectInput({
       name: newName.trim(),
       phone: newPhone.trim() || null,
       email: newEmail.trim() || null,
+      cardImage: cardImageUrl || undefined,
     };
     try {
       const created = await createCustomer.mutateAsync(dto);
@@ -54,6 +63,33 @@ export function CustomerSelectInput({
       setShowDropdown(false);
     } catch {
       // mutation error handled by react-query
+    }
+  };
+
+  const handleScanCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const parsed = await scanBusinessCard(file);
+    if (parsed) {
+      setNewCompany(parsed.company);
+      setNewName(parsed.name);
+      setNewPhone(parsed.phone);
+      setNewEmail(parsed.email);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post<ApiSuccessResponse<{ url: string }>>(
+        API_ENDPOINTS.UPLOAD.CARD_IMAGE,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      if (data.success && data.data?.url) setCardImageUrl(data.data.url);
+    } catch {
+      // Error handled by api interceptor
     }
   };
 
@@ -192,23 +228,46 @@ export function CustomerSelectInput({
               onChange={(e) => setNewEmail(e.target.value)}
             />
           </div>
-          <div className="mt-3 flex gap-2">
-            <Button
-              variant="secondary"
-              className="text-[13px]"
-              onClick={resetCreateForm}
-            >
-              İptal
-            </Button>
-            <Button
-              className="text-[13px]"
-              onClick={handleCreateCustomer}
-              disabled={
-                !newCompany.trim() || !newName.trim() || createCustomer.isPending
-              }
-            >
-              {createCustomer.isPending ? 'Kaydediliyor...' : 'Kaydet'}
-            </Button>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="text-[13px]"
+                onClick={resetCreateForm}
+              >
+                İptal
+              </Button>
+              <Button
+                className="text-[13px]"
+                onClick={handleCreateCustomer}
+                disabled={
+                  !newCompany.trim() ||
+                  !newName.trim() ||
+                  createCustomer.isPending ||
+                  isOcrLoading
+                }
+              >
+                {createCustomer.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleScanCard}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-[13px]"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isOcrLoading}
+              >
+                {isOcrLoading ? 'Okunuyor...' : 'Kart Vizit Tara'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
