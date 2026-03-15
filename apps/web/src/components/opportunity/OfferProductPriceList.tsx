@@ -2,11 +2,24 @@
 
 import { useCallback } from 'react';
 import type { Product } from '@crm/shared';
-import { CURRENCIES } from '@crm/shared';
+import { CURRENCIES, OFFER_UNITS } from '@crm/shared';
+import type { OfferUnit } from '@crm/shared';
+
+/** Girilen fiyatı Türkçe formata çevirir: 5000000 -> 5.000.000 */
+function formatPriceInput(value: string): string {
+  const digitsOnly = value.replace(/[^\d,]/g, '');
+  if (digitsOnly === '') return '';
+  const normalized = digitsOnly.replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(normalized);
+  if (isNaN(num)) return '';
+  return num.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+}
 
 export interface OfferProductRow {
   productId: string;
   productName: string;
+  qty: number;
+  unit: OfferUnit;
   price: string;
   currency: string;
 }
@@ -61,6 +74,8 @@ export function OfferProductPriceList({
         {
           productId: firstAvailable.id,
           productName: firstAvailable.name,
+          qty: 1,
+          unit: 'ton' as OfferUnit,
           price: '',
           currency: 'TRY',
         },
@@ -98,11 +113,38 @@ export function OfferProductPriceList({
                 ))}
               </select>
               <input
+                type="number"
+                min={0.01}
+                step={0.1}
+                placeholder="Miktar"
+                value={row.qty || ''}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  updateRow(index, { qty: isNaN(v) ? 1 : v });
+                }}
+                className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-right text-[13px] text-white focus:border-violet-400/60 focus:outline-none placeholder:text-white/50"
+              />
+              <select
+                value={row.unit || 'ton'}
+                onChange={(e) => updateRow(index, { unit: e.target.value as OfferUnit })}
+                className="w-[70px] rounded border border-white/20 bg-white/5 px-2 py-1.5 text-[13px] text-white focus:border-violet-400/60 focus:outline-none"
+              >
+                {OFFER_UNITS.map((u) => (
+                  <option key={u} value={u}>
+                    {u === 'ton' ? 'Ton' : u === 'kg' ? 'kg' : 'Adet'}
+                  </option>
+                ))}
+              </select>
+              <input
                 type="text"
-                placeholder="Fiyat"
+                inputMode="numeric"
+                placeholder="Toplam"
                 value={row.price}
-                onChange={(e) => updateRow(index, { price: e.target.value })}
-                className="w-24 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-right text-[13px] text-white focus:border-violet-400/60 focus:outline-none placeholder:text-white/50"
+                onChange={(e) => {
+                  const formatted = formatPriceInput(e.target.value);
+                  updateRow(index, { price: formatted });
+                }}
+                className="w-28 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-right text-[13px] text-white focus:border-violet-400/60 focus:outline-none placeholder:text-white/50"
               />
               <select
                 value={row.currency}

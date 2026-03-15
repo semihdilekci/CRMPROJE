@@ -6,3 +6,6 @@ export type ConversionRate = (typeof CONVERSION_RATES)[number];
 
 export const CURRENCIES = ['USD', 'EUR', 'TRY', 'GBP'] as const;
 export type Currency = (typeof CURRENCIES)[number];
+
+export const OFFER_UNITS = ['ton', 'kg', 'adet'] as const;
+export type OfferUnit = (typeof OFFER_UNITS)[number];

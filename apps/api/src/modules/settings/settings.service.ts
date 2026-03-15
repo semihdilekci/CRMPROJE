@@ -67,6 +67,21 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
     value: 'assets/teklif-templates/default-teklif-template.docx',
     description: 'Teklif template dosya yolu (varsayılan: assets/teklif-templates/)',
   },
+  {
+    key: 'EXCHANGE_RATE_USD',
+    value: '34',
+    description: '1 USD = X TRY (teklif toplam hesaplama)',
+  },
+  {
+    key: 'EXCHANGE_RATE_EUR',
+    value: '36',
+    description: '1 EUR = X TRY (teklif toplam hesaplama)',
+  },
+  {
+    key: 'EXCHANGE_RATE_GBP',
+    value: '43',
+    description: '1 GBP = X TRY (teklif toplam hesaplama)',
+  },
 ];
 
 @Injectable()
@@ -119,6 +134,19 @@ export class SettingsService implements OnModuleInit {
       where: { key },
     });
     return s?.value ?? null;
+  }
+
+  /** Teklif toplam hesaplama için kur oranları (TRY cinsinden). Yoksa 1:1 kabul edilir. */
+  async getExchangeRates(): Promise<Record<string, number>> {
+    const usd = await this.get('EXCHANGE_RATE_USD');
+    const eur = await this.get('EXCHANGE_RATE_EUR');
+    const gbp = await this.get('EXCHANGE_RATE_GBP');
+    return {
+      TRY: 1,
+      USD: usd ? parseFloat(usd) || 1 : 1,
+      EUR: eur ? parseFloat(eur) || 1 : 1,
+      GBP: gbp ? parseFloat(gbp) || 1 : 1,
+    };
   }
 
   /** Giriş yapmış her kullanıcının okuyabildiği görüntü ayarları (para birimi, etiket metinleri). */

@@ -39,6 +39,15 @@ function localInputToIso(value: string, fallbackIso: string): string {
   return date.toISOString();
 }
 
+const EMPTY_LOGS: Array<{
+  id: string;
+  stage: string;
+  note: string | null;
+  lossReason: string | null;
+  createdAt: string;
+  changedBy: { id: string; name: string; email: string };
+}> = [];
+
 export function StageHistory({
   opportunityId,
   compact = false,
@@ -46,7 +55,8 @@ export function StageHistory({
   allowDeleteLast = false,
   fairId,
 }: StageHistoryProps) {
-  const { data: logs = [], isLoading } = useStageHistory(opportunityId);
+  const { data, isLoading } = useStageHistory(opportunityId);
+  const logs = data ?? EMPTY_LOGS;
   const updateStageLog = useUpdateStageLog(opportunityId, fairId);
   const deleteLastStageLog = useDeleteLastStageLog(opportunityId, fairId);
 

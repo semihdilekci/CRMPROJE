@@ -227,6 +227,7 @@ export function OpportunityFormModal({
       open={open}
       onClose={onClose}
       title={isEdit ? 'Fırsatı Düzenle' : 'Yeni Fırsat Yarat'}
+      strongerBlur
     >
       <div className="flex flex-col gap-4">
         <CustomerSelectInput

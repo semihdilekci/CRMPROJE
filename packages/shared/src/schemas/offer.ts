@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { CURRENCIES } from '../constants/enums';
+import { CURRENCIES, OFFER_UNITS } from '../constants/enums';
 
 export const offerProductItemSchema = z.object({
   productId: z.string().min(1, 'Ürün seçimi zorunludur'),
   productName: z.string().min(1),
+  qty: z.number().positive('Miktar 0\'dan büyük olmalıdır'),
+  unit: z.enum(OFFER_UNITS),
   price: z.string().min(1, 'Fiyat zorunludur'),
   currency: z.enum(CURRENCIES as unknown as [string, ...string[]]),
 });

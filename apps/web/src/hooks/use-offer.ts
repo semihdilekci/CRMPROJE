@@ -5,24 +5,29 @@ import type { CreateOfferInput } from '@crm/shared';
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 
+type CreateOfferVariables = CreateOfferInput & { _skipDownload?: boolean };
+
 export function useCreateOffer(opportunityId: string, fairId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (dto: CreateOfferInput) => {
+    mutationFn: async (variables: CreateOfferVariables) => {
+      const { _skipDownload, ...dto } = variables;
       const { data } = await api.post<Blob>(
         `/opportunities/${opportunityId}/create-offer`,
         dto,
         { responseType: 'blob' },
       );
-      const ext = dto.outputFormat === 'pdf' ? 'pdf' : 'docx';
-      const filename = `teklif-${opportunityId.slice(-8)}.${ext}`;
-      const url = window.URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      if (!_skipDownload) {
+        const ext = dto.outputFormat === 'pdf' ? 'pdf' : 'docx';
+        const filename = `teklif-${opportunityId.slice(-8)}.${ext}`;
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
       return { success: true };
     },
     onSuccess: () => {

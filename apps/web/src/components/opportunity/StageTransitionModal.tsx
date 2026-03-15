@@ -63,6 +63,8 @@ function buildInitialOfferRows(
     return oppProducts.map((op) => ({
       productId: op.productId ?? '',
       productName: op.productName ?? '',
+      qty: op.quantity ?? 1,
+      unit: (op.unit ?? 'ton') as 'ton' | 'kg' | 'adet',
       price: '',
       currency: 'TRY',
     }));
@@ -72,6 +74,8 @@ function buildInitialOfferRows(
     return {
       productId: p?.id ?? '',
       productName: name,
+      qty: 1,
+      unit: 'ton' as const,
       price: '',
       currency: 'TRY',
     };
@@ -136,17 +140,30 @@ export function StageTransitionModal({
     };
   }, [note, otherReasonText, targetStage, isOlumsuz, lossReason, showOtherReason]);
 
+  const isValidOfferRow = (r: OfferProductRow) =>
+    r.productId && r.price.trim() && r.qty > 0 && r.unit;
+
   const canCreateOffer =
     isTeklif &&
     offerRows.length > 0 &&
-    offerRows.every((r) => r.productId && r.price.trim()) &&
+    offerRows.every(isValidOfferRow) &&
     !createOffer.isPending;
 
   const canSubmit =
     !transition.isPending &&
     !createOffer.isPending &&
     (!isOlumsuz || !!lossReason) &&
-    (!isTeklif || offerRows.length > 0 && offerRows.every((r) => r.productId && r.price.trim()));
+    (!isTeklif || (offerRows.length > 0 && offerRows.every(isValidOfferRow)));
+
+  const toProductItems = (rows: OfferProductRow[]) =>
+    rows.filter((r) => isValidOfferRow(r)).map((r) => ({
+      productId: r.productId,
+      productName: r.productName,
+      qty: r.qty,
+      unit: r.unit,
+      price: r.price.trim(),
+      currency: r.currency as 'USD' | 'EUR' | 'TRY' | 'GBP',
+    }));
 
   const handleCreateOffer = async () => {
     if (!canCreateOffer) return;
@@ -154,14 +171,7 @@ export function StageTransitionModal({
       setSubmitError('');
       await createOffer.mutateAsync({
         outputFormat,
-        productItems: offerRows
-          .filter((r) => r.productId && r.price.trim())
-          .map((r) => ({
-            productId: r.productId,
-            productName: r.productName,
-            price: r.price.trim(),
-            currency: r.currency as 'USD' | 'EUR' | 'TRY' | 'GBP',
-          })),
+        productItems: toProductItems(offerRows),
       });
     } catch (err: unknown) {
       const msg = await extractApiErrorMessage(err);
@@ -172,15 +182,11 @@ export function StageTransitionModal({
   const handleSubmit = async () => {
     try {
       setSubmitError('');
-      if (isTeklif && offerRows.length > 0 && offerRows.every((r) => r.productId && r.price.trim())) {
+      if (isTeklif && offerRows.length > 0 && offerRows.every(isValidOfferRow)) {
         await createOffer.mutateAsync({
           outputFormat,
-          productItems: offerRows.map((r) => ({
-            productId: r.productId,
-            productName: r.productName,
-            price: r.price.trim(),
-            currency: r.currency as 'USD' | 'EUR' | 'TRY' | 'GBP',
-          })),
+          productItems: toProductItems(offerRows),
+          _skipDownload: true,
         });
       }
       await transition.mutateAsync(dto);
@@ -192,7 +198,7 @@ export function StageTransitionModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={title}>
+    <Modal open={open} onClose={handleClose} title={title} elevated>
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-white/20 backdrop-blur-xl bg-white/5 px-3 py-2 text-[13px] text-white/60">
           <span className="font-semibold text-white">Mevcut Aşama:</span>{' '}
@@ -222,7 +228,7 @@ export function StageTransitionModal({
               ))}
             </div>
             <label className="text-white/60 text-[12px] font-bold uppercase tracking-wider mt-2">
-              İlgilenilen Ürünler (Fiyat + Para Birimi)
+              İlgilenilen Ürünler (Miktar, Birim, Toplam Fiyat)
             </label>
             <OfferProductPriceList
               rows={offerRows}

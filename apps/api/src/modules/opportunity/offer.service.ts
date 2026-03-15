@@ -12,6 +12,7 @@ import PizZip from 'pizzip';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
+import { parseBudgetToNumber } from '@crm/shared';
 import type { CreateOfferInput } from '@crm/shared';
 
 @Injectable()
@@ -131,28 +132,62 @@ export class OfferService {
     }
 
     const { customer } = opportunity;
-    const productListText = dto.productItems
-      .map(
-        (p) =>
-          `${p.productName} - ${p.price} ${p.currency}`,
-      )
+    const displayConfig = await this.settingsService.getDisplayConfig();
+    const defaultCurrency = displayConfig.defaultCurrency;
+    const exchangeRates = await this.settingsService.getExchangeRates();
+
+    const formatAmount = (num: number): string =>
+      num.toLocaleString('tr-TR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+    const unitDisplayMap: Record<string, string> = {
+      ton: 'Ton',
+      kg: 'kg',
+      adet: 'Adet',
+    };
+
+    const products = dto.productItems.map((p, i) => {
+      const lineTotalNum = parseBudgetToNumber(p.price);
+      const qty = p.qty;
+      const unitPriceNum = qty > 0 ? lineTotalNum / qty : 0;
+      return {
+        row_no: i + 1,
+        product_list: p.productName,
+        qty,
+        unit: unitDisplayMap[p.unit] ?? p.unit,
+        unit_price: formatAmount(unitPriceNum),
+        line_total: formatAmount(lineTotalNum),
+      };
+    });
+
+    const rateBase = exchangeRates[defaultCurrency] ?? 1;
+    const totalAmountNum = dto.productItems.reduce((sum, p) => {
+      const lineTotalNum = parseBudgetToNumber(p.price);
+      const rate = exchangeRates[p.currency] ?? 1;
+      return sum + lineTotalNum * (rateBase / rate);
+    }, 0);
+
+    const teklifNo = `TKL-${new Date().getFullYear()}-${opportunityId.slice(-8)}`;
+    const teklifTarihi = new Date().toLocaleDateString('tr-TR');
+
+    const productListText = products
+      .map((p) => `${p.row_no}. ${p.product_list} - ${p.qty} ${p.unit} - ${p.line_total}`)
       .join('\n');
-    const totalAmount = dto.productItems.reduce(
-      (sum, p) => sum + parseFloat(p.price.replace(/[^\d.,-]/g, '').replace(',', '.') || '0'),
-      0,
-    );
-    const totalCurrency =
-      dto.productItems.length > 0 ? dto.productItems[0]!.currency : 'TRY';
 
     const data = {
+      teklif_no: teklifNo,
+      teklif_tarihi: teklifTarihi,
       customer_name: customer.name,
       customer_company: customer.company,
       customer_address: customer.address ?? '-',
       customer_phone: customer.phone ?? '-',
       customer_email: customer.email ?? '-',
+      products,
       product_list: productListText,
-      total_amount: totalAmount.toLocaleString('tr-TR'),
-      total_currency: totalCurrency,
+      total_amount: formatAmount(totalAmountNum),
+      total_currency: defaultCurrency,
     };
 
     let templateBuffer: Buffer;
