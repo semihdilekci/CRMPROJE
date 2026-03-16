@@ -35,3 +35,5 @@ Next.js version: 16.1.6 (Turbopack)
 5. < Bug Çözüldü > Fuar yaratırken başlangıç ve bitiş tarihleri boş bırakıldığında hata veriyor. zorunlu alan olmalı ve boşsa kullanıcıya uyarı mesajı çıkartılmalıdır.
 
 
+6. < Bug Çözüldü > AI chat yanıtında grafikler ve tablolar parse edilmiyor; JSON ham metin olarak görünüyor. Metin, grafik ve tablo olarak ayrı ayrı render edilmesi gerekiyor.
+
