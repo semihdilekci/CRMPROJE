@@ -591,7 +591,7 @@ Commit: feat(mobile): add offer creation and download
 Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
-║  BRANCH 4: KARTVİZİT, NOTLAR, ETİKETLER                  ║
+║  BRANCH 4: KARTVİZİT, NOTLAR (M18 etiketler atlanacak)   ║
 ║  Branch: feature/M16-M18-kartvizit-notlar                ║
 ║  Bağımlılık: Branch 3                                    ║
 ╚══════════════════════════════════════════════════════════╝
@@ -638,8 +638,10 @@ Commit: feat(mobile): add opportunity notes
 Durum: [ ]
 
 ----------------------------------------------------------------------
-M18 — Etiketler UI
+M18 — Etiketler UI (Yapılmayacak)
 ----------------------------------------------------------------------
+
+Bu branch'te M18 uygulanmayacak. Etiket özelliği ileride değerlendirilecek.
 
 Amaç: Fırsata etiket atama, etiket filtreleme.
 
@@ -655,7 +657,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add tags UI and filter
 
-Durum: [ ]
+Durum: [ ] (Bu branch'te atlanacak)
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 5: AI ANALİZ                                     ║
