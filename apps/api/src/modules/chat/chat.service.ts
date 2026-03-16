@@ -406,12 +406,137 @@ export class ChatService {
     charts?: ChartData[];
     tables?: TableData[];
   } {
-    const jsonStr = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    try {
-      return JSON.parse(jsonStr) as { text?: string; charts?: ChartData[]; tables?: TableData[] };
-    } catch {
-      return { text };
+    // 1) Tüm yanıt tek JSON ise (prompt'a uyan modeller)
+    const trimmed = text.trim();
+    const singleJsonMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+    if (singleJsonMatch) {
+      try {
+        const parsed = JSON.parse(singleJsonMatch[1]!.trim()) as unknown;
+        if (Array.isArray(parsed)) {
+          const textWithoutBlock = trimmed.replace(/^```(?:json)?\s*[\s\S]*\s*```$/g, '').trim();
+          return {
+            text: textWithoutBlock || 'Grafikler aşağıda.',
+            charts: this.normalizeCharts(parsed as ChartData[]),
+            tables: undefined,
+          };
+        }
+        if (parsed && typeof parsed === 'object') {
+          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
+          return {
+            text: obj.text ?? trimmed,
+            charts: this.normalizeCharts(obj.charts),
+            tables: obj.tables,
+          };
+        }
+      } catch {
+        // Fall through to markdown parsing
+      }
     }
+
+    // 2) Markdown format: metin + ```json ... ``` blokları + tablo
+    const charts: ChartData[] = [];
+    const tables: TableData[] = [];
+    let cleanText = text;
+
+    // JSON bloklarını bul ve parse et
+    const jsonBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
+    let match: RegExpExecArray | null;
+    while ((match = jsonBlockRegex.exec(text)) !== null) {
+      const blockContent = match[1]!.trim();
+      try {
+        const parsed = JSON.parse(blockContent) as unknown;
+        if (Array.isArray(parsed)) {
+          charts.push(...this.normalizeCharts(parsed as ChartData[]));
+        } else if (parsed && typeof parsed === 'object') {
+          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
+          if (obj.charts?.length) charts.push(...this.normalizeCharts(obj.charts));
+          if (obj.tables?.length) tables.push(...obj.tables);
+        }
+      } catch {
+        // Geçersiz JSON bloğu, atla
+      }
+    }
+
+    // Markdown tabloları parse et
+    const parsedTables = this.parseMarkdownTables(text);
+    if (parsedTables.length > 0) tables.push(...parsedTables);
+
+    // Metin: JSON blokları ve tabloları çıkar (replace için yeni regex kullan)
+    cleanText = text
+      .replace(/```(?:json)?\s*[\s\S]*?\s*```/g, '')
+      .replace(/\|[^\n]+\|\n\|[-:\s|]+\|\n(\|[^\n]+\|\n?)*/g, '')
+      .replace(/\*\*Grafikler:\*\*\s*/gi, '')
+      .replace(/\*\*Tablo:\*\*\s*/gi, '')
+      .trim();
+
+    return {
+      text: cleanText || text,
+      charts: charts.length > 0 ? charts : undefined,
+      tables: tables.length > 0 ? tables : undefined,
+    };
+  }
+
+  private normalizeCharts(charts: ChartData[] | undefined): ChartData[] {
+    if (!charts?.length) return [];
+    return charts.map((c) => this.normalizeChart(c)).filter(Boolean) as ChartData[];
+  }
+
+  private normalizeChart(chart: ChartData): ChartData | null {
+    if (!chart?.chartType || !chart.title) return null;
+    // stackedBar: AI bazen data: [{ label, values }] formatında döner
+    if (chart.chartType === 'stackedBar' && Array.isArray(chart.data)) {
+      const arr = chart.data as Array<{ label?: string; values?: number[] }>;
+      if (arr.length > 0 && 'label' in (arr[0] ?? {})) {
+        const obj: Record<string, number[]> = {};
+        for (const item of arr) {
+          const label = item?.label ?? '';
+          const values = item?.values ?? [];
+          if (label) obj[label] = values;
+        }
+        return { ...chart, data: obj };
+      }
+    }
+    return chart;
+  }
+
+  private parseMarkdownTables(text: string): TableData[] {
+    const tables: TableData[] = [];
+    const lines = text.split('\n');
+    let i = 0;
+    while (i < lines.length) {
+      const headerLine = lines[i];
+      if (!headerLine?.includes('|')) {
+        i++;
+        continue;
+      }
+      const headerCells = headerLine.split('|').map((c) => c.trim()).filter(Boolean);
+      if (headerCells.length === 0) {
+        i++;
+        continue;
+      }
+      i++;
+      const sepLine = lines[i];
+      if (!sepLine?.match(/\|[\s\-:|]+\|/)) {
+        i++;
+        continue;
+      }
+      i++;
+      const rows: (string | number)[][] = [];
+      while (i < lines.length && lines[i]?.includes('|')) {
+        const cells = lines[i]!.split('|').map((c) => c.trim()).filter(Boolean);
+        if (cells.length > 0) {
+          rows.push(
+            cells.map((cell) => {
+              const num = parseFloat(String(cell).replace(/[^\d.,\-]/g, '').replace(',', '.'));
+              return !isNaN(num) && String(num) === String(parseFloat(cell)) ? num : cell;
+            }),
+          );
+        }
+        i++;
+      }
+      if (rows.length > 0) tables.push({ columns: headerCells, rows });
+    }
+    return tables;
   }
 
   async getExport(exportId: string, _userId: string): Promise<{
