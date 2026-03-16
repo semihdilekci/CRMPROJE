@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header } from '@/components/layout/Header';
 import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
 import { FairStats } from '@/components/fair/FairStats';
 import { FilterDrawer } from '@/components/fair/FilterDrawer';
+import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { useFairDetail } from '@/hooks/use-fairs';
+import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 import type { OpportunityWithDetails } from '@crm/shared';
 
 function filterOpportunities(
@@ -39,6 +41,7 @@ export default function FairDetailScreen() {
   const [selectedRates, setSelectedRates] = useState<string[]>([]);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [filterDrawerExpanded, setFilterDrawerExpanded] = useState(false);
+  const openOpportunityForm = useOpportunityFormStore((s) => s.open);
 
   const opportunities = fair?.opportunities ?? [];
   const filteredOpportunities = useMemo(
@@ -124,20 +127,24 @@ export default function FairDetailScreen() {
           onStageFilterChange={setStageFilter}
         />
         {filteredOpportunities.length > 0 ? (
-          <View className="px-4 gap-2">
+          <View className="px-4">
             {filteredOpportunities.map((opp) => (
-              <View
+              <OpportunityCard
                 key={opp.id}
-                className="rounded-xl border border-white/20 bg-white/5 px-4 py-3"
-              >
-                <Text className="text-white font-medium">
-                  {opp.customer?.name ?? '-'} · {opp.customer?.company ?? '-'}
-                </Text>
-                <Text className="text-white/60 text-xs mt-1">
-                  Fırsat kartı M11'de eklenecek
-                </Text>
-              </View>
+                opportunity={opp}
+                fairId={fair.id}
+                onEdit={() => openOpportunityForm(fair.id, opp)}
+              />
             ))}
+            <Pressable
+              onPress={() => openOpportunityForm(fair.id)}
+              className="rounded-xl border-2 border-dashed border-white/20 p-4 mt-2 mb-4"
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+            >
+              <Text className="text-white/60 text-[15px] font-medium text-center">
+                + Yeni Fırsat Ekle
+              </Text>
+            </Pressable>
           </View>
         ) : hasActiveFilters ? (
           <View className="px-4 py-12 items-center">

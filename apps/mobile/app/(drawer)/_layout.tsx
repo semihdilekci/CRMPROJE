@@ -11,7 +11,12 @@ import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 export default function DrawerLayout() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
   const { visible, close, editingFair } = useFairFormStore();
-  const { visible: oppVisible, close: oppClose, fairId: oppFairId } = useOpportunityFormStore();
+  const {
+    visible: oppVisible,
+    close: oppClose,
+    fairId: oppFairId,
+    editingOpportunity: oppEditing,
+  } = useOpportunityFormStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -39,7 +44,12 @@ export default function DrawerLayout() {
       <Drawer.Screen name="(tabs)" options={{ drawerLabel: 'Ana Sayfa' }} />
     </Drawer>
     <FairForm visible={visible} onClose={close} initial={editingFair ?? undefined} />
-    <OpportunityForm visible={oppVisible} fairId={oppFairId} onClose={oppClose} />
+    <OpportunityForm
+      visible={oppVisible}
+      fairId={oppFairId}
+      initial={oppEditing ?? undefined}
+      onClose={oppClose}
+    />
     </>
   );
 }
