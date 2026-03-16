@@ -45,7 +45,7 @@ export function OpportunityForm({
   const createOpportunity = useCreateOpportunity(fairId ?? '');
   const updateOpportunity = useUpdateOpportunity(fairId ?? '');
   const updateCustomer = useUpdateCustomer();
-  const openCustomerForm = useOpportunityFormStore((s) => s.open);
+  const openCustomerForm = useCustomerFormStore((s) => s.open);
   const { data: productList = [] } = useProducts();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
