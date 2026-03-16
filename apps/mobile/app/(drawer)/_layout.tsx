@@ -4,9 +4,11 @@ import { Drawer } from 'expo-router/drawer';
 import { DrawerContent } from '@/components/layout/DrawerContent';
 import { FairForm } from '@/components/fair/FairForm';
 import { OpportunityForm } from '@/components/opportunity/OpportunityForm';
+import { CustomerForm } from '@/components/customer/CustomerForm';
 import { useAuthStore } from '@/stores/auth-store';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
+import { useCustomerFormStore } from '@/stores/customer-form-store';
 
 export default function DrawerLayout() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -17,6 +19,11 @@ export default function DrawerLayout() {
     fairId: oppFairId,
     editingOpportunity: oppEditing,
   } = useOpportunityFormStore();
+  const {
+    visible: custVisible,
+    close: custClose,
+    fairId: custFairId,
+  } = useCustomerFormStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -49,6 +56,11 @@ export default function DrawerLayout() {
       fairId={oppFairId}
       initial={oppEditing ?? undefined}
       onClose={oppClose}
+    />
+    <CustomerForm
+      visible={custVisible}
+      fairId={custFairId}
+      onClose={custClose}
     />
     </>
   );
