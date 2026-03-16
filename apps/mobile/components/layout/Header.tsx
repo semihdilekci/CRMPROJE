@@ -1,5 +1,4 @@
 import { View, Text, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
 
 interface HeaderProps {
   title?: string;
@@ -7,6 +6,7 @@ interface HeaderProps {
   showSearch?: boolean;
   onMenuPress?: () => void;
   onSearchPress?: () => void;
+  onBackPress?: () => void;
 }
 
 export function Header({
@@ -15,17 +15,16 @@ export function Header({
   showSearch = true,
   onMenuPress,
   onSearchPress,
+  onBackPress,
 }: HeaderProps) {
-  const router = useRouter();
-
   return (
     <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10 bg-[#020617]/95">
       <Pressable
-        onPress={onMenuPress}
+        onPress={onBackPress ?? onMenuPress}
         className="p-2 -ml-2"
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        <Text className="text-white text-xl">☰</Text>
+        <Text className="text-white text-xl">{onBackPress ? '←' : '☰'}</Text>
       </Pressable>
       <View className="flex-row items-center gap-2">
         <View className="w-8 h-8 rounded-lg bg-[#8b5cf6] items-center justify-center">

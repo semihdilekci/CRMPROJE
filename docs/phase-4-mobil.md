@@ -406,7 +406,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add fairs list with FairCard
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M8 — Fuar CRUD (Bottom Sheet)

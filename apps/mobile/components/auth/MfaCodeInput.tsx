@@ -79,7 +79,8 @@ export function MfaCodeInput({
             maxLength={1}
             selectTextOnFocus
             placeholderTextColor="rgba(255,255,255,0.5)"
-            className={`w-11 h-12 rounded-lg border text-center text-lg font-semibold text-white
+            style={{ color: '#ffffff' }}
+            className={`w-11 h-12 rounded-lg border text-center text-lg font-semibold
               border-white/20 bg-white/5
               ${error ? 'border-[#F87171]' : ''}`}
             accessibilityLabel={`Rakam ${i + 1}`}

@@ -1,8 +1,7 @@
 export const queryKeys = {
   fairs: {
     all: ['fairs'] as const,
-    list: () => [...queryKeys.fairs.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.fairs.all, id] as const,
+    byId: (id: string) => [...queryKeys.fairs.all, id] as const,
   },
   opportunities: {
     all: ['opportunities'] as const,
