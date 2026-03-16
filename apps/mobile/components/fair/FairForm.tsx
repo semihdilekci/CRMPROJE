@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import type { Fair } from '@crm/shared';
+import { formatDateInput, parseDateInput } from '@crm/shared';
 import { useCreateFair, useUpdateFair } from '@/hooks/use-fairs';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
+import { DateInput } from '@/components/ui/DateInput';
 import { Button } from '@/components/ui/Button';
 
 interface FairFormProps {
@@ -21,10 +23,10 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
   const [startDate, setStartDate] = useState(
-    initial?.startDate ? initial.startDate.slice(0, 10) : ''
+    initial?.startDate ? formatDateInput(initial.startDate) : ''
   );
   const [endDate, setEndDate] = useState(
-    initial?.endDate ? initial.endDate.slice(0, 10) : ''
+    initial?.endDate ? formatDateInput(initial.endDate) : ''
   );
   const [dateError, setDateError] = useState('');
 
@@ -32,8 +34,8 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
     if (visible && initial) {
       setName(initial.name);
       setAddress(initial.address);
-      setStartDate(initial.startDate ? initial.startDate.slice(0, 10) : '');
-      setEndDate(initial.endDate ? initial.endDate.slice(0, 10) : '');
+      setStartDate(initial.startDate ? formatDateInput(initial.startDate) : '');
+      setEndDate(initial.endDate ? formatDateInput(initial.endDate) : '');
     } else if (visible) {
       setName('');
       setAddress('');
@@ -47,7 +49,13 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
       setDateError('');
       return;
     }
-    if (new Date(endDate) < new Date(startDate)) {
+    const startIso = parseDateInput(startDate);
+    const endIso = parseDateInput(endDate);
+    if (!startIso || !endIso) {
+      setDateError('');
+      return;
+    }
+    if (new Date(endIso) < new Date(startIso)) {
       setDateError('Bitiş tarihi başlangıç tarihinden önce olamaz');
     } else {
       setDateError('');
@@ -63,11 +71,15 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
   const handleSubmit = async () => {
     if (!isValid) return;
 
+    const startIso = parseDateInput(startDate);
+    const endIso = parseDateInput(endDate);
+    if (!startIso || !endIso) return;
+
     const dto = {
       name: name.trim(),
       address: address.trim(),
-      startDate: new Date(startDate + 'T12:00:00.000Z').toISOString(),
-      endDate: new Date(endDate + 'T12:00:00.000Z').toISOString(),
+      startDate: startIso,
+      endDate: endIso,
     };
 
     try {
@@ -105,17 +117,17 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
           value={address}
           onChangeText={setAddress}
         />
-        <Input
+        <DateInput
           label="Başlangıç Tarihi *"
-          placeholder="YYYY-MM-DD"
+          placeholder="gg.aa.yyyy"
           value={startDate}
-          onChangeText={setStartDate}
+          onChange={setStartDate}
         />
-        <Input
+        <DateInput
           label="Bitiş Tarihi *"
-          placeholder="YYYY-MM-DD"
+          placeholder="gg.aa.yyyy"
           value={endDate}
-          onChangeText={setEndDate}
+          onChange={setEndDate}
           error={dateError || undefined}
         />
         <View className="flex-row gap-3 mt-2">

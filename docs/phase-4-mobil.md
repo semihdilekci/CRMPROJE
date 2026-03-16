@@ -177,6 +177,11 @@ Web ile birebir: docs/design-system.md ve docs/Mobil-ui-examples/ referans.
 - Kartlar: rounded-2xl, glass arka plan, border-white/20
 - Formlar: bottom sheet pattern (aşağıdan yukarı açılan modal)
 
+Tasarım tutarlılığı (efektler, animasyonlar):
+- Web ile mobil aynı görsellikte olmalı: Eş zamanlı geliştirme tercih edilir.
+- Her yeni feature’da web bileşenini referans alın ve mobilde aynı stili uygulayın.
+- Mevcut farklar için: "Phase 4 polish" veya Branch 6 (M20-M22) içinde toplu gözden geçirme yapılabilir.
+
 ==============================
 BRANCH YÖNETİMİ STRATEJİSİ
 ==============================

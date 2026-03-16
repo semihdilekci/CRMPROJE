@@ -3,8 +3,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { DateInput } from '@/components/ui/DateInput';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { formatDateInput, parseDateInput } from '@crm/shared';
 import { useCreateFair, useUpdateFair } from '@/hooks/use-fairs';
 import type { Fair } from '@crm/shared';
 
@@ -23,9 +25,11 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
   const [startDate, setStartDate] = useState(
-    initial?.startDate ? initial.startDate.slice(0, 10) : ''
+    initial?.startDate ? formatDateInput(initial.startDate) : ''
   );
-  const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : '');
+  const [endDate, setEndDate] = useState(
+    initial?.endDate ? formatDateInput(initial.endDate) : ''
+  );
   const [targetLeadCount, setTargetLeadCount] = useState(
     initial?.targetLeadCount != null ? String(initial.targetLeadCount) : ''
   );
@@ -38,8 +42,8 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
     if (open && initial) {
       setName(initial.name);
       setAddress(initial.address);
-      setStartDate(initial.startDate ? initial.startDate.slice(0, 10) : '');
-      setEndDate(initial.endDate ? initial.endDate.slice(0, 10) : '');
+      setStartDate(initial.startDate ? formatDateInput(initial.startDate) : '');
+      setEndDate(initial.endDate ? formatDateInput(initial.endDate) : '');
       setTargetLeadCount(
         initial.targetLeadCount != null ? String(initial.targetLeadCount) : ''
       );
@@ -56,7 +60,10 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
 
   const dateError = useMemo(() => {
     if (!startDate || !endDate) return '';
-    if (new Date(endDate) < new Date(startDate)) {
+    const startIso = parseDateInput(startDate);
+    const endIso = parseDateInput(endDate);
+    if (!startIso || !endIso) return '';
+    if (new Date(endIso) < new Date(startIso)) {
       return 'Bitiş tarihi başlangıç tarihinden önce olamaz';
     }
     return '';
@@ -68,11 +75,15 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
   const handleSubmit = async () => {
     if (!isValid) return;
 
+    const startIso = parseDateInput(startDate);
+    const endIso = parseDateInput(endDate);
+    if (!startIso || !endIso) return;
+
     const dto = {
       name: name.trim(),
       address: address.trim(),
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
+      startDate: startIso,
+      endDate: endIso,
       targetLeadCount: targetLeadCount.trim()
         ? parseInt(targetLeadCount, 10)
         : null,
@@ -134,24 +145,20 @@ export function FairFormModal({ open, onClose, initial }: FairFormModalProps) {
           onChange={(e) => setAddress(e.target.value)}
         />
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DateInput
             label="Başlangıç Tarihi *"
-            type="date"
+            placeholder="gg.aa.yyyy"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            error={!startDate ? undefined : undefined}
+            onChange={setStartDate}
           />
-          <Input
+          <DateInput
             label="Bitiş Tarihi *"
-            type="date"
+            placeholder="gg.aa.yyyy"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            error={!endDate ? undefined : undefined}
+            onChange={setEndDate}
+            error={dateError || undefined}
           />
         </div>
-        {dateError && (
-          <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{dateError}</p>
-        )}
         <div className="border-t border-white/10 pt-4">
           <p className="mb-3 text-[12px] font-bold uppercase tracking-wider text-white/60">
             KPI Hedefleri (Opsiyonel)
