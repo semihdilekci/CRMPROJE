@@ -384,7 +384,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): implement login and MFA flow
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M7 — Fuarlar Listesi
