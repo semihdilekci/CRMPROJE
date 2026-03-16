@@ -2,10 +2,13 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { DrawerContent } from '@/components/layout/DrawerContent';
+import { FairForm } from '@/components/fair/FairForm';
 import { useAuthStore } from '@/stores/auth-store';
+import { useFairFormStore } from '@/stores/fair-form-store';
 
 export default function DrawerLayout() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
+  const { visible, close, editingFair } = useFairFormStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,6 +22,7 @@ export default function DrawerLayout() {
   }, [isLoading, isAuthenticated, router]);
 
   return (
+    <>
     <Drawer
       screenOptions={{
         headerShown: false,
@@ -30,5 +34,7 @@ export default function DrawerLayout() {
     >
       <Drawer.Screen name="(tabs)" options={{ drawerLabel: 'Ana Sayfa' }} />
     </Drawer>
+    <FairForm visible={visible} onClose={close} initial={editingFair ?? undefined} />
+    </>
   );
 }

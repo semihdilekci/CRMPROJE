@@ -429,7 +429,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add Fair CRUD with bottom sheet form
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M9 — Fuar Detay Sayfası

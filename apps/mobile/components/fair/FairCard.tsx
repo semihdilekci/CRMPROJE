@@ -1,7 +1,9 @@
-import { Pressable, View, Text } from 'react-native';
+import { Pressable, View, Text, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Fair } from '@crm/shared';
 import { formatDate } from '@crm/shared';
+import { useFairFormStore } from '@/stores/fair-form-store';
+import { useDeleteFair } from '@/hooks/use-fairs';
 
 export type FairWithCount = Fair & { _count?: { opportunities: number } };
 
@@ -11,6 +13,8 @@ interface FairCardProps {
 
 export function FairCard({ fair }: FairCardProps) {
   const router = useRouter();
+  const openEdit = useFairFormStore((s) => s.openEdit);
+  const deleteFair = useDeleteFair();
   const now = new Date();
   const start = new Date(fair.startDate);
   const end = new Date(fair.endDate);
@@ -22,9 +26,39 @@ export function FairCard({ fair }: FairCardProps) {
     router.push(`/(drawer)/(tabs)/fairs/${fair.id}`);
   };
 
+  const handleLongPress = () => {
+    Alert.alert(
+      fair.name,
+      'Fuarı düzenle veya sil',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { text: 'Düzenle', onPress: () => openEdit(fair) },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Fuarı Sil',
+              `"${fair.name}" fuarı ve tüm fırsatları silinecek. Emin misiniz?`,
+              [
+                { text: 'İptal', style: 'cancel' },
+                {
+                  text: 'Sil',
+                  style: 'destructive',
+                  onPress: () => deleteFair.mutate(fair.id),
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Pressable
       onPress={handlePress}
+      onLongPress={handleLongPress}
       className="rounded-2xl border border-white/20 bg-white/5 p-4 active:opacity-90"
     >
       <View className="flex-row items-start justify-between">

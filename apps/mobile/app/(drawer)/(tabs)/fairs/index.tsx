@@ -3,9 +3,11 @@ import { Header } from '@/components/layout/Header';
 import { useNavigation } from 'expo-router';
 import { useFairs } from '@/hooks/use-fairs';
 import { FairCard } from '@/components/fair/FairCard';
+import { useFairFormStore } from '@/stores/fair-form-store';
 
 export default function FairsScreen() {
   const navigation = useNavigation();
+  const openFairForm = useFairFormStore((s) => s.open);
   const { data: fairs, isLoading, error } = useFairs();
 
   const totalOpportunities = fairs?.reduce(
@@ -24,6 +26,7 @@ export default function FairsScreen() {
         Yeni bir fuar ekleyerek başlayın
       </Text>
       <Pressable
+        onPress={openFairForm}
         className="mt-6 rounded-lg bg-[#8b5cf6] px-6 py-3"
         style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
@@ -88,11 +91,20 @@ export default function FairsScreen() {
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingBottom: 24,
+          paddingBottom: 80,
           flexGrow: 1,
         }}
         ItemSeparatorComponent={() => <View className="h-3" />}
       />
+      {fairCount > 0 && (
+        <Pressable
+          onPress={openFairForm}
+          className="absolute bottom-24 right-4 w-14 h-14 rounded-2xl bg-[#8b5cf6] items-center justify-center"
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+        >
+          <Text className="text-white text-2xl font-bold">+</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
