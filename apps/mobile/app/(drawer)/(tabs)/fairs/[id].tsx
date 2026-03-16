@@ -9,6 +9,8 @@ import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { useFairDetail } from '@/hooks/use-fairs';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
+import { useStageTransitionStore } from '@/stores/stage-transition-store';
+import { useOfferStore } from '@/stores/offer-store';
 import type { OpportunityWithDetails } from '@crm/shared';
 
 function filterOpportunities(
@@ -42,6 +44,8 @@ export default function FairDetailScreen() {
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [filterDrawerExpanded, setFilterDrawerExpanded] = useState(false);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
+  const openStageTransition = useStageTransitionStore((s) => s.open);
+  const openOfferSheet = useOfferStore((s) => s.open);
 
   const opportunities = fair?.opportunities ?? [];
   const filteredOpportunities = useMemo(
@@ -134,6 +138,8 @@ export default function FairDetailScreen() {
                 opportunity={opp}
                 fairId={fair.id}
                 onEdit={() => openOpportunityForm(fair.id, opp)}
+                onStageChange={() => openStageTransition(opp, fair.id)}
+                onOfferDownload={() => openOfferSheet(opp, fair.id)}
               />
             ))}
             <Pressable

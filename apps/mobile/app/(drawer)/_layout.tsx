@@ -5,10 +5,14 @@ import { DrawerContent } from '@/components/layout/DrawerContent';
 import { FairForm } from '@/components/fair/FairForm';
 import { OpportunityForm } from '@/components/opportunity/OpportunityForm';
 import { CustomerForm } from '@/components/customer/CustomerForm';
+import { StageTransitionSheet } from '@/components/opportunity/StageTransitionSheet';
+import { OfferCreateSheet } from '@/components/opportunity/OfferCreateSheet';
 import { useAuthStore } from '@/stores/auth-store';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
+import { useStageTransitionStore } from '@/stores/stage-transition-store';
+import { useOfferStore } from '@/stores/offer-store';
 
 export default function DrawerLayout() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -24,6 +28,18 @@ export default function DrawerLayout() {
     close: custClose,
     fairId: custFairId,
   } = useCustomerFormStore();
+  const {
+    visible: stageVisible,
+    close: stageClose,
+    opportunity: stageOpp,
+    fairId: stageFairId,
+  } = useStageTransitionStore();
+  const {
+    visible: offerVisible,
+    close: offerClose,
+    opportunity: offerOpp,
+    fairId: offerFairId,
+  } = useOfferStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +77,18 @@ export default function DrawerLayout() {
       visible={custVisible}
       fairId={custFairId}
       onClose={custClose}
+    />
+    <StageTransitionSheet
+      visible={stageVisible}
+      opportunity={stageOpp}
+      fairId={stageFairId}
+      onClose={stageClose}
+    />
+    <OfferCreateSheet
+      visible={offerVisible}
+      opportunity={offerOpp}
+      fairId={offerFairId}
+      onClose={offerClose}
     />
     </>
   );

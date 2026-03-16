@@ -503,7 +503,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add OpportunityCard with accordion
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M12 — Fırsat Formu (Bottom Sheet)
@@ -524,7 +524,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add Opportunity form with bottom sheet
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M13 — Müşteri Formu (Bottom Sheet)
@@ -544,7 +544,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add Customer form with bottom sheet
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M14 — Pipeline Geçiş (StageTransitionSheet)
@@ -566,7 +566,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add pipeline stage transition sheet
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M15 — Teklif Oluşturma & İndirme
@@ -588,7 +588,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add offer creation and download
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 4: KARTVİZİT, NOTLAR, ETİKETLER                  ║
