@@ -6,6 +6,12 @@ const getBaseURL = () => {
   return url || 'http://localhost:3001/api/v1';
 };
 
+/** Upload/card-image gibi asset URL'leri için base (api/v1 olmadan) */
+export function getAssetBaseUrl(): string {
+  const url = getBaseURL();
+  return url.replace(/\/api\/v1\/?$/, '') || url;
+}
+
 const api = axios.create({
   baseURL: getBaseURL(),
   headers: { 'Content-Type': 'application/json' },
