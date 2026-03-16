@@ -16,6 +16,7 @@ export const theme = {
     glassBorder: 'rgba(255,255,255,0.2)',
   },
   gradients: {
-    primary: ['#8b5cf6', '#06b6d4'],
+    primary: ['#8b5cf6', '#06b6d4'] as const,
+    glass: ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.04)'] as const,
   },
 } as const;

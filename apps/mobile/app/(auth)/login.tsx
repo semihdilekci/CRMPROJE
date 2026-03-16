@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { MfaCodeInput } from '@/components/auth/MfaCodeInput';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 
 function getErrorMessage(err: unknown): string {
   const axiosErr = err as {
@@ -92,7 +93,8 @@ export default function LoginScreen() {
   };
 
   const content = (
-    <View className="flex-1 bg-[#020617] items-center justify-center px-6">
+    <GradientBackground>
+    <View className="flex-1 items-center justify-center px-6">
       <View className="w-full max-w-[400px] rounded-2xl border border-white/20 bg-white/5 p-6">
         <View className="mb-6 items-center">
           <Text className="text-white text-2xl font-semibold">Fuar CRM</Text>
@@ -190,6 +192,7 @@ export default function LoginScreen() {
         )}
       </View>
     </View>
+    </GradientBackground>
   );
 
   return (
@@ -199,6 +202,7 @@ export default function LoginScreen() {
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
+        style={{ backgroundColor: 'transparent' }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

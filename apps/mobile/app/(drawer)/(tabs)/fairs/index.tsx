@@ -1,5 +1,7 @@
 import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
 import { Header } from '@/components/layout/Header';
+import { GradientView } from '@/components/ui/GradientView';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 import { useNavigation } from 'expo-router';
 import { useFairs } from '@/hooks/use-fairs';
 import { FairCard } from '@/components/fair/FairCard';
@@ -27,10 +29,15 @@ export default function FairsScreen() {
       </Text>
       <Pressable
         onPress={openFairForm}
-        className="mt-6 rounded-lg bg-[#8b5cf6] px-6 py-3"
+        className="mt-6 rounded-lg overflow-hidden"
         style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
-        <Text className="text-white font-semibold">Yeni Fuar Ekle</Text>
+        <GradientView
+          direction="horizontal"
+          style={{ paddingHorizontal: 24, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text className="text-white font-semibold" style={{ textAlign: 'center' }}>Yeni Fuar Ekle</Text>
+        </GradientView>
       </Pressable>
     </View>
   );
@@ -45,7 +52,7 @@ export default function FairsScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-[#020617]">
+      <GradientBackground>
         <Header
           onMenuPress={() => {
             (navigation as { openDrawer?: () => void }).openDrawer?.();
@@ -55,13 +62,13 @@ export default function FairsScreen() {
           <ActivityIndicator size="large" color="#8b5cf6" />
           <Text className="text-white/60 mt-3">Yükleniyor...</Text>
         </View>
-      </View>
+      </GradientBackground>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 bg-[#020617]">
+      <GradientBackground>
         <Header
           onMenuPress={() => {
             (navigation as { openDrawer?: () => void }).openDrawer?.();
@@ -72,12 +79,12 @@ export default function FairsScreen() {
             Fuarlar yüklenirken hata oluştu
           </Text>
         </View>
-      </View>
+      </GradientBackground>
     );
   }
 
   return (
-    <View className="flex-1 bg-[#020617]">
+    <GradientBackground>
       <Header
         onMenuPress={() => {
           (navigation as { openDrawer?: () => void }).openDrawer?.();
@@ -94,17 +101,9 @@ export default function FairsScreen() {
           paddingBottom: 80,
           flexGrow: 1,
         }}
+        style={{ backgroundColor: 'transparent' }}
         ItemSeparatorComponent={() => <View className="h-3" />}
       />
-      {fairCount > 0 && (
-        <Pressable
-          onPress={openFairForm}
-          className="absolute bottom-24 right-4 w-14 h-14 rounded-2xl bg-[#8b5cf6] items-center justify-center"
-          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
-        >
-          <Text className="text-white text-2xl font-bold">+</Text>
-        </Pressable>
-      )}
-    </View>
+    </GradientBackground>
   );
 }

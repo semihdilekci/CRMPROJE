@@ -1,28 +1,159 @@
-import { View, Text } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header } from '@/components/layout/Header';
-import { useNavigation } from 'expo-router';
+import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
+import { FairStats } from '@/components/fair/FairStats';
+import { FilterDrawer } from '@/components/fair/FilterDrawer';
+import { GradientBackground } from '@/components/ui/GradientBackground';
+import { useFairDetail } from '@/hooks/use-fairs';
+import type { OpportunityWithDetails } from '@crm/shared';
+
+function filterOpportunities(
+  opportunities: OpportunityWithDetails[],
+  search: string,
+  selectedRates: string[],
+  stageFilter: string | null
+): OpportunityWithDetails[] {
+  return opportunities.filter((o) => {
+    const searchLower = search.trim().toLowerCase();
+    if (searchLower) {
+      const nameMatch = o.customer?.name?.toLowerCase().includes(searchLower);
+      const companyMatch = o.customer?.company?.toLowerCase().includes(searchLower);
+      if (!nameMatch && !companyMatch) return false;
+    }
+    if (selectedRates.length > 0 && (!o.conversionRate || !selectedRates.includes(o.conversionRate))) {
+      return false;
+    }
+    if (stageFilter && o.currentStage !== stageFilter) return false;
+    return true;
+  });
+}
 
 export default function FairDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
+  const { data: fair, isLoading, error } = useFairDetail(id ?? null);
+
+  const [search, setSearch] = useState('');
+  const [selectedRates, setSelectedRates] = useState<string[]>([]);
+  const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [filterDrawerExpanded, setFilterDrawerExpanded] = useState(false);
+
+  const opportunities = fair?.opportunities ?? [];
+  const filteredOpportunities = useMemo(
+    () => filterOpportunities(opportunities, search, selectedRates, stageFilter),
+    [opportunities, search, selectedRates, stageFilter]
+  );
+  const hasActiveFilters = !!search.trim() || selectedRates.length > 0 || !!stageFilter;
+
+  const handleRateToggle = (rate: string | null) => {
+    if (rate === null) {
+      setSelectedRates([]);
+      return;
+    }
+    setSelectedRates((prev) =>
+      prev.includes(rate) ? prev.filter((r) => r !== rate) : [...prev, rate]
+    );
+  };
+
+  if (isLoading || !fair) {
+    return (
+      <GradientBackground>
+        <Header
+          onBackPress={() => router.back()}
+          title="Fuar Detay"
+          showSearch={false}
+        />
+        <View className="flex-1 items-center justify-center">
+          {isLoading ? (
+            <>
+              <ActivityIndicator size="large" color="#8b5cf6" />
+              <Text className="text-white/60 mt-3">Yükleniyor...</Text>
+            </>
+          ) : (
+            <Text className="text-white/60">Fuar bulunamadı</Text>
+          )}
+        </View>
+      </GradientBackground>
+    );
+  }
+
+  if (error) {
+    return (
+      <GradientBackground>
+        <Header
+          onBackPress={() => router.back()}
+          title="Fuar Detay"
+          showSearch={false}
+        />
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-[#F87171] text-center">
+            Fuar detayı yüklenirken hata oluştu
+          </Text>
+        </View>
+      </GradientBackground>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-[#020617]">
+    <GradientBackground>
       <Header
-        onMenuPress={() => {
-          (navigation as { openDrawer?: () => void }).openDrawer?.();
-        }}
-        onBackPress={router.back}
-        title="Fuar Detay"
+        onBackPress={() => router.back()}
+        title={fair.name}
+        showSearch={false}
       />
-      <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-white/60">Fuar ID: {id}</Text>
-        <Text className="text-white/60 mt-2 text-center">
-          Fuar detay sayfası M9'da tamamlanacak
-        </Text>
-      </View>
-    </View>
+      <ScrollView
+        className="flex-1"
+        style={{ backgroundColor: 'transparent' }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <FairDetailHeader fair={fair} />
+        <FairStats
+          opportunities={opportunities}
+          selectedRates={selectedRates}
+          onRateToggle={handleRateToggle}
+        />
+        <FilterDrawer
+          expanded={filterDrawerExpanded}
+          onToggle={() => setFilterDrawerExpanded((e) => !e)}
+          search={search}
+          onSearchChange={setSearch}
+          stageFilter={stageFilter}
+          onStageFilterChange={setStageFilter}
+        />
+        {filteredOpportunities.length > 0 ? (
+          <View className="px-4 gap-2">
+            {filteredOpportunities.map((opp) => (
+              <View
+                key={opp.id}
+                className="rounded-xl border border-white/20 bg-white/5 px-4 py-3"
+              >
+                <Text className="text-white font-medium">
+                  {opp.customer?.name ?? '-'} · {opp.customer?.company ?? '-'}
+                </Text>
+                <Text className="text-white/60 text-xs mt-1">
+                  Fırsat kartı M11'de eklenecek
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : hasActiveFilters ? (
+          <View className="px-4 py-12 items-center">
+            <Text className="text-white/60 text-sm text-center">
+              Arama sonucu bulunamadı.
+            </Text>
+          </View>
+        ) : (
+          <View className="px-4 py-12 items-center">
+            <Text className="text-[48px]">💼</Text>
+            <Text className="text-white/60 text-sm text-center mt-3">
+              Henüz fırsat eklenmemiş. Alt bardaki + butonu ile fırsat ekleyin.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </GradientBackground>
   );
 }

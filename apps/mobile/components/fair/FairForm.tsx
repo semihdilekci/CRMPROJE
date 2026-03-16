@@ -135,14 +135,14 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
             variant="secondary"
             onPress={handleClose}
             disabled={loading}
-            className="flex-1"
+            className="flex-1 items-center justify-center"
           >
             İptal
           </Button>
           <Button
             onPress={handleSubmit}
             disabled={!isValid || loading}
-            className="flex-1"
+            className="flex-1 items-center justify-center"
           >
             {loading ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>

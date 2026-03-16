@@ -2,6 +2,7 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { useAuthStore } from '@/stores/auth-store';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 
 export default function Index() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -13,9 +14,11 @@ export default function Index() {
 
   if (!ready || isLoading) {
     return (
-      <View className="flex-1 bg-[#020617] items-center justify-center">
+      <GradientBackground>
+      <View className="flex-1 items-center justify-center">
         <Text className="text-white/60">Yükleniyor...</Text>
       </View>
+      </GradientBackground>
     );
   }
 

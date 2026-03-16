@@ -1,21 +1,30 @@
 import { View, Text, Pressable } from 'react-native';
+import { GradientView } from '@/components/ui/GradientView';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 import { useFairFormStore } from '@/stores/fair-form-store';
 
 export default function AddScreen() {
   const openFairForm = useFairFormStore((s) => s.open);
 
   return (
-    <View className="flex-1 bg-[#020617] items-center justify-center px-6">
+    <GradientBackground>
+    <View className="flex-1 items-center justify-center px-6">
       <Text className="text-white/60 text-center mb-6">
         Yeni fuar veya fırsat ekleyin
       </Text>
       <Pressable
         onPress={openFairForm}
-        className="rounded-lg bg-[#8b5cf6] px-8 py-4"
+        className="rounded-lg overflow-hidden"
         style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
-        <Text className="text-white font-semibold text-lg">Yeni Fuar Ekle</Text>
+        <GradientView
+          direction="horizontal"
+          style={{ paddingHorizontal: 32, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text className="text-white font-semibold text-lg" style={{ textAlign: 'center' }}>Yeni Fuar Ekle</Text>
+        </GradientView>
       </Pressable>
     </View>
+    </GradientBackground>
   );
 }

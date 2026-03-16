@@ -1,27 +1,58 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { View, Text, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { GradientView } from '@/components/ui/GradientView';
+import { FairTabIcon } from '@/components/ui/FairTabIcon';
+import { ChartTabIcon } from '@/components/ui/ChartTabIcon';
+import { useFairFormStore } from '@/stores/fair-form-store';
+import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 
-function TabBarIcon({ name, label }: { name: string; label: string }) {
+function AddButton(props: React.ComponentProps<typeof Pressable>) {
+  const pathname = usePathname();
+  const openFairForm = useFairFormStore((s) => s.open);
+  const openOpportunityForm = useOpportunityFormStore((s) => s.open);
+
+  const handlePress = () => {
+    const fairDetailMatch = pathname?.match(/\/fairs\/([^/]+)/);
+    if (fairDetailMatch) {
+      openOpportunityForm(fairDetailMatch[1]);
+    } else {
+      openFairForm();
+    }
+  };
+
   return (
-    <View className="items-center justify-center">
-      <Text className="text-[20px]">{name}</Text>
-      <Text className="text-white/60 text-[10px] mt-0.5">{label}</Text>
+    <Pressable {...props} onPress={handlePress}>
+      {props.children}
+    </Pressable>
+  );
+}
+
+function TabBarIconOnly({
+  icon: Icon,
+  focused,
+}: {
+  icon: React.ComponentType<{ focused?: boolean }>;
+  focused?: boolean;
+}) {
+  return (
+    <View className="items-center justify-center flex-1">
+      <Icon focused={focused} />
     </View>
   );
 }
 
 export default function TabLayout() {
-  const router = useRouter();
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: 'rgba(2, 6, 23, 0.95)',
           borderTopColor: 'rgba(255,255,255,0.1)',
+          height: 64,
         },
+        tabBarItemStyle: { paddingVertical: 8 },
         tabBarActiveTintColor: '#8b5cf6',
         tabBarInactiveTintColor: 'rgba(255,255,255,0.6)',
       }}
@@ -30,7 +61,9 @@ export default function TabLayout() {
         name="fairs"
         options={{
           title: 'Fuarlar',
-          tabBarIcon: () => <TabBarIcon name="🏛" label="Fuarlar" />,
+          tabBarIcon: ({ focused }) => (
+            <TabBarIconOnly icon={FairTabIcon} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -38,17 +71,41 @@ export default function TabLayout() {
         options={{
           title: 'Ekle',
           tabBarIcon: () => (
-            <View className="w-14 h-14 -mt-6 rounded-2xl bg-[#8b5cf6] items-center justify-center">
-              <Text className="text-white text-2xl font-bold">+</Text>
+            <View
+              className="items-center justify-center"
+              style={{
+                marginTop: -16,
+                shadowColor: '#8b5cf6',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.5,
+                shadowRadius: 16,
+                elevation: 12,
+              }}
+            >
+              <GradientView
+                direction="horizontal"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text className="text-white font-bold" style={{ fontSize: 28 }}>+</Text>
+              </GradientView>
             </View>
           ),
+          tabBarButton: (props) => <AddButton {...props} />,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
           title: 'AI Analiz',
-          tabBarIcon: () => <TabBarIcon name="📊" label="AI Analiz" />,
+          tabBarIcon: ({ focused }) => (
+            <TabBarIconOnly icon={ChartTabIcon} focused={focused} />
+          ),
         }}
       />
     </Tabs>

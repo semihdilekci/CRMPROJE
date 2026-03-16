@@ -455,7 +455,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add fair detail page with stats
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M10 — Toolbar: Arama & Filtreler
@@ -476,7 +476,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add search and filters to fair detail
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 3: FIRSAT & PİPELİNE                             ║

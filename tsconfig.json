@@ -28,5 +28,4 @@
     "out",
     "coverage"
   ],
-  "extends": "expo/tsconfig.base"
 }

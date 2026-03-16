@@ -1,5 +1,10 @@
 import { Pressable, View, Text, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GradientView } from '@/components/ui/GradientView';
+import { MapPinIcon } from '@/components/ui/MapPinIcon';
+import { CalendarIcon } from '@/components/ui/CalendarIcon';
+import { theme } from '@/constants/theme';
 import type { Fair } from '@crm/shared';
 import { formatDate } from '@crm/shared';
 import { useFairFormStore } from '@/stores/fair-form-store';
@@ -59,22 +64,33 @@ export function FairCard({ fair }: FairCardProps) {
     <Pressable
       onPress={handlePress}
       onLongPress={handleLongPress}
-      className="rounded-2xl border border-white/20 bg-white/5 p-4 active:opacity-90"
+      className="rounded-2xl border border-white/20 overflow-hidden active:opacity-90"
     >
+      <GradientView
+        colors={theme.gradients.glass}
+        direction="diagonal"
+        style={{ padding: 16 }}
+      >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 min-w-0">
           <Text className="text-white text-lg font-semibold" numberOfLines={2}>
             {fair.name}
           </Text>
-          <Text className="text-white/70 text-[13px] mt-1" numberOfLines={2}>
-            📍 {fair.address}
-          </Text>
-          <Text
-            className={`text-[13px] mt-1 ${isPast ? 'text-white/50' : 'text-white/70'}`}
-            numberOfLines={1}
-          >
-            📅 {formatDate(fair.startDate)} — {formatDate(fair.endDate)}
-          </Text>
+          <View className="flex-row items-start gap-1.5 mt-1">
+            <MapPinIcon size={14} color="#a78bfa" />
+            <Text className="text-white/70 text-[13px] flex-1" numberOfLines={2}>
+              {fair.address}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-1.5 mt-1">
+            <CalendarIcon size={14} color="#22d3ee" />
+            <Text
+              className={`text-[13px] flex-1 ${isPast ? 'text-white/50' : 'text-white/70'}`}
+              numberOfLines={1}
+            >
+              {formatDate(fair.startDate)} — {formatDate(fair.endDate)}
+            </Text>
+          </View>
         </View>
         {isActive && (
           <View className="rounded-full bg-green-500/20 border border-green-500/30 px-2 py-0.5">
@@ -83,11 +99,29 @@ export function FairCard({ fair }: FairCardProps) {
         )}
       </View>
       <View className="mt-3">
-        <View className="self-start rounded-full bg-orange-500/20 border border-orange-500/30 px-3 py-1.5 flex-row items-baseline gap-1">
-          <Text className="text-white font-bold text-base">{opportunityCount}</Text>
-          <Text className="text-white/80 text-[12px]">fırsat</Text>
-        </View>
+        <LinearGradient
+          colors={['rgba(249,115,22,0.2)', 'rgba(236,72,153,0.2)']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={{
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            gap: 8,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 9999,
+            borderWidth: 1,
+            borderColor: 'rgba(249,115,22,0.3)',
+          }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#fb923c' }}>
+            {opportunityCount}
+          </Text>
+          <Text className="text-white/80 text-xs">fırsat</Text>
+        </LinearGradient>
       </View>
+      </GradientView>
     </Pressable>
   );
 }

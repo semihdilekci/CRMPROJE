@@ -1,4 +1,8 @@
 import { View, Text, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { ReactNode } from 'react';
+import { Search, Sparkles, Menu } from 'lucide-react-native';
+import { GradientView } from '@/components/ui/GradientView';
 
 interface HeaderProps {
   title?: string;
@@ -7,38 +11,57 @@ interface HeaderProps {
   onMenuPress?: () => void;
   onSearchPress?: () => void;
   onBackPress?: () => void;
+  rightContent?: ReactNode;
 }
 
 export function Header({
-  title = 'Fuar CRM',
+  title = 'EXPO CRM',
   showMenu = true,
   showSearch = true,
   onMenuPress,
   onSearchPress,
   onBackPress,
+  rightContent,
 }: HeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10 bg-[#020617]/95">
+    <View
+      className="flex-row items-center justify-between px-4 py-3 border-b border-white/10 bg-[#020617]/95"
+      style={{ paddingTop: insets.top + 12 }}
+    >
       <Pressable
         onPress={onBackPress ?? onMenuPress}
         className="p-2 -ml-2"
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        <Text className="text-white text-xl">{onBackPress ? '←' : '☰'}</Text>
+        {onBackPress ? (
+          <Text className="text-white text-2xl">←</Text>
+        ) : (
+          <Menu size={30} color="white" strokeWidth={2} />
+        )}
       </Pressable>
       <View className="flex-row items-center gap-2">
-        <View className="w-8 h-8 rounded-lg bg-[#8b5cf6] items-center justify-center">
-          <Text className="text-white text-sm">★</Text>
-        </View>
+        <GradientView
+          direction="horizontal"
+          style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Sparkles size={18} color="white" strokeWidth={2} />
+        </GradientView>
         <Text className="text-white text-lg font-semibold">{title}</Text>
       </View>
-      <Pressable
-        onPress={onSearchPress}
-        className="p-2 -mr-2"
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      >
-        <Text className="text-white text-xl">🔍</Text>
-      </Pressable>
+      {rightContent ?? (
+        showSearch ? (
+          <Pressable
+            onPress={onSearchPress}
+            className="p-2 -mr-2"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <Search size={22} color="white" strokeWidth={2} />
+          </Pressable>
+        ) : (
+          <View className="w-10" />
+        )
+      )}
     </View>
   );
 }
