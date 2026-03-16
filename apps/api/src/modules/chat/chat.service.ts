@@ -433,7 +433,30 @@ export class ChatService {
       }
     }
 
-    // 2) Markdown format: metin + ```json ... ``` blokları + tablo
+    // 2) Ham JSON objesi (code block olmadan) — AI bazen metin + tablo sonrası raw JSON ekliyor
+    const rawJsonMatch = text.match(/\{\s*"(?:text|charts|tables)"\s*:/);
+    if (rawJsonMatch && rawJsonMatch.index !== undefined) {
+      const start = rawJsonMatch.index;
+      try {
+        const parsed = JSON.parse(text.slice(start)) as unknown;
+        if (parsed && typeof parsed === 'object') {
+          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
+          const hasStructured = (obj.charts?.length ?? 0) > 0 || (obj.tables?.length ?? 0) > 0;
+          if (hasStructured && (obj.text || obj.charts || obj.tables)) {
+            const displayText = (obj.text ?? text.slice(0, start).trim()).trim();
+            return {
+              text: displayText || 'Analiz sonuçları aşağıda.',
+              charts: this.normalizeCharts(obj.charts),
+              tables: obj.tables,
+            };
+          }
+        }
+      } catch {
+        // Parse hatası, markdown yoluna devam
+      }
+    }
+
+    // 3) Markdown format: metin + ```json ... ``` blokları + tablo
     const charts: ChartData[] = [];
     const tables: TableData[] = [];
     let cleanText = text;
