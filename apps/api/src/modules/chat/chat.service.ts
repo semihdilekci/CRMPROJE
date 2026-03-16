@@ -406,97 +406,57 @@ export class ChatService {
     charts?: ChartData[];
     tables?: TableData[];
   } {
-    // 1) Tüm yanıt tek JSON ise (prompt'a uyan modeller)
     const trimmed = text.trim();
-    const singleJsonMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-    if (singleJsonMatch) {
-      try {
-        const parsed = JSON.parse(singleJsonMatch[1]!.trim()) as unknown;
-        if (Array.isArray(parsed)) {
-          const textWithoutBlock = trimmed.replace(/^```(?:json)?\s*[\s\S]*\s*```$/g, '').trim();
+
+    // 1) ```json ... ``` blok içinde JSON
+    const blockMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+    if (blockMatch) {
+      const parsed = this.tryParseStructuredJson(blockMatch[1]!.trim());
+      if (parsed) return parsed;
+    }
+
+    // 2) Ham JSON (code block olmadan) — prompt'a rağmen bazen AI ek metin ekliyor
+    const rawMatch = text.match(/\{\s*"(?:text|charts|tables)"\s*:/);
+    if (rawMatch && rawMatch.index !== undefined) {
+      const parsed = this.tryParseStructuredJson(text.slice(rawMatch.index));
+      if (parsed) return parsed;
+    }
+
+    // 3) Tüm yanıt tek JSON
+    const parsed = this.tryParseStructuredJson(trimmed);
+    if (parsed) return parsed;
+
+    return { text };
+  }
+
+  private tryParseStructuredJson(jsonStr: string): {
+    text?: string;
+    charts?: ChartData[];
+    tables?: TableData[];
+  } | null {
+    try {
+      const parsed = JSON.parse(jsonStr) as unknown;
+      if (Array.isArray(parsed)) {
+        return {
+          text: 'Grafikler aşağıda.',
+          charts: this.normalizeCharts(parsed as ChartData[]),
+          tables: undefined,
+        };
+      }
+      if (parsed && typeof parsed === 'object') {
+        const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
+        if (obj.text || obj.charts || obj.tables) {
           return {
-            text: textWithoutBlock || 'Grafikler aşağıda.',
-            charts: this.normalizeCharts(parsed as ChartData[]),
-            tables: undefined,
-          };
-        }
-        if (parsed && typeof parsed === 'object') {
-          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
-          return {
-            text: obj.text ?? trimmed,
+            text: (obj.text ?? '').trim() || 'Analiz sonuçları aşağıda.',
             charts: this.normalizeCharts(obj.charts),
             tables: obj.tables,
           };
         }
-      } catch {
-        // Fall through to markdown parsing
       }
+    } catch {
+      // ignore
     }
-
-    // 2) Ham JSON objesi (code block olmadan) — AI bazen metin + tablo sonrası raw JSON ekliyor
-    const rawJsonMatch = text.match(/\{\s*"(?:text|charts|tables)"\s*:/);
-    if (rawJsonMatch && rawJsonMatch.index !== undefined) {
-      const start = rawJsonMatch.index;
-      try {
-        const parsed = JSON.parse(text.slice(start)) as unknown;
-        if (parsed && typeof parsed === 'object') {
-          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
-          const hasStructured = (obj.charts?.length ?? 0) > 0 || (obj.tables?.length ?? 0) > 0;
-          if (hasStructured && (obj.text || obj.charts || obj.tables)) {
-            const displayText = (obj.text ?? text.slice(0, start).trim()).trim();
-            return {
-              text: displayText || 'Analiz sonuçları aşağıda.',
-              charts: this.normalizeCharts(obj.charts),
-              tables: obj.tables,
-            };
-          }
-        }
-      } catch {
-        // Parse hatası, markdown yoluna devam
-      }
-    }
-
-    // 3) Markdown format: metin + ```json ... ``` blokları + tablo
-    const charts: ChartData[] = [];
-    const tables: TableData[] = [];
-    let cleanText = text;
-
-    // JSON bloklarını bul ve parse et
-    const jsonBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
-    let match: RegExpExecArray | null;
-    while ((match = jsonBlockRegex.exec(text)) !== null) {
-      const blockContent = match[1]!.trim();
-      try {
-        const parsed = JSON.parse(blockContent) as unknown;
-        if (Array.isArray(parsed)) {
-          charts.push(...this.normalizeCharts(parsed as ChartData[]));
-        } else if (parsed && typeof parsed === 'object') {
-          const obj = parsed as { text?: string; charts?: ChartData[]; tables?: TableData[] };
-          if (obj.charts?.length) charts.push(...this.normalizeCharts(obj.charts));
-          if (obj.tables?.length) tables.push(...obj.tables);
-        }
-      } catch {
-        // Geçersiz JSON bloğu, atla
-      }
-    }
-
-    // Markdown tabloları parse et
-    const parsedTables = this.parseMarkdownTables(text);
-    if (parsedTables.length > 0) tables.push(...parsedTables);
-
-    // Metin: JSON blokları ve tabloları çıkar (replace için yeni regex kullan)
-    cleanText = text
-      .replace(/```(?:json)?\s*[\s\S]*?\s*```/g, '')
-      .replace(/\|[^\n]+\|\n\|[-:\s|]+\|\n(\|[^\n]+\|\n?)*/g, '')
-      .replace(/\*\*Grafikler:\*\*\s*/gi, '')
-      .replace(/\*\*Tablo:\*\*\s*/gi, '')
-      .trim();
-
-    return {
-      text: cleanText || text,
-      charts: charts.length > 0 ? charts : undefined,
-      tables: tables.length > 0 ? tables : undefined,
-    };
+    return null;
   }
 
   private normalizeCharts(charts: ChartData[] | undefined): ChartData[] {
@@ -520,46 +480,6 @@ export class ChatService {
       }
     }
     return chart;
-  }
-
-  private parseMarkdownTables(text: string): TableData[] {
-    const tables: TableData[] = [];
-    const lines = text.split('\n');
-    let i = 0;
-    while (i < lines.length) {
-      const headerLine = lines[i];
-      if (!headerLine?.includes('|')) {
-        i++;
-        continue;
-      }
-      const headerCells = headerLine.split('|').map((c) => c.trim()).filter(Boolean);
-      if (headerCells.length === 0) {
-        i++;
-        continue;
-      }
-      i++;
-      const sepLine = lines[i];
-      if (!sepLine?.match(/\|[\s\-:|]+\|/)) {
-        i++;
-        continue;
-      }
-      i++;
-      const rows: (string | number)[][] = [];
-      while (i < lines.length && lines[i]?.includes('|')) {
-        const cells = lines[i]!.split('|').map((c) => c.trim()).filter(Boolean);
-        if (cells.length > 0) {
-          rows.push(
-            cells.map((cell) => {
-              const num = parseFloat(String(cell).replace(/[^\d.,\-]/g, '').replace(',', '.'));
-              return !isNaN(num) && String(num) === String(parseFloat(cell)) ? num : cell;
-            }),
-          );
-        }
-        i++;
-      }
-      if (rows.length > 0) tables.push({ columns: headerCells, rows });
-    }
-    return tables;
   }
 
   async getExport(exportId: string, _userId: string): Promise<{
@@ -759,17 +679,20 @@ VERİ (JSON):
 ${dataJson}
 
 YANIT STRATEJİSİ:
-a) Metin yorumu: Veriyi yorumlayarak ana bulguları, trendleri profesyonel Türkçe ile yaz. Sayısal değerlerle destekle. Tahmin yapma.
-b) Grafik önerisi: Soruya uygun grafik türleri: bar, line, pie, donut, stackedBar, area, composed. Her grafik için JSON: { chartType, title, labels, data, description }. Grafikler soruyla alakalı olmalı.
-c) Proaktif öneriler: Faydalı ek analizleri öner.
-d) Tablo (zorunlu): Kullanıcının sorusuyla alakalı veriyi tablo halinde en altta sun.
+a) text: Veriyi yorumlayarak ana bulguları, trendleri profesyonel Türkçe ile yaz. Sayısal değerlerle destekle. Tahmin yapma. Proaktif önerileri de bu metne dahil et.
+b) charts: Soruya uygun grafik türleri: bar, line, pie, donut, stackedBar, area, composed. Her grafik: { chartType, title, labels, data, description }.
+c) tables: Kullanıcının sorusuyla alakalı veriyi tablo halinde sun. columns: sütun adları, rows: satır dizisi.
 
-YANIT FORMATI — MUTLAKA şu JSON yapısında döndür:
+YANIT FORMATI — ZORUNLU:
+Yanıtının TAMAMINI sadece aşağıdaki JSON yapısında döndür. Markdown, başlık, tablo veya grafik metin formatı KULLANMA. Sadece geçerli JSON döndür.
+
 {
-  "text": "Profesyonel metin yorumu (sayısal değerlerle, tahmin yok)",
-  "charts": [{ "chartType": "bar", "title": "...", "labels": [...], "data": [...], "description": "..." }],
+  "text": "Profesyonel metin yorumu (sayısal değerlerle, proaktif öneriler dahil)",
+  "charts": [{ "chartType": "bar", "title": "...", "labels": ["a","b"], "data": [1,2], "description": "..." }],
   "tables": [{ "columns": ["Sütun1", "Sütun2"], "rows": [["değer1","değer2"]] }]
 }
+
+stackedBar için data formatı: { "Seri1": [1,2,3], "Seri2": [4,5,6] } — labels x ekseni için.
 
 EXCEL: Kullanıcı excel/xlsx/indir/export istediğinde response'a exportId ekle. Excel istedi mi: ${wantsExport}`;
   }
