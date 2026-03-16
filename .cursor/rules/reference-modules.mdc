@@ -81,6 +81,17 @@ Frontend Auth & State:
 - Available after: Feature 17
 - Use for: Adding new Zustand stores or Axios interceptor patterns
 
+Mobile App (Phase 4 — docs/phase-4-mobil.md):
+- Template: apps/web/src/components/fair/, opportunity/, customer/
+- Available after: Phase 3 tamamlandı
+- Use for: Mobil bileşenler (FairCard, OpportunityCard, formlar) web ile aynı işlevsellik
+- Pattern covers:
+  Web FairCard → apps/mobile/components/fair/FairCard.tsx (NativeWind, aynı veri)
+  Web OpportunityFormModal → mobil BottomSheet + OpportunityForm
+  Web auth-store, api.ts → mobil auth-store, api.ts (expo-secure-store ile token)
+- Mobil geliştirmede: docs/phase-4-mobil.md, docs/design-system.md, docs/Mobil-ui-examples/
+- Admin sayfaları mobilde YOK; sadece web referans alınır.
+
 ==============================
 PRE-REFERENCE PHASE (Feature 1–8)
 ==============================

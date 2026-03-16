@@ -40,6 +40,11 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
   Örnek: `NEXT_PUBLIC_API_URL=https://api.uygulama.com/api/v1`  
   Not: Bu değişken build zamanında gömülür; build’den sonra değiştirirsen yeni build gerekir.
 
+### Mobile (Expo — Phase 4)
+
+- [ ] **EXPO_PUBLIC_API_URL** app.json veya .env ile set edildi. DEV: `http://<bilgisayar-ip>:3001/api/v1`; PROD: canlı API base URL.
+- [ ] CORS: Native app HTTP isteklerinde origin göndermez. Expo dev web için `http://localhost:8081` CORS_ORIGIN'e eklenebilir.
+
 ### Altyapı
 
 - [ ] API ve web aynı domain altında değilse CORS ve cookie/credentials ayarları (domain, secure, sameSite) uyumlu.
@@ -53,6 +58,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **CORS:** `apps/api/src/main.ts` — `NODE_ENV === 'production'` iken `CORS_ORIGIN` kullanılır.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez.
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
+- **API base URL (mobile):** `apps/mobile/lib/api.ts` — `EXPO_PUBLIC_API_URL` kullanılır (Phase 4).
 
 ---
 

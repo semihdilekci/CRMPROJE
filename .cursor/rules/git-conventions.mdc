@@ -42,7 +42,7 @@ Examples:
 
 Rules:
 - Use lowercase and hyphens only.
-- Always include the feature number from docs/phase-1-features.md.
+- Include feature number: Phase 1–3 → docs/phase-1-features.md (F{n}), Phase 4 → docs/phase-4-mobil.md (M{n}).
 - Keep descriptions short (2-4 words).
 - Never use spaces or special characters.
 
@@ -129,6 +129,7 @@ Types:
 Scopes (match monorepo apps):
   api      — backend (NestJS)
   web      — frontend (Next.js)
+  mobile   — mobile app (React Native + Expo)
   shared   — packages/shared
   prisma   — database schema and migrations
   config   — project-wide configuration
