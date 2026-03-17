@@ -18,6 +18,8 @@ export const queryKeys = {
       [...queryKeys.opportunities.all, opportunityId, 'stages'] as const,
     hasOffer: (opportunityId: string) =>
       [...queryKeys.opportunities.all, opportunityId, 'has-offer'] as const,
+    notes: (opportunityId: string) =>
+      [...queryKeys.opportunities.all, opportunityId, 'notes'] as const,
   },
   customers: {
     all: ['customers'] as const,

@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Image } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Image,
+  Alert,
+  Platform,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { CreateCustomerDto } from '@crm/shared';
 import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
@@ -7,6 +15,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useCreateCustomer } from '@/hooks/use-customers';
+import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
 import api, { getAssetBaseUrl } from '@/lib/api';
 
@@ -22,7 +31,8 @@ export function CustomerForm({
   onClose,
 }: CustomerFormProps) {
   const createCustomer = useCreateCustomer();
-  const { onCreated } = useCustomerFormStore();
+  const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
+  const { onCreated, markCreatedSuccessfully } = useCustomerFormStore();
 
   const [company, setCompany] = useState('');
   const [name, setName] = useState('');
@@ -43,6 +53,86 @@ export function CustomerForm({
       setSubmitError('');
     }
   }, [visible]);
+
+  const pickImageAndRunOcr = async (
+    launchFn: () => Promise<ImagePicker.ImagePickerResult>,
+  ) => {
+    const result = await launchFn();
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+    const rawFilename = uri.split('/').pop() ?? '';
+    const hasValidExt = /\.(jpg|jpeg|png|webp|gif)$/i.test(rawFilename);
+    const filename = hasValidExt ? rawFilename : 'card-image.jpg';
+    const type = 'image/jpeg';
+
+    const ocrResult = await scanBusinessCard(uri, filename, type);
+    if (ocrResult) {
+      setCompany(ocrResult.parsed.company);
+      setName(ocrResult.parsed.name);
+      setPhone(ocrResult.parsed.phone);
+      setEmail(ocrResult.parsed.email);
+      setCardImage(ocrResult.url);
+      setSubmitError('');
+    } else {
+      setSubmitError('Kartvizit okunamadı. Lütfen daha net bir fotoğraf deneyin.');
+    }
+  };
+
+  const handleScanCard = () => {
+    const options: Array<{ text: string; onPress: () => void }> = [];
+
+    if (Platform.OS !== 'web') {
+      options.push({
+        text: 'Kamera',
+        onPress: async () => {
+          const { status } =
+            await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            setSubmitError('Kamera erişim izni gerekli');
+            return;
+          }
+          await pickImageAndRunOcr(() =>
+            ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [3, 4],
+              quality: 0.8,
+            }),
+          );
+        },
+      });
+    }
+
+    options.push({
+      text: 'Galeri',
+      onPress: async () => {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          setSubmitError('Galeri erişim izni gerekli');
+          return;
+        }
+        await pickImageAndRunOcr(() =>
+          ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [3, 4],
+            quality: 0.8,
+          }),
+        );
+      },
+    });
+
+    Alert.alert(
+      'Kartvizit Tara',
+      'Kamera veya galeriden fotoğraf seçin',
+      [
+        ...options.map((o) => ({ text: o.text, onPress: o.onPress })),
+        { text: 'İptal', style: 'cancel' as const },
+      ],
+    );
+  };
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -75,8 +165,7 @@ export function CustomerForm({
 
       const { data } = await api.post<ApiSuccessResponse<{ url: string }>>(
         API_ENDPOINTS.UPLOAD.CARD_IMAGE,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        formData
       );
       if (data.success && data.data?.url) {
         setCardImage(data.data.url);
@@ -105,6 +194,7 @@ export function CustomerForm({
       setSubmitError('');
       const customer = await createCustomer.mutateAsync(dto);
       onCreated?.(customer);
+      markCreatedSuccessfully();
       onClose();
     } catch {
       setSubmitError(
@@ -202,15 +292,29 @@ export function CustomerForm({
                 </Pressable>
               </View>
             ) : (
-              <Pressable
-                onPress={handlePickImage}
-                className="rounded-xl border-2 border-dashed border-white/20 p-6 items-center"
-                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
-              >
-                <Text className="text-white/60 text-[14px]">
-                  📷 Fotoğraf Yükle
-                </Text>
-              </Pressable>
+              <View className="flex-row gap-3">
+                <Pressable
+                  onPress={handleScanCard}
+                  disabled={ocrLoading}
+                  className="flex-1 rounded-xl border-2 border-dashed border-white/20 p-4 items-center"
+                  style={({ pressed }) => ({
+                    opacity: pressed || ocrLoading ? 0.8 : 1,
+                  })}
+                >
+                  <Text className="text-white/60 text-[14px]">
+                    {ocrLoading ? '⏳ Tara...' : '📇 Kart Vizit Tara'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handlePickImage}
+                  className="flex-1 rounded-xl border-2 border-dashed border-white/20 p-4 items-center"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                >
+                  <Text className="text-white/60 text-[14px]">
+                    📷 Fotoğraf Yükle
+                  </Text>
+                </Pressable>
+              </View>
             )}
           </View>
 

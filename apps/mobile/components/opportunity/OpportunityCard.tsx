@@ -6,6 +6,8 @@ import {
   LayoutAnimation,
   Linking,
   Alert,
+  TextInput,
+  Image,
 } from 'react-native';
 import type { OpportunityWithDetails } from '@crm/shared';
 import {
@@ -20,6 +22,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useDeleteOpportunity } from '@/hooks/use-opportunities';
 import { useStageHistory } from '@/hooks/use-opportunity-stages';
+import {
+  useOpportunityNotes,
+  useCreateOpportunityNote,
+  useUpdateOpportunityNote,
+  useDeleteOpportunityNote,
+} from '@/hooks/use-opportunity-notes';
+import { useHasOfferDocument, useDownloadOfferDocument } from '@/hooks/use-offer';
+import { useAuthStore } from '@/stores/auth-store';
+import { getAssetBaseUrl } from '@/lib/api';
+import { useUpdateCustomer } from '@/hooks/use-customers';
 
 function formatTonnageShort(quantity: number | null, unit: string): string {
   if (quantity == null || quantity === 0) return '';
@@ -39,7 +51,6 @@ interface OpportunityCardProps {
   fairId: string;
   onEdit: () => void;
   onStageChange?: () => void;
-  onOfferDownload?: () => void;
 }
 
 export function OpportunityCard({
@@ -47,13 +58,27 @@ export function OpportunityCard({
   fairId,
   onEdit,
   onStageChange,
-  onOfferDownload,
 }: OpportunityCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+
+  const user = useAuthStore((s) => s.user);
   const deleteOpportunity = useDeleteOpportunity(fairId);
+  const updateCustomer = useUpdateCustomer();
   const { data: stageLogs = [] } = useStageHistory(opportunity.id, {
     enabled: expanded,
   });
+  const { data: notes = [] } = useOpportunityNotes(opportunity.id, {
+    enabled: expanded,
+  });
+  const createNote = useCreateOpportunityNote(opportunity.id);
+  const updateNote = useUpdateOpportunityNote(opportunity.id);
+  const deleteNote = useDeleteOpportunityNote(opportunity.id);
+  const { data: hasOffer } = useHasOfferDocument(opportunity.id);
+  const downloadOffer = useDownloadOfferDocument(opportunity.id);
 
   const { customer } = opportunity;
   const hasProducts =
@@ -105,6 +130,63 @@ export function OpportunityCard({
     if (customer.email) Linking.openURL(`mailto:${customer.email}`);
   };
 
+  const handleAddNote = async () => {
+    const content = newNoteContent.trim();
+    if (!content) return;
+    try {
+      await createNote.mutateAsync(content);
+      setNewNoteContent('');
+      setShowAddNote(false);
+    } catch {
+      Alert.alert('Hata', 'Not eklenemedi');
+    }
+  };
+
+  const handleUpdateNote = async () => {
+    if (!editingNoteId || !editingContent.trim()) return;
+    try {
+      await updateNote.mutateAsync({ noteId: editingNoteId, content: editingContent.trim() });
+      setEditingNoteId(null);
+      setEditingContent('');
+    } catch {
+      Alert.alert('Hata', 'Not güncellenemedi');
+    }
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    Alert.alert('Notu Sil', 'Bu notu silmek istediğinizden emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: () => deleteNote.mutate(noteId),
+      },
+    ]);
+  };
+
+  const canEditNote = (note: { createdBy: { id: string } }) =>
+    user?.id === note.createdBy.id || user?.role === 'admin';
+
+  const handleDeleteCard = () => {
+    Alert.alert(
+      'Kartviziti Sil',
+      'Kartvizit fotoğrafını silmek istediğinizden emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: () =>
+            updateCustomer.mutate({
+              id: customer.id,
+              dto: { cardImage: null },
+              fairId,
+            }),
+        },
+      ],
+    );
+  };
+
   return (
     <View className="rounded-xl border border-white/20 bg-white/5 overflow-hidden mb-2">
       <Pressable
@@ -135,6 +217,9 @@ export function OpportunityCard({
           </View>
         </View>
         <View className="ml-3 flex-row items-center gap-2">
+          {expanded && notes.length > 0 ? (
+            <Text className="text-[12px]">💬 {notes.length}</Text>
+          ) : null}
           {customer.cardImage ? (
             <Text className="text-[14px]">📇</Text>
           ) : null}
@@ -198,6 +283,45 @@ export function OpportunityCard({
               </View>
             )}
 
+            <View className="rounded-xl border border-white/20 bg-white/5 overflow-hidden mt-2">
+              <View className="flex-row items-center justify-between px-3 pt-2 pb-1.5">
+                <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
+                  Kartvizit
+                </Text>
+                {customer.cardImage ? (
+                  <Pressable
+                    onPress={handleDeleteCard}
+                    disabled={updateCustomer.isPending}
+                    className="p-1.5"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  >
+                    <Text className="text-[#F87171] text-[14px]">🗑</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {customer.cardImage ? (
+                <Image
+                  source={{
+                    uri: customer.cardImage.startsWith('http')
+                      ? customer.cardImage
+                      : `${getAssetBaseUrl()}${customer.cardImage}`,
+                  }}
+                  className="h-32 w-full"
+                  resizeMode="contain"
+                />
+              ) : (
+                <Pressable
+                  onPress={onEdit}
+                  className="rounded-lg border-2 border-dashed border-white/30 py-6 mx-3 mb-3 items-center"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                >
+                  <Text className="text-white/60 text-[14px]">
+                    📇 Kartvizit Ekle
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+
             {hasProducts && (
               <View className="rounded-xl border border-white/20 bg-white/5 px-3 py-2 mt-1">
                 <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider mb-1.5">
@@ -232,9 +356,142 @@ export function OpportunityCard({
               </View>
             )}
 
-            {onOfferDownload && (
-              <Button variant="secondary" onPress={onOfferDownload} className="mt-2">
-                📄 Teklif İndir
+            <View className="rounded-xl border border-white/20 bg-white/5 px-3 py-2 mt-2">
+              <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider mb-1.5">
+                Notlar
+              </Text>
+              {!showAddNote ? (
+                <Pressable
+                  onPress={() => setShowAddNote(true)}
+                  className="rounded-lg border border-dashed border-white/30 py-2 items-center"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                >
+                  <Text className="text-white/60 text-[13px]">+ Not ekle</Text>
+                </Pressable>
+              ) : (
+                <View className="gap-2">
+                  <TextInput
+                    value={newNoteContent}
+                    onChangeText={setNewNoteContent}
+                    placeholder="Not içeriği..."
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white text-[13px] min-h-[60px]"
+                    multiline
+                    editable={!createNote.isPending}
+                  />
+                  <View className="flex-row gap-2">
+                    <Button
+                      variant="secondary"
+                      onPress={() => {
+                        setShowAddNote(false);
+                        setNewNoteContent('');
+                      }}
+                      disabled={createNote.isPending}
+                      className="flex-1"
+                    >
+                      İptal
+                    </Button>
+                    <Button
+                      onPress={handleAddNote}
+                      disabled={!newNoteContent.trim() || createNote.isPending}
+                      className="flex-1"
+                    >
+                      {createNote.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+                    </Button>
+                  </View>
+                </View>
+              )}
+              {notes.length > 0 && (
+                <View className="mt-3 gap-2">
+                  {notes.map((note) => (
+                    <View
+                      key={note.id}
+                      className="rounded-lg bg-white/5 px-3 py-2 border border-white/10"
+                    >
+                      {editingNoteId === note.id ? (
+                        <View className="gap-2">
+                          <TextInput
+                            value={editingContent}
+                            onChangeText={setEditingContent}
+                            placeholder="Not içeriği..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white text-[13px] min-h-[50px]"
+                            multiline
+                            editable={!updateNote.isPending}
+                          />
+                          <View className="flex-row gap-2">
+                            <Button
+                              variant="secondary"
+                              onPress={() => {
+                                setEditingNoteId(null);
+                                setEditingContent('');
+                              }}
+                              disabled={updateNote.isPending}
+                              className="flex-1"
+                            >
+                              İptal
+                            </Button>
+                            <Button
+                              onPress={handleUpdateNote}
+                              disabled={
+                                !editingContent.trim() || updateNote.isPending
+                              }
+                              className="flex-1"
+                            >
+                              Kaydet
+                            </Button>
+                          </View>
+                        </View>
+                      ) : (
+                        <>
+                          <Text className="text-white text-[13px]">
+                            {note.content}
+                          </Text>
+                          <Text className="text-white/50 text-[11px] mt-1">
+                            {note.createdBy.name} —{' '}
+                            {formatDateTime(note.createdAt)}
+                          </Text>
+                          {canEditNote(note) && (
+                            <View className="flex-row gap-2 mt-2">
+                              <Pressable
+                                onPress={() => {
+                                  setEditingNoteId(note.id);
+                                  setEditingContent(note.content);
+                                }}
+                                className="px-2 py-1"
+                              >
+                                <Text className="text-white/70 text-[12px]">
+                                  ✏️ Düzenle
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => handleDeleteNote(note.id)}
+                                className="px-2 py-1"
+                              >
+                                <Text className="text-[#F87171] text-[12px]">
+                                  🗑 Sil
+                                </Text>
+                              </Pressable>
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {hasOffer && (
+              <Button
+                variant="secondary"
+                onPress={() => downloadOffer.mutate()}
+                disabled={downloadOffer.isPending}
+                className="mt-2"
+              >
+                {downloadOffer.isPending
+                  ? 'İndiriliyor...'
+                  : '📄 Teklif Dokümanını İndir'}
               </Button>
             )}
           </View>

@@ -610,12 +610,13 @@ Yapılacaklar:
 4. parse-business-card (@crm/shared) ile metin parse, form alanlarına doldurma
 
 Etkilenen dosyalar:
-  DEĞİŞEN: CustomerForm.tsx, CustomerSelectInput.tsx
-  YENİ: hooks/use-business-card-ocr.ts (mobil uyarlaması)
+  DEĞİŞEN: CustomerForm.tsx
+  YENİ: hooks/use-business-card-ocr.ts
+  API: POST /upload/card-image-ocr (tesseract.js backend OCR)
 
 Commit: feat(mobile): add card image upload and OCR
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M17 — Fırsat Notları
@@ -632,10 +633,11 @@ Yapılacaklar:
 Etkilenen dosyalar:
   DEĞİŞEN: OpportunityCard.tsx
   YENİ: hooks/use-opportunity-notes.ts
+  API: OpportunityNote model, POST/GET/PATCH/DELETE /opportunities/:id/notes
 
 Commit: feat(mobile): add opportunity notes
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M18 — Etiketler UI (Yapılmayacak)

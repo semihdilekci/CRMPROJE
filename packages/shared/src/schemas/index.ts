@@ -5,6 +5,7 @@ export * from './customer';
 export * from './opportunity';
 export * from './opportunity-product';
 export * from './opportunity-stage';
+export * from './opportunity-note';
 export * from './offer';
 export * from './product';
 export * from './setting';

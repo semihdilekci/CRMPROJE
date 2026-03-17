@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+
+const ENCODING_BASE64 = 'base64' as const;
 import type { CreateOfferInput } from '@crm/shared';
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+
+type CreateOfferVariables = CreateOfferInput & { _skipDownload?: boolean };
 
 async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -37,28 +41,31 @@ export function useCreateOffer(opportunityId: string, fairId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (dto: CreateOfferInput) => {
+    mutationFn: async (variables: CreateOfferVariables) => {
+      const { _skipDownload, ...dto } = variables;
       const { data } = await api.post<Blob>(
         `/opportunities/${opportunityId}/create-offer`,
         dto,
         { responseType: 'blob' }
       );
-      const ext = dto.outputFormat === 'pdf' ? 'pdf' : 'docx';
-      const filename = `teklif-${opportunityId.slice(-8)}.${ext}`;
-      const base64 = await blobToBase64(data);
-      const path = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(path, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(path, {
-          mimeType:
-            ext === 'pdf'
-              ? 'application/pdf'
-              : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          dialogTitle: 'Teklif Paylaş',
+      if (!_skipDownload) {
+        const ext = dto.outputFormat === 'pdf' ? 'pdf' : 'docx';
+        const filename = `teklif-${opportunityId.slice(-8)}.${ext}`;
+        const base64 = await blobToBase64(data);
+        const path = `${FileSystem.cacheDirectory}${filename}`;
+        await FileSystem.writeAsStringAsync(path, base64, {
+          encoding: ENCODING_BASE64,
         });
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(path, {
+            mimeType:
+              ext === 'pdf'
+                ? 'application/pdf'
+                : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            dialogTitle: 'Teklif Paylaş',
+          });
+        }
       }
       return { success: true };
     },
@@ -89,7 +96,7 @@ export function useDownloadOfferDocument(opportunityId: string) {
       const filename = `teklif-${opportunityId.slice(-8)}.docx`;
       const path = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(path, base64, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: ENCODING_BASE64,
       });
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {

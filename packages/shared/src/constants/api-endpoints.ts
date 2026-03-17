@@ -20,8 +20,12 @@ export const API_ENDPOINTS = {
   },
   OPPORTUNITIES: {
     BY_ID: (id: string) => `/opportunities/${id}`,
+    NOTES: (id: string) => `/opportunities/${id}/notes`,
+    NOTE_BY_ID: (oppId: string, noteId: string) =>
+      `/opportunities/${oppId}/notes/${noteId}`,
   },
   UPLOAD: {
     CARD_IMAGE: '/upload/card-image',
+    CARD_IMAGE_OCR: '/upload/card-image-ocr',
   },
 } as const;

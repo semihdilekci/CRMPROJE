@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { createWorker } from 'tesseract.js';
+import { parseBusinessCardText, type ParsedBusinessCard } from '@crm/shared';
 
 const OFFER_TEMPLATE_DIR = 'uploads/teklif-templates';
 const DEFAULT_TEMPLATE_PATH = 'assets/teklif-templates/default-teklif-template.docx';
@@ -35,6 +37,35 @@ export class UploadService {
     this.logger.log(`Card image uploaded: ${filename}`);
 
     return `/uploads/card-images/${filename}`;
+  }
+
+  async uploadCardImageWithOcr(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; parsed: ParsedBusinessCard }> {
+    this.validateFile(file);
+
+    const ext = path.extname(file.originalname) || '.jpg';
+    const filename = `${crypto.randomUUID()}${ext}`;
+    const filePath = path.join(this.uploadDir, filename);
+
+    fs.writeFileSync(filePath, file.buffer);
+    this.logger.log(`Card image uploaded for OCR: ${filename}`);
+
+    const url = `/uploads/card-images/${filename}`;
+
+    let worker = null;
+    try {
+      worker = await createWorker('tur+eng');
+      const {
+        data: { text },
+      } = await worker.recognize(filePath);
+      const parsed = parseBusinessCardText(text);
+      return { url, parsed };
+    } finally {
+      if (worker) {
+        await worker.terminate();
+      }
+    }
   }
 
   private validateFile(file: Express.Multer.File): void {

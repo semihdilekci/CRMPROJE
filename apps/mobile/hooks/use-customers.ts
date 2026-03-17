@@ -42,16 +42,31 @@ export function useCreateCustomer() {
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, dto }: { id: string; dto: UpdateCustomerDto }) => {
+    mutationFn: async ({
+      id,
+      dto,
+    }: {
+      id: string;
+      dto: UpdateCustomerDto;
+      fairId?: string;
+    }) => {
       const { data } = await api.patch<ApiSuccessResponse<Customer>>(
         `/customers/${id}`,
         dto
       );
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
+      if (variables.fairId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.fairs.byId(variables.fairId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.opportunities.byFair(variables.fairId),
+        });
+      }
     },
   });
 }

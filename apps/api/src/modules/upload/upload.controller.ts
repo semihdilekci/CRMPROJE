@@ -56,6 +56,22 @@ export class UploadController {
     };
   }
 
+  @Post('card-image-ocr')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCardImageWithOcr(
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<
+    ApiSuccessResponse<{ url: string; parsed: { company: string; name: string; phone: string; email: string } }>
+  > {
+    const { url, parsed } =
+      await this.uploadService.uploadCardImageWithOcr(file);
+    return {
+      success: true,
+      message: 'Kartvizit taranıp form dolduruldu',
+      data: { url, parsed },
+    };
+  }
+
   @Post('teklif-template-reset')
   @UseGuards(RolesGuard)
   @Roles('admin')

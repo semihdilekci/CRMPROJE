@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import {
   OpportunityWithDetails,
   CreateOpportunityDto,
@@ -8,6 +14,9 @@ import {
   isTerminalStage,
   type StageTransitionInput,
   type UpdateStageLogInput,
+  type OpportunityNote,
+  type CreateOpportunityNoteInput,
+  type UpdateOpportunityNoteInput,
 } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
@@ -15,6 +24,7 @@ import { AuditService } from '@modules/audit/audit.service';
 export interface AuditUser {
   id: string;
   email: string;
+  role?: string;
 }
 
 @Injectable()
@@ -524,6 +534,111 @@ export class OpportunityService {
     });
 
     return this.getStageHistory(opportunityId);
+  }
+
+  async addNote(
+    opportunityId: string,
+    dto: CreateOpportunityNoteInput,
+    auditUser?: AuditUser,
+  ): Promise<OpportunityNote> {
+    await this.ensureOpportunityExists(opportunityId);
+    if (!auditUser) {
+      throw new BadRequestException('Not eklemek için giriş yapmanız gerekiyor');
+    }
+
+    const note = await this.prisma.opportunityNote.create({
+      data: {
+        opportunityId,
+        content: dto.content.trim(),
+        createdById: auditUser.id,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return {
+      id: note.id,
+      opportunityId: note.opportunityId,
+      content: note.content,
+      createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+      createdBy: note.createdBy,
+    };
+  }
+
+  async getNotes(opportunityId: string): Promise<OpportunityNote[]> {
+    await this.ensureOpportunityExists(opportunityId);
+    const notes = await this.prisma.opportunityNote.findMany({
+      where: { opportunityId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+    return notes.map((n) => ({
+      id: n.id,
+      opportunityId: n.opportunityId,
+      content: n.content,
+      createdAt: n.createdAt.toISOString(),
+      updatedAt: n.updatedAt.toISOString(),
+      createdBy: n.createdBy,
+    }));
+  }
+
+  async updateNote(
+    opportunityId: string,
+    noteId: string,
+    dto: UpdateOpportunityNoteInput,
+    auditUser?: AuditUser,
+  ): Promise<OpportunityNote> {
+    const note = await this.prisma.opportunityNote.findUnique({
+      where: { id: noteId },
+      include: { createdBy: { select: { id: true, name: true, email: true } } },
+    });
+    if (!note || note.opportunityId !== opportunityId) {
+      throw new NotFoundException('Not bulunamadı');
+    }
+    const isAdmin = auditUser?.role === 'admin';
+    const isAuthor = note.createdById === auditUser?.id;
+    if (!isAdmin && !isAuthor) {
+      throw new ForbiddenException('Bu notu düzenleme yetkiniz yok');
+    }
+
+    const updated = await this.prisma.opportunityNote.update({
+      where: { id: noteId },
+      data: { content: dto.content.trim() },
+      include: {
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+    return {
+      id: updated.id,
+      opportunityId: updated.opportunityId,
+      content: updated.content,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+      createdBy: updated.createdBy,
+    };
+  }
+
+  async deleteNote(
+    opportunityId: string,
+    noteId: string,
+    auditUser?: AuditUser,
+  ): Promise<void> {
+    const note = await this.prisma.opportunityNote.findUnique({
+      where: { id: noteId },
+    });
+    if (!note || note.opportunityId !== opportunityId) {
+      throw new NotFoundException('Not bulunamadı');
+    }
+    const isAdmin = auditUser?.role === 'admin';
+    const isAuthor = note.createdById === auditUser?.id;
+    if (!isAdmin && !isAuthor) {
+      throw new ForbiddenException('Bu notu silme yetkiniz yok');
+    }
+    await this.prisma.opportunityNote.delete({ where: { id: noteId } });
   }
 
   private async ensureFairExists(fairId: string): Promise<void> {

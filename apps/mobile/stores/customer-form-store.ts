@@ -5,15 +5,35 @@ interface CustomerFormState {
   visible: boolean;
   fairId: string | null;
   onCreated: ((customer: Customer) => void) | null;
-  open: (fairId: string, onCreated?: (customer: Customer) => void) => void;
+  onCloseCallback: (() => void) | null;
+  createdSuccessfully: boolean;
+  open: (
+    fairId: string,
+    onCreated?: (customer: Customer) => void,
+    onCloseCallback?: () => void,
+  ) => void;
   close: () => void;
+  markCreatedSuccessfully: () => void;
 }
 
-export const useCustomerFormStore = create<CustomerFormState>((set) => ({
+export const useCustomerFormStore = create<CustomerFormState>((set, get) => ({
   visible: false,
   fairId: null,
   onCreated: null,
-  open: (fairId, onCreated) =>
-    set({ visible: true, fairId, onCreated: onCreated ?? null }),
-  close: () => set({ visible: false, fairId: null, onCreated: null }),
+  onCloseCallback: null,
+  createdSuccessfully: false,
+  open: (fairId, onCreated, onCloseCallback) =>
+    set({
+      visible: true,
+      fairId,
+      onCreated: onCreated ?? null,
+      onCloseCallback: onCloseCallback ?? null,
+      createdSuccessfully: false,
+    }),
+  close: () => {
+    const { onCloseCallback, createdSuccessfully } = get();
+    set({ visible: false, fairId: null, onCreated: null, onCloseCallback: null, createdSuccessfully: false });
+    if (!createdSuccessfully) onCloseCallback?.();
+  },
+  markCreatedSuccessfully: () => set({ createdSuccessfully: true }),
 }));

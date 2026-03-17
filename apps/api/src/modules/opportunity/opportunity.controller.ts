@@ -23,12 +23,17 @@ import {
   stageTransitionSchema,
   updateStageLogSchema,
   createOfferSchema,
+  createOpportunityNoteSchema,
+  updateOpportunityNoteSchema,
   CreateOpportunityDto,
   UpdateOpportunityDto,
   ConversionRate,
   type StageTransitionInput,
   type UpdateStageLogInput,
   type CreateOfferInput,
+  type CreateOpportunityNoteInput,
+  type UpdateOpportunityNoteInput,
+  type OpportunityNote,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
@@ -206,5 +211,45 @@ export class OpportunityController {
   ): Promise<ApiSuccessResponse<null>> {
     await this.opportunityService.remove(id, user);
     return { success: true, message: 'Fırsat başarıyla silindi', data: null };
+  }
+
+  @Post('opportunities/:id/notes')
+  async addNote(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(createOpportunityNoteSchema)) dto: CreateOpportunityNoteInput,
+    @CurrentUser() user: { id: string; email: string; role?: string },
+  ): Promise<ApiSuccessResponse<OpportunityNote>> {
+    const data = await this.opportunityService.addNote(id, dto, user);
+    return { success: true, message: 'Not eklendi', data };
+  }
+
+  @Get('opportunities/:id/notes')
+  async getNotes(
+    @Param('id') id: string,
+  ): Promise<ApiSuccessResponse<OpportunityNote[]>> {
+    const data = await this.opportunityService.getNotes(id);
+    return { success: true, message: 'Notlar getirildi', data };
+  }
+
+  @Patch('opportunities/:oppId/notes/:noteId')
+  async updateNote(
+    @Param('oppId') oppId: string,
+    @Param('noteId') noteId: string,
+    @Body(new ZodValidationPipe(updateOpportunityNoteSchema)) dto: UpdateOpportunityNoteInput,
+    @CurrentUser() user: { id: string; email: string; role?: string },
+  ): Promise<ApiSuccessResponse<OpportunityNote>> {
+    const data = await this.opportunityService.updateNote(oppId, noteId, dto, user);
+    return { success: true, message: 'Not güncellendi', data };
+  }
+
+  @Delete('opportunities/:oppId/notes/:noteId')
+  @HttpCode(HttpStatus.OK)
+  async deleteNote(
+    @Param('oppId') oppId: string,
+    @Param('noteId') noteId: string,
+    @CurrentUser() user: { id: string; email: string; role?: string },
+  ): Promise<ApiSuccessResponse<null>> {
+    await this.opportunityService.deleteNote(oppId, noteId, user);
+    return { success: true, message: 'Not silindi', data: null };
   }
 }

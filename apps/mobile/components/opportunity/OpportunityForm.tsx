@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Image,
+  Alert,
+  Platform,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import type {
   OpportunityWithDetails,
   Customer,
@@ -26,7 +36,10 @@ import {
 } from '@/hooks/use-opportunities';
 import { useUpdateCustomer } from '@/hooks/use-customers';
 import { useProducts } from '@/hooks/use-products';
+import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
+import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
+import { getAssetBaseUrl } from '@/lib/api';
 
 interface OpportunityFormProps {
   visible: boolean;
@@ -45,7 +58,12 @@ export function OpportunityForm({
   const createOpportunity = useCreateOpportunity(fairId ?? '');
   const updateOpportunity = useUpdateOpportunity(fairId ?? '');
   const updateCustomer = useUpdateCustomer();
+  const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
   const openCustomerForm = useCustomerFormStore((s) => s.open);
+  const oppClose = useOpportunityFormStore((s) => s.close);
+  const oppOpen = useOpportunityFormStore((s) => s.open);
+  const preselectedCustomer = useOpportunityFormStore((s) => s.preselectedCustomer);
+  const clearPreselectedCustomer = useOpportunityFormStore((s) => s.clearPreselectedCustomer);
   const { data: productList = [] } = useProducts();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -97,6 +115,11 @@ export function OpportunityForm({
             .filter((p) => p.productId)
         );
       }
+      clearPreselectedCustomer();
+    } else if (visible && preselectedCustomer) {
+      setSelectedCustomer(preselectedCustomer);
+      setCardImage(preselectedCustomer.cardImage ?? '');
+      setSubmitError('');
     } else if (visible) {
       setSelectedCustomer(null);
       setBudgetRaw('');
@@ -106,7 +129,7 @@ export function OpportunityForm({
       setCardImage('');
       setSubmitError('');
     }
-  }, [visible, initial, productList]);
+  }, [visible, initial, preselectedCustomer, productList, clearPreselectedCustomer]);
 
   useEffect(() => {
     if (visible && selectedCustomer) {
@@ -124,9 +147,119 @@ export function OpportunityForm({
     : '';
 
   const handleAddNewCustomer = () => {
-    if (fairId) {
-      openCustomerForm(fairId, (customer) => setSelectedCustomer(customer));
+    if (!fairId) return;
+    oppClose();
+    const reopenOpp = () => oppOpen(fairId);
+    openCustomerForm(fairId, (customer) => {
+      oppOpen(fairId, undefined, customer);
+    }, reopenOpp);
+  };
+
+  const pickImageAndRunOcr = async (
+    launchFn: () => Promise<ImagePicker.ImagePickerResult>,
+  ) => {
+    const result = await launchFn();
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    const rawFilename = uri.split('/').pop() ?? '';
+    const hasValidExt = /\.(jpg|jpeg|png|webp|gif)$/i.test(rawFilename);
+    const filename = hasValidExt ? rawFilename : 'card-image.jpg';
+    const ocrResult = await scanBusinessCard(uri, filename, 'image/jpeg');
+    if (ocrResult) {
+      setCardImage(ocrResult.url);
+      setSelectedCustomer((prev) =>
+        prev ? { ...prev, cardImage: ocrResult.url } : null,
+      );
+      setSubmitError('');
+    } else {
+      setSubmitError('Kartvizit okunamadı. Lütfen daha net bir fotoğraf deneyin.');
     }
+  };
+
+  const handleAddCard = () => {
+    const options: Array<{ text: string; onPress: () => void }> = [];
+    if (Platform.OS !== 'web') {
+      options.push({
+        text: 'Kamera',
+        onPress: async () => {
+          const { status } =
+            await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            setSubmitError('Kamera erişim izni gerekli');
+            return;
+          }
+          await pickImageAndRunOcr(() =>
+            ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [3, 4],
+              quality: 0.8,
+            }),
+          );
+        },
+      });
+    }
+    options.push({
+      text: 'Galeri',
+      onPress: async () => {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          setSubmitError('Galeri erişim izni gerekli');
+          return;
+        }
+        await pickImageAndRunOcr(() =>
+          ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [3, 4],
+            quality: 0.8,
+          }),
+        );
+      },
+    });
+    if (options.length === 1) {
+      options[0].onPress();
+    } else {
+      Alert.alert(
+        'Kartvizit Ekle',
+        'Kamera veya galeriden fotoğraf seçin',
+        [
+          ...options.map((o) => ({ text: o.text, onPress: o.onPress })),
+          { text: 'İptal', style: 'cancel' as const },
+        ],
+      );
+    }
+  };
+
+  const handleDeleteCard = () => {
+    Alert.alert(
+      'Kartviziti Sil',
+      'Kartvizit fotoğrafını silmek istediğinizden emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            if (!selectedCustomer) return;
+            setCardImage('');
+            setSelectedCustomer((prev) =>
+              prev ? { ...prev, cardImage: null } : null,
+            );
+            try {
+              await updateCustomer.mutateAsync({
+                id: selectedCustomer.id,
+                dto: { cardImage: null },
+                fairId: fairId ?? undefined,
+              });
+            } catch {
+              setSubmitError('Kartvizit silinirken hata oluştu');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSubmit = async () => {
@@ -155,6 +288,7 @@ export function OpportunityForm({
         await updateCustomer.mutateAsync({
           id: selectedCustomer.id,
           dto: { cardImage: cardImage || null },
+          fairId: fairId ?? undefined,
         });
       }
       if (isEdit && initial) {
@@ -197,6 +331,50 @@ export function OpportunityForm({
             onSelect={setSelectedCustomer}
             onAddNew={handleAddNewCustomer}
           />
+
+          {selectedCustomer ? (
+            <View className="rounded-xl border border-white/20 bg-white/5 overflow-hidden">
+              <View className="flex-row items-center justify-between px-3 pt-2 pb-1.5">
+                <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
+                  Kartvizit
+                </Text>
+                {cardImage ? (
+                  <Pressable
+                    onPress={handleDeleteCard}
+                    disabled={updateCustomer.isPending}
+                    className="p-1.5"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  >
+                    <Text className="text-[#F87171] text-[14px]">🗑</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {cardImage ? (
+                <Image
+                  source={{
+                    uri: cardImage.startsWith('http')
+                      ? cardImage
+                      : `${getAssetBaseUrl()}${cardImage}`,
+                  }}
+                  className="h-32 w-full"
+                  resizeMode="contain"
+                />
+              ) : (
+                <Pressable
+                  onPress={handleAddCard}
+                  disabled={ocrLoading}
+                  className="rounded-lg border-2 border-dashed border-white/30 py-6 mx-3 mb-3 items-center"
+                  style={({ pressed }) => ({
+                    opacity: pressed || ocrLoading ? 0.8 : 1,
+                  })}
+                >
+                  <Text className="text-white/60 text-[14px]">
+                    {ocrLoading ? '⏳ Tara...' : '📇 Kartvizit Ekle'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : null}
 
           <View>
             <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider mb-1.5">
