@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header } from '@/components/layout/Header';
 import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
@@ -7,7 +7,10 @@ import { FairStats } from '@/components/fair/FairStats';
 import { FilterDrawer } from '@/components/fair/FilterDrawer';
 import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
 import { GradientBackground } from '@/components/ui/GradientBackground';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { LoadingView } from '@/components/ui/LoadingView';
 import { useFairDetail } from '@/hooks/use-fairs';
+import { isNetworkError } from '@/lib/error-utils';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 import { useStageTransitionStore } from '@/stores/stage-transition-store';
 import type { OpportunityWithDetails } from '@crm/shared';
@@ -36,7 +39,7 @@ function filterOpportunities(
 export default function FairDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: fair, isLoading, error } = useFairDetail(id ?? null);
+  const { data: fair, isLoading, error, refetch } = useFairDetail(id ?? null);
 
   const [search, setSearch] = useState('');
   const [selectedRates, setSelectedRates] = useState<string[]>([]);
@@ -72,10 +75,7 @@ export default function FairDetailScreen() {
         />
         <View className="flex-1 items-center justify-center">
           {isLoading ? (
-            <>
-              <ActivityIndicator size="large" color="#8b5cf6" />
-              <Text className="text-white/60 mt-3">Yükleniyor...</Text>
-            </>
+            <LoadingView message="Fuar detayı yükleniyor..." />
           ) : (
             <Text className="text-white/60">Fuar bulunamadı</Text>
           )}
@@ -92,10 +92,12 @@ export default function FairDetailScreen() {
           title="Fuar Detay"
           showSearch={false}
         />
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[#F87171] text-center">
-            Fuar detayı yüklenirken hata oluştu
-          </Text>
+        <View className="flex-1">
+          <ErrorState
+            message="Fuar detayı yüklenirken hata oluştu"
+            onRetry={() => refetch()}
+            isNetworkError={isNetworkError(error)}
+          />
         </View>
       </GradientBackground>
     );

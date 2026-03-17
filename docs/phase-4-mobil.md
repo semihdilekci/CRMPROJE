@@ -711,7 +711,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): implement drawer menu items
 
-Durum: [ ]
+Durum: [ ] (Bu branch'te atlanacak — sonra değerlendirilecek)
 
 ----------------------------------------------------------------------
 M21 — Boş Durumlar & Hata Yönetimi
@@ -731,7 +731,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add empty states and error handling
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 M22 — Entegrasyon Testi & Son Düzenlemeler

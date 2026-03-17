@@ -14,6 +14,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyMfa: (tempToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
+  forceLogout: () => void;
   setUser: (user: User | null) => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -69,6 +70,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       await storage.clearAuth();
       set({ user: null, isAuthenticated: false });
     }
+  },
+
+  forceLogout: () => {
+    set({ user: null, isAuthenticated: false });
   },
 
   setUser: async (user) => {

@@ -1,6 +1,13 @@
 import axios from 'axios';
 import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearAuth } from './storage';
 
+let onAuthError: (() => void) | null = null;
+
+/** 401 refresh başarısız olduğunda çağrılacak handler (app init'te ayarlanır) */
+export function setAuthErrorHandler(handler: () => void): void {
+  onAuthError = handler;
+}
+
 const getBaseURL = () => {
   const url = process.env.EXPO_PUBLIC_API_URL?.trim();
   return url || 'http://localhost:3001/api/v1';
@@ -55,6 +62,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         await clearAuth();
+        onAuthError?.();
         return Promise.reject(error);
       }
     }

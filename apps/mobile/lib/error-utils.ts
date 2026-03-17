@@ -1,3 +1,17 @@
+/** Network/bağlantı hatası mı kontrol eder */
+export function isNetworkError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: string; message?: string };
+  return (
+    e.code === 'ERR_NETWORK' ||
+    e.code === 'ECONNABORTED' ||
+    (typeof e.message === 'string' &&
+      (e.message.includes('Network Error') ||
+        e.message.includes('network') ||
+        e.message.includes('timeout')))
+  );
+}
+
 /** API hata yanıtından mesaj çıkarır (blob veya JSON) */
 export async function extractApiErrorMessage(err: unknown): Promise<string | null> {
   if (!err || typeof err !== 'object') return null;

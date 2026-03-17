@@ -1,16 +1,19 @@
-import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, FlatList, Pressable } from 'react-native';
 import { Header } from '@/components/layout/Header';
 import { GradientView } from '@/components/ui/GradientView';
 import { GradientBackground } from '@/components/ui/GradientBackground';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { LoadingView } from '@/components/ui/LoadingView';
 import { useNavigation } from 'expo-router';
 import { useFairs } from '@/hooks/use-fairs';
 import { FairCard } from '@/components/fair/FairCard';
 import { useFairFormStore } from '@/stores/fair-form-store';
+import { isNetworkError } from '@/lib/error-utils';
 
 export default function FairsScreen() {
   const navigation = useNavigation();
   const openFairForm = useFairFormStore((s) => s.open);
-  const { data: fairs, isLoading, error } = useFairs();
+  const { data: fairs, isLoading, error, refetch } = useFairs();
 
   const totalOpportunities = fairs?.reduce(
     (sum, f) => sum + (f._count?.opportunities ?? 0),
@@ -58,10 +61,7 @@ export default function FairsScreen() {
             (navigation as { openDrawer?: () => void }).openDrawer?.();
           }}
         />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#8b5cf6" />
-          <Text className="text-white/60 mt-3">Yükleniyor...</Text>
-        </View>
+        <LoadingView message="Fuarlar yükleniyor..." />
       </GradientBackground>
     );
   }
@@ -74,10 +74,12 @@ export default function FairsScreen() {
             (navigation as { openDrawer?: () => void }).openDrawer?.();
           }}
         />
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[#F87171] text-center">
-            Fuarlar yüklenirken hata oluştu
-          </Text>
+        <View className="flex-1">
+          <ErrorState
+            message="Fuarlar yüklenirken hata oluştu"
+            onRetry={() => refetch()}
+            isNetworkError={isNetworkError(error)}
+          />
         </View>
       </GradientBackground>
     );

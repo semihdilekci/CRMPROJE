@@ -1,11 +1,13 @@
 import '../global.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { setAuthErrorHandler } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 // Design system: mor glow (sol üst) + turkuaz glow (sağ alt) + koyu taban
 const backgroundGradient = [
@@ -17,6 +19,12 @@ const backgroundGradient = [
 ] as const;
 
 export default function RootLayout() {
+  useEffect(() => {
+    setAuthErrorHandler(() => {
+      useAuthStore.getState().forceLogout();
+    });
+  }, []);
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
