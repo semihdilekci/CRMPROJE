@@ -54,16 +54,17 @@ export function FairCard({ fair, onClick }: FairCardProps) {
         />
 
         <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-          {isActive && (
-            <span className="absolute top-3 right-3 shrink-0 rounded-full bg-green-500/20 border border-green-500/30 px-2 py-0.5 text-[10px] font-bold text-green">
-              DEVAM EDİYOR
-            </span>
-          )}
-
-          {/* 4. Title gradient effect — başlık hover'da gradient oluyor */}
-          <h3 className="text-xl font-semibold text-white pr-20 line-clamp-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-white/80 group-hover:bg-clip-text transition-all duration-300">
-            {fair.name}
-          </h3>
+          {/* Başlık + DEVAM EDİYOR rozeti — flex ile çakışma önlenir */}
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="min-w-0 flex-1 text-xl font-semibold text-white line-clamp-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-white/80 group-hover:bg-clip-text transition-all duration-300">
+              {fair.name}
+            </h3>
+            {isActive && (
+              <span className="shrink-0 rounded-full bg-green-500/20 border border-green-500/30 px-2 py-0.5 text-[10px] font-bold text-green-400">
+                DEVAM EDİYOR
+              </span>
+            )}
+          </div>
 
           <p className="mt-1.5 flex items-start gap-1.5 text-sm text-white/70">
             <MapPinIcon size={16} className="mt-0.5 shrink-0 text-violet-400" />

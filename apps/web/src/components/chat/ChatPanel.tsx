@@ -5,23 +5,18 @@ import { useRouter } from 'next/navigation';
 import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth-store';
+import { useChatStore } from '@/stores/chat-store';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import type { ChartData, TableData, OllamaModel } from '@crm/shared';
-
-interface MessageItem {
-  role: 'user' | 'assistant';
-  content: string;
-  charts?: ChartData[];
-  tables?: TableData[];
-  exportId?: string;
-}
+import type { OllamaModel } from '@crm/shared';
 
 export function ChatPanel() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
-  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const messages = useChatStore((s) => s.messages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const setMessages = useChatStore((s) => s.setMessages);
   const [input, setInput] = useState('');
   const [provider, setProvider] = useState<'ollama' | 'claude' | 'gemini'>('ollama');
   const [ollamaModel, setOllamaModel] = useState<OllamaModel>('qwen2.5-coder:7b');
@@ -39,12 +34,13 @@ export function ChatPanel() {
     const msg = input.trim();
     if (!msg || chatQuery.isPending) return;
 
-    const userMessage: MessageItem = { role: 'user', content: msg };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage = { role: 'user' as const, content: msg };
+    addMessage(userMessage);
     setInput('');
 
-    const recentMessages = [...messages, userMessage]
-      .slice(-10)
+    const recentMessages = useChatStore
+      .getState()
+      .messages.slice(-10)
       .map((m) => ({ role: m.role, content: m.content }));
 
     try {
@@ -55,14 +51,13 @@ export function ChatPanel() {
         ...(provider === 'ollama' && { ollamaModel }),
       });
 
-      const assistantMessage: MessageItem = {
+      addMessage({
         role: 'assistant',
         content: result.text,
         charts: result.charts,
         tables: result.tables,
         exportId: result.exportId,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      });
     } catch (err: unknown) {
       const status = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { status?: number } }).response?.status
@@ -73,13 +68,10 @@ export function ChatPanel() {
           : undefined;
 
       if (status === 401) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.',
-          },
-        ]);
+        addMessage({
+          role: 'assistant',
+          content: 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.',
+        });
         await logout();
         router.replace('/login');
         return;
@@ -89,10 +81,7 @@ export function ChatPanel() {
         apiMessage && typeof apiMessage === 'string'
           ? apiMessage
           : 'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.';
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: errorText },
-      ]);
+      addMessage({ role: 'assistant', content: errorText });
     }
   };
 
