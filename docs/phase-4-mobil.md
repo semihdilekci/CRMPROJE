@@ -685,7 +685,7 @@ Etkilenen dosyalar:
 
 Commit: feat(mobile): add AI Analiz chat page
 
-Durum: [ ]
+Durum: [x]
 
 ╔══════════════════════════════════════════════════════════╗
 ║  BRANCH 6: DRAWER & FİNAL                               ║
