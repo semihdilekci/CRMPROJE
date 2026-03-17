@@ -1,12 +1,103 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Animated,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth-store';
-import { Button } from '@/components/ui/Button';
 import { Dropdown } from '@/components/ui/Dropdown';
+import { GradientView } from '@/components/ui/GradientView';
 import type { ChartData, TableData, OllamaModel } from '@crm/shared';
+
+function LoadingDots() {
+  const [anims] = useState(() =>
+    [0, 1, 2].map(() => new Animated.Value(0))
+  );
+
+  useEffect(() => {
+    const animate = (index: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anims[index], {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[index], {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+    anims.forEach((_, i) => animate(i));
+  }, [anims]);
+
+  return (
+    <View className="flex-row items-center gap-0.5 ml-1">
+      {anims.map((a, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            width: 4,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: 'white',
+            opacity: a.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.4, 1],
+            }),
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+interface ChatSendButtonProps {
+  onPress: () => void;
+  disabled: boolean;
+  loading: boolean;
+}
+
+function ChatSendButton({ onPress, disabled, loading }: ChatSendButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      className={`overflow-hidden shrink-0 ${disabled ? 'opacity-50' : ''}`}
+      style={{
+        minWidth: 100,
+        borderRadius: 12,
+      }}
+    >
+      <GradientView
+        direction="horizontal"
+        style={{
+          minHeight: 44,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+        }}
+      >
+        <Text className="text-[14px] font-semibold text-white">Gönder</Text>
+        {loading && <LoadingDots />}
+      </GradientView>
+    </Pressable>
+  );
+}
 
 interface MessageItem {
   role: 'user' | 'assistant';
@@ -119,7 +210,7 @@ export function ChatPanel() {
     <KeyboardAvoidingView
       className="flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
     >
       <View className="flex-1">
         <View className="border-b border-white/10 px-4 py-3">
@@ -181,8 +272,8 @@ export function ChatPanel() {
           )}
         </ScrollView>
 
-        <View className="border-t border-white/10 px-4 py-3">
-          <View className="flex-row items-end gap-3">
+        <View className="border-t border-white/10 px-4 py-2">
+          <View className="flex-row items-center gap-3">
             <TextInput
               value={input}
               onChangeText={setInput}
@@ -197,12 +288,11 @@ export function ChatPanel() {
               returnKeyType="send"
               blurOnSubmit={false}
             />
-            <Button
+            <ChatSendButton
               onPress={handleSubmit}
               disabled={!input.trim() || chatQuery.isPending}
-            >
-              {chatQuery.isPending ? 'Analiz ediliyor...' : 'Gönder'}
-            </Button>
+              loading={chatQuery.isPending}
+            />
           </View>
         </View>
       </View>
