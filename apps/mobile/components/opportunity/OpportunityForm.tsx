@@ -323,6 +323,7 @@ export function OpportunityForm({
         className="max-h-[70vh]"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View className="gap-4 pb-4">
           <CustomerSelectInput

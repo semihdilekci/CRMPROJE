@@ -107,6 +107,42 @@ Terminal'de bir **QR kod** görünecektir.
 
 ---
 
+## Farklı Ekran Boyutları ve Safe Area
+
+Uygulama farklı cihazlarda test edilmeli:
+
+- **Küçük ekran** (örn. iPhone SE): Fuarlar listesi, formlar, tab bar düzgün görünmeli
+- **Büyük ekran** (örn. iPhone Pro Max): İçerik taşmamalı, boşluklar makul olmalı
+- **Safe area**: Tab bar ve BottomSheet home indicator (iPhone X+) alanına saygı duymalı
+
+Simülatörde farklı cihazlar: Xcode → Window → Devices and Simulators → farklı iPhone modelleri.
+
+---
+
+## Offline / Network Kesintisi Simülasyonu
+
+Ağ hatası ve retry akışını test etmek için:
+
+### Yöntem 1: Uçak modu
+1. Uygulamayı açın, fuarlar listesini yükleyin
+2. Uçak modunu açın (veya Wi‑Fi’yi kapatın)
+3. Listeyi yenileyin veya başka bir sayfaya gidin
+4. "Sunucuya bağlanılamıyor" mesajı ve "Tekrar Dene" butonu görünmeli
+5. Uçak modunu kapatın, "Tekrar Dene"ye basın — veri yüklenmeli
+
+### Yöntem 2: Yanlış API URL
+1. `apps/mobile/.env` içinde `EXPO_PUBLIC_API_URL` değerini geçersiz yapın (örn. `http://192.168.1.99:9999/api/v1`)
+2. Uygulamayı yeniden başlatın
+3. Login veya fuarlar sayfasında hata + retry görünmeli
+
+### Yöntem 3: API sunucusunu durdurmak
+1. API çalışırken uygulamayı açın
+2. API sunucusunu durdurun (`Ctrl+C`)
+3. Uygulamada sayfa değiştirin veya yenileyin
+4. Hata + retry görünmeli
+
+---
+
 ## Test Sonrası
 
 Simülatörde çalışmaya geri dönmek için `apps/mobile/.env` dosyasında:

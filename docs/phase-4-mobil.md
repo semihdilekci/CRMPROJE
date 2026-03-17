@@ -752,7 +752,7 @@ Etkilenen dosyalar:
 
 Commit: chore(mobile): integration test and final adjustments
 
-Durum: [ ]
+Durum: [x]
 
 ==============================
 ÖZET — İŞ SIRASI

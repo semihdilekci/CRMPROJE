@@ -195,8 +195,10 @@ export function OpportunityCard({
         style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
       >
         <View className="flex-1 min-w-0">
-          <Text className="text-white font-bold text-[15px]">{customer.name}</Text>
-          <Text className="text-white/80 font-semibold text-[13px] mt-0.5">
+          <Text className="text-white font-bold text-[15px]" numberOfLines={2}>
+            {customer.name}
+          </Text>
+          <Text className="text-white/80 font-semibold text-[13px] mt-0.5" numberOfLines={2}>
             {customer.company}
           </Text>
           <View className="flex-row flex-wrap gap-1.5 mt-2">
@@ -377,6 +379,7 @@ export function OpportunityCard({
                     placeholderTextColor="rgba(255,255,255,0.4)"
                     className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white text-[13px] min-h-[60px]"
                     multiline
+                    maxLength={5000}
                     editable={!createNote.isPending}
                   />
                   <View className="flex-row gap-2">
@@ -417,6 +420,7 @@ export function OpportunityCard({
                             placeholderTextColor="rgba(255,255,255,0.4)"
                             className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white text-[13px] min-h-[50px]"
                             multiline
+                            maxLength={5000}
                             editable={!updateNote.isPending}
                           />
                           <View className="flex-row gap-2">

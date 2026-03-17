@@ -203,6 +203,7 @@ export function StageTransitionSheet({
         className="max-h-[60vh]"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View className="gap-4 pb-4">
           <View className="rounded-xl border border-white/20 bg-white/5 px-3 py-2">

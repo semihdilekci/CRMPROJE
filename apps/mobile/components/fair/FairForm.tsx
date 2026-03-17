@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import type { Fair } from '@crm/shared';
 import { formatDateInput, parseDateInput } from '@crm/shared';
 import { useCreateFair, useUpdateFair } from '@/hooks/use-fairs';
@@ -104,18 +104,25 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
       onClose={handleClose}
       title={isEdit ? 'Fuarı Düzenle' : 'Yeni Fuar Oluştur'}
     >
-      <View className="gap-4">
-        <Input
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        <View className="gap-4">
+          <Input
           label="Fuar Adı *"
           placeholder="Fuar adı giriniz"
           value={name}
           onChangeText={setName}
+          maxLength={200}
         />
         <Input
           label="Adres / Yer"
           placeholder="Adres bilgisi giriniz"
           value={address}
           onChangeText={setAddress}
+          maxLength={500}
         />
         <DateInput
           label="Başlangıç Tarihi *"
@@ -147,7 +154,8 @@ export function FairForm({ visible, onClose, initial }: FairFormProps) {
             {loading ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>
         </View>
-      </View>
+        </View>
+      </ScrollView>
     </BottomSheet>
   );
 }

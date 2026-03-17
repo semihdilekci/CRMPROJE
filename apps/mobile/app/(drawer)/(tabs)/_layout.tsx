@@ -1,5 +1,6 @@
 import { Tabs, usePathname } from 'expo-router';
 import { View, Text, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientView } from '@/components/ui/GradientView';
 import { FairTabIcon } from '@/components/ui/FairTabIcon';
 import { ChartTabIcon } from '@/components/ui/ChartTabIcon';
@@ -42,6 +43,8 @@ function TabBarIconOnly({
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -50,7 +53,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: 'rgba(2, 6, 23, 0.95)',
           borderTopColor: 'rgba(255,255,255,0.1)',
-          height: 64,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom,
         },
         tabBarItemStyle: { paddingVertical: 8 },
         tabBarActiveTintColor: '#8b5cf6',

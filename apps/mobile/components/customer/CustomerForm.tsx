@@ -226,6 +226,7 @@ export function CustomerForm({
         className="max-h-[70vh]"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View className="gap-4 pb-4">
           <Input
@@ -236,6 +237,7 @@ export function CustomerForm({
               setCompany(t);
               setSubmitError('');
             }}
+            maxLength={200}
           />
           <Input
             label="Ad Soyad"
@@ -245,6 +247,7 @@ export function CustomerForm({
               setName(t);
               setSubmitError('');
             }}
+            maxLength={100}
           />
           <Input
             label="Telefon"
@@ -255,6 +258,7 @@ export function CustomerForm({
               setSubmitError('');
             }}
             keyboardType="phone-pad"
+            maxLength={30}
           />
           <Input
             label="E-posta"
@@ -265,12 +269,14 @@ export function CustomerForm({
               setSubmitError('');
             }}
             keyboardType="email-address"
+            maxLength={254}
           />
           <Input
             label="Adres (opsiyonel)"
             placeholder="Adres"
             value={address}
             onChangeText={setAddress}
+            maxLength={1000}
           />
 
           <View>
