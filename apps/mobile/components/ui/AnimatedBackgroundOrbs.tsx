@@ -13,7 +13,7 @@ import { OrbViolet, OrbCyan, OrbPink } from './OrbSvg';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Figma SVG: 384x384, Web konumları: top-1/4 -left-48, bottom-1/4 -right-48, top-1/2 left-1/2
-const ORB_SIZE = 384;
+const ORB_SIZE = 450;
 const ORB_OFFSET = 192;
 
 const ORBS = [
@@ -31,8 +31,8 @@ const ORBS = [
   },
   {
     Orb: OrbPink,
-    top: SCREEN_HEIGHT * 0.5 - ORB_SIZE / 2,
-    left: SCREEN_WIDTH * 0.5 - ORB_SIZE / 2,
+    top: SCREEN_HEIGHT * 0.4 - ORB_SIZE / 2,
+    left: SCREEN_WIDTH * 0.9 - ORB_SIZE / 2,
     delay: 2000,
   },
 ];

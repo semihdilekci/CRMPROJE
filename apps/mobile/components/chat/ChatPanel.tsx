@@ -9,6 +9,7 @@ import {
   Pressable,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
@@ -206,13 +207,16 @@ export function ChatPanel() {
     }
   };
 
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 45 + insets.bottom;
+
   return (
     <KeyboardAvoidingView
       className="flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
     >
-      <View className="flex-1">
+      <View className="flex-1" style={{ paddingBottom: tabBarHeight }}>
         <View className="border-b border-white/10 px-4 py-3">
           <View className="flex-row items-center justify-between gap-3 flex-wrap">
             <View className="flex-1 min-w-[140px]">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { MfaCodeInput } from '@/components/auth/MfaCodeInput';
 import { GradientBackground } from '@/components/ui/GradientBackground';
+import { GradientView } from '@/components/ui/GradientView';
 
 function getErrorMessage(err: unknown): string {
   const axiosErr = err as {
@@ -97,7 +99,20 @@ export default function LoginScreen() {
     <View className="flex-1 items-center justify-center px-6">
       <View className="w-full max-w-[400px] rounded-2xl border border-white/20 bg-white/5 p-6">
         <View className="mb-6 items-center">
-          <Text className="text-white text-2xl font-semibold">Fuar CRM</Text>
+          <GradientView
+            direction="horizontal"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 12,
+            }}
+          >
+            <Sparkles size={28} color="white" strokeWidth={2} />
+          </GradientView>
+          <Text className="text-white text-2xl font-semibold">EXPO CRM</Text>
           <Text className="text-white/60 text-[14px] mt-2 text-center">
             {step === 'credentials'
               ? 'Yönetim paneline giriş yapın'

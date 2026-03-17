@@ -3,7 +3,7 @@ import { Providers } from '@/lib/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Fuar CRM',
+  title: 'EXPO CRM',
   description: 'Fuar fırsat yönetim paneli',
 };
 
