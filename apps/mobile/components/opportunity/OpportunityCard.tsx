@@ -31,6 +31,7 @@ import {
 import { useHasOfferDocument, useDownloadOfferDocument } from '@/hooks/use-offer';
 import { useAuthStore } from '@/stores/auth-store';
 import { getAssetBaseUrl } from '@/lib/api';
+import { useRouter } from 'expo-router';
 import { useUpdateCustomer } from '@/hooks/use-customers';
 
 function formatTonnageShort(quantity: number | null, unit: string): string {
@@ -59,6 +60,7 @@ export function OpportunityCard({
   onEdit,
   onStageChange,
 }: OpportunityCardProps) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -195,12 +197,18 @@ export function OpportunityCard({
         style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
       >
         <View className="flex-1 min-w-0">
-          <Text className="text-white font-bold text-[15px]" numberOfLines={2}>
-            {customer.name}
-          </Text>
-          <Text className="text-white/80 font-semibold text-[13px] mt-0.5" numberOfLines={2}>
-            {customer.company}
-          </Text>
+          <Pressable
+            onPress={() =>
+              router.push(`/(drawer)/(tabs)/customers/${customer.id}`)
+            }
+          >
+            <Text className="text-white font-bold text-[15px]" numberOfLines={2}>
+              {customer.name}
+            </Text>
+            <Text className="text-white/80 font-semibold text-[13px] mt-0.5" numberOfLines={2}>
+              {customer.company}
+            </Text>
+          </Pressable>
           <View className="flex-row flex-wrap gap-1.5 mt-2">
             {opportunity.conversionRate && (
               <Badge color={rateColor}>{rateLabel}</Badge>

@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { GradientView } from '@/components/ui/GradientView';
 import { FairTabIcon } from '@/components/ui/FairTabIcon';
+import { CustomersTabIcon } from '@/components/ui/CustomersTabIcon';
+import { ReportsTabIcon } from '@/components/ui/ReportsTabIcon';
 import { ChartTabIcon } from '@/components/ui/ChartTabIcon';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
@@ -90,6 +92,15 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="customers"
+          options={{
+            title: 'Müşteriler',
+            tabBarIcon: ({ focused }) => (
+              <TabBarIconOnly icon={CustomersTabIcon} focused={focused} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="add"
           options={{
             title: 'Ekle',
@@ -100,6 +111,15 @@ export default function TabLayout() {
                 <AddButton {...rest} style={[styles.addTabPlaceholder, style]} />
               );
             },
+          }}
+        />
+        <Tabs.Screen
+          name="reports"
+          options={{
+            title: 'Raporlar',
+            tabBarIcon: ({ focused }) => (
+              <TabBarIconOnly icon={ReportsTabIcon} focused={focused} />
+            ),
           }}
         />
         <Tabs.Screen

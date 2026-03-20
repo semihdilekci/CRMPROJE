@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import { Header } from '@/components/layout/Header';
 import { FairDetailHeader } from '@/components/fair/FairDetailHeader';
 import { FairStats } from '@/components/fair/FairStats';
@@ -13,6 +14,7 @@ import { useFairDetail } from '@/hooks/use-fairs';
 import { isNetworkError } from '@/lib/error-utils';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 import { useStageTransitionStore } from '@/stores/stage-transition-store';
+import { useFairOpportunityFocusStore } from '@/stores/fair-opportunity-focus-store';
 import type { OpportunityWithDetails } from '@crm/shared';
 
 function filterOpportunities(
@@ -36,8 +38,18 @@ function filterOpportunities(
   });
 }
 
+function normalizeParam(v: string | string[] | undefined): string | undefined {
+  if (v == null) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
 export default function FairDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; opportunityId?: string | string[] }>();
+  const globalParams = useGlobalSearchParams();
+  const id = normalizeParam(params.id) ?? '';
+  const opportunityIdFromQuery = normalizeParam(params.opportunityId) ?? normalizeParam(
+    (globalParams as Record<string, string | string[] | undefined>).opportunityId
+  );
   const router = useRouter();
   const { data: fair, isLoading, error, refetch } = useFairDetail(id ?? null);
 
@@ -45,6 +57,8 @@ export default function FairDetailScreen() {
   const [selectedRates, setSelectedRates] = useState<string[]>([]);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [filterDrawerExpanded, setFilterDrawerExpanded] = useState(false);
+  /** Aynı fuar+fırsat için tekrar tekrar filtre yazmayı önler; id / query değişince sıfırlanır. */
+  const lastAppliedFocusKeyRef = useRef<string | null>(null);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
   const openStageTransition = useStageTransitionStore((s) => s.open);
 
@@ -64,6 +78,48 @@ export default function FairDetailScreen() {
       prev.includes(rate) ? prev.filter((r) => r !== rate) : [...prev, rate]
     );
   };
+
+  /** Yeni deep link veya farklı fuar için aynı oturumda tekrar uygulanabilsin. */
+  useEffect(() => {
+    lastAppliedFocusKeyRef.current = null;
+  }, [id, opportunityIdFromQuery]);
+
+  const applyOpportunityFiltersFromDeepLink = useCallback(() => {
+    if (!fair?.id || !id || fair.id !== id) return;
+
+    const pending = useFairOpportunityFocusStore.getState().pending;
+    const fromStore =
+      pending?.fairId === id && pending.opportunityId ? pending.opportunityId : null;
+    const opportunityId = fromStore ?? opportunityIdFromQuery;
+    if (!opportunityId) return;
+
+    const focusKey = `${fair.id}:${opportunityId}`;
+    if (lastAppliedFocusKeyRef.current === focusKey) return;
+
+    const opp = fair.opportunities.find((o) => o.id === opportunityId);
+    if (!opp) return;
+
+    if (fromStore) {
+      useFairOpportunityFocusStore.getState().consume(id);
+    }
+    lastAppliedFocusKeyRef.current = focusKey;
+    const company = opp.customer?.company?.trim() ?? '';
+    const personName = opp.customer?.name?.trim() ?? '';
+    setSearch(company || personName);
+    setSelectedRates(opp.conversionRate ? [opp.conversionRate] : []);
+    setStageFilter(opp.currentStage ?? null);
+    setFilterDrawerExpanded(true);
+  }, [fair, id, opportunityIdFromQuery]);
+
+  useFocusEffect(
+    useCallback(() => {
+      applyOpportunityFiltersFromDeepLink();
+    }, [applyOpportunityFiltersFromDeepLink])
+  );
+
+  useEffect(() => {
+    applyOpportunityFiltersFromDeepLink();
+  }, [applyOpportunityFiltersFromDeepLink]);
 
   if (isLoading || !fair) {
     return (

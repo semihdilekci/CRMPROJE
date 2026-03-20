@@ -39,9 +39,10 @@ export function FilterDrawer({
     }).start();
   }, [expanded, animatedHeight]);
 
+  /** İçerik ~130–155px; 220px fazla boşluk bırakıyordu (aşama chip’leri ile kartlar arası). */
   const drawerHeight = animatedHeight.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 220],
+    outputRange: [0, 100],
   });
 
   const rotateChevron = animatedHeight.interpolate({

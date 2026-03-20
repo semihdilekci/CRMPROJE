@@ -6,6 +6,8 @@ Bu doküman, web tarafında `docs/phase-5-customer360-WEB.md` ve görsel referan
 
 **İlke:** Diğer ekranlar (Fuarlar, Fuar detay, FAB, AI Analiz, formlar, auth) **davranış olarak etkilenmemeli**; değişiklikler yeni route’lar, yeni bileşenler ve sınırlı entegrasyon noktalarıyla izole edilir.
 
+**Tipografi:** Müşteriler ve müşteri profili ekranlarında **yalnızca uygulamanın geri kalanıyla aynı font ve tipografi kullanımı** geçerlidir. Başlık, gövde ve etiketler için mevcut ekranlardaki kalıplar (ör. `Header`, `FairCard`, `OpportunityCard`, `fairs/index` — `font-semibold`, `text-lg`, `text-[12px]` …) referans alınır; `musteri-profil.html` veya web’deki Playfair/DM Sans **mobilde yeni font yükleme veya farklı font ailesi** olarak uygulanmaz. Renk ve hiyerarşi `docs/design-system.md` ve `apps/mobile/constants/theme.ts` ile uyumlu kalır.
+
 ---
 
 ## 1. Referans dokümanlar
@@ -13,7 +15,7 @@ Bu doküman, web tarafında `docs/phase-5-customer360-WEB.md` ve görsel referan
 | Doküman | Rol |
 |--------|-----|
 | `docs/phase-5-customer360-WEB.md` | İş kuralları, API yanıt şekilleri, bölüm sırası (Hero, KPI, Bekleyen, Timeline, Notlar), sıralama seçenekleri |
-| `docs/musteri-profil.html` | Profil ekranı düzeni, renk/typography referansı (mobilde NativeWind ile uyarlama) |
+| `docs/musteri-profil.html` | Profil ekranı düzeni ve renk hiyerarşisi (mobilde layout; **fontlar web HTML’e kopyalanmaz**, aşağıdaki tipografi kuralı geçerli) |
 | `docs/phase-4-mobil.md` | Genel mobil mimari, tasarım dili, drawer kapsamı (admin yok) |
 | `docs/design-system.md` | Tema token’ları, fontlar |
 
@@ -84,6 +86,7 @@ apps/mobile/app/(drawer)/(tabs)/
 
 - Profil: `router.push(\`/customers/${id}\`)` veya Expo Router `href`.
 - Fırsat kartından profil: `/(drawer)/(tabs)/customers/${customerId}` (projedeki grup yapısına göre tam path doğrulanır).
+- Müşteri profilinden fuar: `/(drawer)/(tabs)/fairs/{fairId}?opportunityId={opportunityId}` ve ayrıca `stores/fair-opportunity-focus-store.ts` ile hedef fırsat id’si taşınır (tab/stack içinde sorgu parametresi kaybolabildiği için store birincil, URL yedek).
 
 ---
 
@@ -179,9 +182,16 @@ Web empty state ile aynı metin (📋, başlık, açıklama); `GradientBackgroun
 
 ## 8. Tasarım (mobil uyarlama)
 
-- **HTML piksel mükemmelliği** mobilde zorunlu değil; renk ve hiyerarşi `docs/design-system.md` ve mevcut mobil ekranlarla uyumlu olmalı.
+### 8.1 Tipografi (zorunlu)
+
+- Tüm metinler **mevcut mobil uygulama ile aynı font** üzerinden gider: projede özel `fontFamily` / `expo-font` ile yüklenmiş global bir font yoksa **sistem varsayılanı** + NativeWind `font-*` / `text-*` sınıfları kullanılır; yeni ekranlar da **Fuarlar listesi, fuar detayı, fırsat kartı** ile aynı stil dilini takip eder.
+- **Yapılmayacaklar:** `musteri-profil.html` veya web’deki başlık/gövde font isimlerini mobilde tek başına ekran bazında tanımlamak; yalnızca bu müşteri ekranlarına özel font yükleme veya farklı font ailesi seçmek.
+- **Yapılacaklar:** Aynı bileşenlerdeki gibi tutarlı boyut ve ağırlık (ör. sayfa başlığında `Header`’a benzer; kart başlığında `FairCard`’a benzer; küçük etiketlerde `uppercase tracking-wider` + `text-[12px]` gibi mevcut pattern’ler).
+
+### 8.2 Genel
+
+- **HTML piksel mükemmelliği** mobilde zorunlu değil; renk ve hiyerarşi `docs/design-system.md`, `apps/mobile/constants/theme.ts` ve mevcut mobil ekranlarla uyumlu olmalı.
 - Glass: `bg-white/10`, `border-white/20`, `rounded-2xl`, `backdrop` (mevcut bileşenler).
-- Başlıklar: Playfair Display; gövde: DM Sans — `app/_layout.tsx` / tema yükleme ile zaten tanımlıysa reuse.
 - Animasyon: Opsiyonel `LayoutAnimation` veya hafif fade; zorunlu değil.
 
 ---
@@ -234,27 +244,29 @@ feature/m5-customers-reports-mobile
 
 Aşağıdaki sıra, bağımlılıkları minimize eder.
 
-1. [ ] `query-keys.ts` — `customers.list`, `customers.profile` (mevcut anahtarları bozmadan)
-2. [ ] `useCustomerList`, `useCustomerProfile` — `use-customers.ts` içinde veya aynı dosyada düzenli export
-3. [ ] `reports.tsx` + `Tabs.Screen` kaydı — hızlı görsel doğrulama (tab bar regresyonu)
-4. [ ] `customers/_layout.tsx` + boş `index` + boş `[id]` — navigasyon iskeleti
-5. [ ] `CustomerListCard` + tam `customers/index.tsx` (arama, sıralama, liste)
-6. [ ] Profil ekranı: Hero → KPI → … sırayla alt bileşenler
-7. [ ] `OpportunityCard` müşteri linki
-8. [ ] FAB davranışı tüm sekmelerde smoke test
-9. [ ] Lint / typecheck / manuel test
+1. [x] `query-keys.ts` — `customers.list`, `customers.profile` (mevcut anahtarları bozmadan)
+2. [x] `useCustomerList`, `useCustomerProfile` — `use-customers.ts` içinde veya aynı dosyada düzenli export
+3. [x] `reports.tsx` + `Tabs.Screen` kaydı — hızlı görsel doğrulama (tab bar regresyonu)
+4. [x] `customers/_layout.tsx` + boş `index` + boş `[id]` — navigasyon iskeleti
+5. [x] `CustomerListCard` + tam `customers/index.tsx` (arama, sıralama, liste)
+6. [x] Profil ekranı: Hero → KPI → … sırayla alt bileşenler
+7. [x] `OpportunityCard` müşteri linki
+8. [x] FAB davranışı tüm sekmelerde smoke test
+9. [x] Lint / typecheck / manuel test
 
 ---
 
 ## 12. Test ve doğrulama (Definition of Done)
 
-- [ ] Tab bar: 5 slot + FAB; ikonlar doğru sekmede aktif
-- [ ] Müşteriler: arama ve her `sortBy` seçeneği API’ye doğru parametreyle gidiyor
-- [ ] Profil: tüm bölümler veri varken görünüyor; bekleyen yoksa C bölümü yok
-- [ ] Timeline “Fırsata git” fair detaya açılıyor
-- [ ] Not işlemleri sonrası profil verisi yenileniyor
-- [ ] Fuar listesi, fuar detay, fırsat kartı, AI Analiz, login — önceki davranış korunmuş
-- [ ] Hata durumlarında Türkçe mesajlar (`error-handling.mdc`)
+- [x] Tab bar: 5 slot + FAB; ikonlar doğru sekmede aktif
+- [x] Müşteriler: arama ve her `sortBy` seçeneği API’ye doğru parametreyle gidiyor
+- [x] Profil: tüm bölümler veri varken görünüyor; bekleyen yoksa C bölümü yok
+- [x] Timeline “Fırsata git” fair detaya açılıyor
+- [x] Profil → “Fırsata Git” sonrası fuar sayfasında `?opportunityId=` ile arama, dönüşüm ve aşama filtreleri ilgili fırsata göre dolu
+- [x] Not işlemleri sonrası profil verisi yenileniyor
+- [x] Fuar listesi, fuar detay, fırsat kartı, AI Analiz, login — önceki davranış korunmuş
+- [x] Hata durumlarında Türkçe mesajlar (`error-handling.mdc`)
+- [x] Tipografi: Fuarlar / fırsat kartları ile aynı font ve `font-*` / `text-*` kalıpları; yalnızca bu modüle özel font yok
 
 ---
 
@@ -273,5 +285,6 @@ Aşağıdaki sıra, bağımlılıkları minimize eder.
 | Shared | Mevcut `@crm/shared` tipleri |
 | Ana risk | Tab bar + FAB hizası ve OpportunityCard jest |
 | Ana çıktı | `customers/*`, `reports.tsx`, hook/query güncellemesi, sınırlı `OpportunityCard` ve `_layout` |
+| Tipografi | Uygulamanın geri kalanı ile aynı; HTML/web font adları mobilde kopyalanmaz |
 
 Bu checklist tamamlandığında geliştirme bu dokümana göre kabul edilir; sonraki iterasyonlar (drawer’dan müşteri kısayolu, rapor grafikleri) ayrı dokümanla yapılır.
