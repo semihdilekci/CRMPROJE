@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Müşteri Profili — Expo CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07070f;
+      --surface:   #0f0f1a;
+      --card:      #14141f;
+      --card-hover:#1a1a2e;
+      --border:    rgba(255,255,255,0.08);
+      --border-md: rgba(255,255,255,0.14);
+      --text:      #f0ede8;
+      --muted:     rgba(240,237,232,0.50);
+      --muted2:    rgba(240,237,232,0.30);
+      --accent-from: #8b5cf6;
+      --accent-to:   #06b6d4;
+      --gold:      #ffb347;
+      --green:     #4ade80;
+      --red:       #f87171;
+      --amber:     #fbbf24;
+      --blur:      blur(20px);
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND GLOW ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 15%, rgba(139,92,246,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 45% at 90% 80%, rgba(6,182,212,0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 35% at 50% 50%, rgba(139,92,246,0.06) 0%, transparent 70%);
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px; height: 56px;
+      background: rgba(7,7,15,0.75);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 28px; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 4px 14px rgba(139,92,246,0.45);
+    }
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px; font-weight: 600; color: var(--text);
+    }
+    nav { display: flex; align-items: center; gap: 2px; }
+    .nav-item {
+      padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer; transition: all 0.2s;
+      border: 1px solid transparent; text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-item.active {
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(6,182,212,0.12));
+      border-color: var(--border-md);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .btn-exit {
+      padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: var(--muted); background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-exit:hover { color: var(--text); border-color: var(--border-md); }
+
+    /* ── BREADCRUMB ── */
+    .breadcrumb-bar {
+      padding: 0 40px; display: flex; align-items: center;
+      gap: 6px; font-size: 13px; color: var(--muted); margin-top: 22px; margin-bottom: 4px;
+    }
+    .breadcrumb-bar a { color: var(--muted); text-decoration: none; }
+    .breadcrumb-bar a:hover { color: var(--text); }
+    .bc-sep { opacity: 0.4; }
+    .bc-back {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--muted); font-size: 13px; cursor: pointer;
+      text-decoration: none; transition: color 0.2s; margin-bottom: 18px;
+      padding: 0 40px;
+    }
+    .bc-back:hover { color: var(--text); }
+
+    /* ── MAIN CONTENT ── */
+    .content {
+      position: relative; z-index: 1;
+      max-width: 960px; margin: 0 auto;
+      padding: 0 40px 80px;
+    }
+
+    /* ── GLASS CARD BASE ── */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .glass-md {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    /* ── HERO CARD ── */
+    .hero-card {
+      padding: 28px 32px;
+      display: flex; gap: 28px; align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .avatar-wrap {
+      flex-shrink: 0; width: 110px; height: 110px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.35), rgba(6,182,212,0.25));
+      border: 1px solid rgba(139,92,246,0.35);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 38px; font-weight: 700; color: #fff;
+      letter-spacing: -1px;
+      box-shadow: 0 0 30px rgba(139,92,246,0.2);
+    }
+    .hero-info { flex: 1; }
+    .hero-company {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px; font-weight: 700; color: var(--text);
+      line-height: 1.2; margin-bottom: 4px;
+    }
+    .hero-name { font-size: 15px; color: var(--muted); margin-bottom: 16px; font-weight: 400; }
+    .hero-contacts { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+    .contact-item {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 14px; color: rgba(240,237,232,0.75);
+    }
+    .contact-item a { color: inherit; text-decoration: none; }
+    .contact-item a:hover { color: var(--text); }
+    .contact-icon { font-size: 13px; opacity: 0.7; }
+    .hero-dates {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted2);
+    }
+    .date-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted2); }
+    .hero-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+    .btn-primary {
+      padding: 8px 20px; border-radius: 9px; font-size: 13px; font-weight: 500;
+      color: #fff; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+      box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: 0.9; box-shadow: 0 4px 20px rgba(139,92,246,0.45); }
+    .btn-danger {
+      padding: 8px 20px; border-radius: 9px; font-size: 13px; font-weight: 500;
+      color: #f87171; background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-danger:hover { background: rgba(248,113,113,0.15); }
+
+    /* ── KPI ROW ── */
+    .kpi-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .kpi-card {
+      padding: 18px 20px; border-radius: 14px; text-align: center;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      transition: border-color 0.2s;
+    }
+    .kpi-card:hover { border-color: var(--border-md); }
+    .kpi-value {
+      font-size: 28px; font-weight: 700; line-height: 1;
+      margin-bottom: 6px; font-family: 'Playfair Display', serif;
+    }
+    .kpi-label { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-accent  { color: #a78bfa; }
+    .kpi-green   { color: var(--green); }
+    .kpi-amber   { color: var(--amber); }
+    .kpi-gold    { color: var(--gold); }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 20px; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .section-title-icon { font-size: 14px; }
+    .section-badge {
+      font-size: 11px; padding: 2px 10px; border-radius: 20px;
+      font-weight: 600; letter-spacing: 0.3px;
+    }
+    .badge-amber { background: rgba(251,191,36,0.15); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
+
+    /* ── BEKLEYEN AKSİYONLAR ── */
+    .pending-section {
+      border-color: rgba(251,191,36,0.2);
+      background: rgba(251,191,36,0.03);
+    }
+    .pending-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 22px; gap: 16px;
+    }
+    .pending-item + .pending-item { border-top: 1px solid rgba(251,191,36,0.1); }
+    .pending-info { flex: 1; }
+    .pending-fair { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .pending-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pending-stage {
+      font-size: 12px; padding: 2px 10px; border-radius: 20px; font-weight: 500;
+      background: rgba(139,92,246,0.15); color: #c4b5fd;
+      border: 1px solid rgba(139,92,246,0.25);
+    }
+    .pending-age { font-size: 12px; color: var(--amber); }
+    .pending-value { font-size: 12px; color: var(--muted); }
+    .btn-goto {
+      padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      color: rgba(167,139,250,0.9); background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.2); cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .btn-goto:hover { background: rgba(139,92,246,0.18); color: #c4b5fd; }
+
+    /* ── TIMELINE ── */
+    .timeline-body { padding: 22px; }
+    .timeline-year-group { margin-bottom: 8px; }
+    .timeline-year {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--muted2); text-transform: uppercase;
+      margin-bottom: 12px; padding-left: 22px;
+    }
+    .timeline-items { display: flex; flex-direction: column; gap: 10px; }
+
+    .tl-item { display: flex; gap: 16px; align-items: flex-start; }
+    .tl-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+    .tl-dot {
+      width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid; margin-bottom: 0;
+    }
+    .tl-dot.active  { background: #a78bfa; border-color: #8b5cf6; box-shadow: 0 0 8px rgba(139,92,246,0.6); }
+    .tl-dot.won     { background: var(--green); border-color: #22c55e; box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+    .tl-dot.lost    { background: rgba(248,113,113,0.5); border-color: var(--red); }
+    .tl-line {
+      width: 1px; flex: 1; min-height: 20px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+      margin-top: 4px;
+    }
+    .tl-card {
+      flex: 1; border-radius: 12px; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .tl-card.active { background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.2); }
+    .tl-card.won    { background: rgba(74,222,128,0.04); border: 1px solid rgba(74,222,128,0.18); }
+    .tl-card.lost   { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); }
+    .tl-card:hover  { border-color: rgba(255,255,255,0.18) !important; }
+
+    .tl-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; gap: 12px;
+    }
+    .tl-fair-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .tl-status-badge {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-active { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+    .badge-won    { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.22); }
+    .badge-lost   { background: rgba(248,113,113,0.10); color: var(--red); border: 1px solid rgba(248,113,113,0.20); }
+
+    .tl-card-body { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .tl-meta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .tl-meta-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .tl-meta-item.gold { color: var(--gold); }
+
+    /* Pipeline mini bar */
+    .pipeline-bar { display: flex; align-items: center; gap: 0; margin-top: 2px; }
+    .pip-step { display: flex; align-items: center; gap: 0; }
+    .pip-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;
+    }
+    .pip-dot.done    { background: rgba(139,92,246,0.7); border-color: #8b5cf6; }
+    .pip-dot.current { background: #a78bfa; border-color: #8b5cf6; box-shadow: 0 0 5px rgba(139,92,246,0.7); }
+    .pip-dot.won-dot { background: var(--green); border-color: #22c55e; }
+    .pip-dot.lost-dot{ background: var(--red); border-color: var(--red); }
+    .pip-arrow { width: 22px; height: 1px; background: rgba(255,255,255,0.12); }
+    .pip-label { font-size: 11px; color: var(--muted); margin-left: 8px; }
+
+    .tl-note {
+      font-size: 12px; color: var(--muted); font-style: italic;
+      padding: 6px 10px; border-radius: 7px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    }
+    .tl-note::before { content: '💬 '; font-style: normal; }
+
+    .tl-footer {
+      display: flex; justify-content: flex-end; padding: 0 16px 12px;
+    }
+
+    /* ── NOTLAR ── */
+    .notes-body { padding: 6px 22px 18px; display: flex; flex-direction: column; gap: 0; }
+    .note-item { padding: 14px 0; }
+    .note-item + .note-item { border-top: 1px solid var(--border); }
+    .note-meta {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--muted2); margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .note-source {
+      background: rgba(255,255,255,0.06); padding: 1px 8px; border-radius: 20px;
+      font-size: 11px; color: var(--muted); border: 1px solid var(--border);
+    }
+    .note-text { font-size: 13px; color: rgba(240,237,232,0.8); line-height: 1.6; }
+    .note-actions {
+      display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      cursor: pointer; font-size: 12px; transition: all 0.2s; color: var(--muted);
+    }
+    .btn-icon:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+    .btn-icon.del:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); color: var(--red); }
+    .btn-add-note {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: rgba(167,139,250,0.8);
+      background: rgba(139,92,246,0.08); border: 1px dashed rgba(139,92,246,0.25);
+      border-radius: 9px; padding: 8px 16px; cursor: pointer; transition: all 0.2s;
+      width: 100%; justify-content: center; margin-top: 10px;
+    }
+    .btn-add-note:hover { background: rgba(139,92,246,0.14); color: #c4b5fd; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+    /* fade-in animation */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.4s ease both; }
+    .delay-1 { animation-delay: 0.06s; }
+    .delay-2 { animation-delay: 0.12s; }
+    .delay-3 { animation-delay: 0.18s; }
+    .delay-4 { animation-delay: 0.24s; }
+    .delay-5 { animation-delay: 0.30s; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════ TOPBAR ══════════════ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="logo" href="#">
+        <div class="logo-icon">✦</div>
+        <span class="logo-text">Expo CRM</span>
+      </a>
+      <nav>
+        <a class="nav-item" href="#">Fuarlar</a>
+        <a class="nav-item active" href="#">Müşteriler</a>
+        <a class="nav-item" href="#">Raporlar</a>
+        <a class="nav-item" href="#">AI Analiz</a>
+        <a class="nav-item" href="#">Yönetim ▾</a>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-exit">Çıkış</button>
+    </div>
+  </header>
+
+  <!-- ══════════════ BACK LINK ══════════════ -->
+  <div style="position:relative;z-index:1;">
+    <a class="bc-back" href="#">← Müşterilere Dön</a>
+  </div>
+
+  <!-- ══════════════ CONTENT ══════════════ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <div class="glass hero-card fade-up">
+      <div class="avatar-wrap">AI</div>
+
+      <div class="hero-info">
+        <div class="hero-company">Ankara Isı Sistemleri</div>
+        <div class="hero-name">Burak Çelik · Satın Alma Müdürü</div>
+        <div class="hero-contacts">
+          <div class="contact-item">
+            <span class="contact-icon">📞</span>
+            <a href="tel:+905327654321">+90 532 765 43 21</a>
+          </div>
+          <div class="contact-item">
+            <span class="contact-icon">✉</span>
+            <a href="mailto:burak@ankaraisi.com.tr">burak@ankaraisi.com.tr</a>
+          </div>
+        </div>
+        <div class="hero-dates">
+          <span>🏷 İlk Temas: Haz 2024</span>
+          <div class="date-dot"></div>
+          <span>Son Temas: Mar 2026</span>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn-primary">✏️ Düzenle</button>
+        <button class="btn-danger">🗑 Sil</button>
+      </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row fade-up delay-1">
+      <div class="kpi-card">
+        <div class="kpi-value kpi-accent">5</div>
+        <div class="kpi-label">Toplam Fırsat</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value kpi-green">2</div>
+        <div class="kpi-label">Kazanılan</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value kpi-amber">%40</div>
+        <div class="kpi-label">Dönüşüm Oranı</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value kpi-gold" style="font-size:22px;">450K TRY</div>
+        <div class="kpi-label">Toplam Bütçe</div>
+      </div>
+    </div>
+
+    <!-- BEKLEYEN AKSİYONLAR -->
+    <div class="glass section pending-section fade-up delay-2">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-title-icon">⚠️</span>
+          Bekleyen Aksiyonlar
+        </div>
+        <span class="section-badge badge-amber">1 açık fırsat</span>
+      </div>
+
+      <div class="pending-item">
+        <div class="pending-info">
+          <div class="pending-fair">MCE Expocomfort Milano 2026</div>
+          <div class="pending-meta">
+            <span class="pending-stage">Teklif Aşamasında</span>
+            <span class="pending-age">🕐 12 gündür bu aşamada</span>
+            <span class="pending-value">50.000 EUR</span>
+          </div>
+        </div>
+        <a class="btn-goto" href="#">Fırsata Git →</a>
+      </div>
+    </div>
+
+    <!-- FUAR KATILIM GEÇMİŞİ -->
+    <div class="glass section fade-up delay-3">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-title-icon">📅</span>
+          Fuar Katılım Geçmişi
+        </div>
+        <span style="font-size:12px;color:var(--muted);">3 fuar · 5 fırsat</span>
+      </div>
+
+      <div class="timeline-body">
+
+        <!-- 2026 -->
+        <div class="timeline-year-group">
+          <div class="timeline-year">2026</div>
+          <div class="timeline-items">
+
+            <div class="tl-item">
+              <div class="tl-dot-col">
+                <div class="tl-dot active"></div>
+                <div class="tl-line"></div>
+              </div>
+              <div class="tl-card active">
+                <div class="tl-card-header">
+                  <span class="tl-fair-name">MCE Expocomfort Milano 2026</span>
+                  <span class="tl-status-badge badge-active">● Teklif</span>
+                </div>
+                <div class="tl-card-body">
+                  <div class="tl-meta-row">
+                    <span class="tl-meta-item">📅 17 Mar – 20 Mar 2026</span>
+                    <span class="tl-meta-item gold">💰 50.000 EUR</span>
+                    <span class="tl-meta-item">📦 Kompresörler (150t) · Vana Sistemleri (80t)</span>
+                  </div>
+                  <div class="pipeline-bar">
+                    <div class="pip-step">
+                      <div class="pip-dot done"></div>
+                    </div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-step">
+                      <div class="pip-dot done"></div>
+                    </div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-step">
+                      <div class="pip-dot current"></div>
+                    </div>
+                    <span class="pip-label">Tanışma · Toplantı · Teklif</span>
+                  </div>
+                </div>
+                <div class="tl-footer">
+                  <a class="btn-goto" href="#">Fırsata Git →</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2025 -->
+        <div class="timeline-year-group" style="margin-top:20px;">
+          <div class="timeline-year">2025</div>
+          <div class="timeline-items">
+
+            <div class="tl-item">
+              <div class="tl-dot-col">
+                <div class="tl-dot won"></div>
+                <div class="tl-line"></div>
+              </div>
+              <div class="tl-card won">
+                <div class="tl-card-header">
+                  <span class="tl-fair-name">ISK-SODEX Istanbul 2025</span>
+                  <span class="tl-status-badge badge-won">✓ Satışa Dönüştü</span>
+                </div>
+                <div class="tl-card-body">
+                  <div class="tl-meta-row">
+                    <span class="tl-meta-item">📅 8 Eki – 11 Eki 2025</span>
+                    <span class="tl-meta-item gold">💰 200.000 TRY</span>
+                    <span class="tl-meta-item">📦 Filtre Üniteleri (60t)</span>
+                  </div>
+                  <div class="pipeline-bar">
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot won-dot"></div>
+                    <span class="pip-label">Tanışma · Toplantı · Sözleşme · Satışa Dönüştü</span>
+                  </div>
+                  <div class="tl-note">"Sözleşme imzalandı. Teslimat Aralık 2025."</div>
+                </div>
+                <div class="tl-footer">
+                  <a class="btn-goto" href="#">Fırsata Git →</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-dot-col">
+                <div class="tl-dot won"></div>
+                <div class="tl-line"></div>
+              </div>
+              <div class="tl-card won">
+                <div class="tl-card-header">
+                  <span class="tl-fair-name">WIN Eurasia 2025</span>
+                  <span class="tl-status-badge badge-won">✓ Satışa Dönüştü</span>
+                </div>
+                <div class="tl-card-body">
+                  <div class="tl-meta-row">
+                    <span class="tl-meta-item">📅 12 Haz – 15 Haz 2025</span>
+                    <span class="tl-meta-item gold">💰 130.000 TRY</span>
+                    <span class="tl-meta-item">📦 Vana Sistemleri (45t)</span>
+                  </div>
+                  <div class="pipeline-bar">
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot won-dot"></div>
+                    <span class="pip-label">Tanışma · Teklif · Satışa Dönüştü</span>
+                  </div>
+                </div>
+                <div class="tl-footer">
+                  <a class="btn-goto" href="#">Fırsata Git →</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2024 -->
+        <div class="timeline-year-group" style="margin-top:20px;">
+          <div class="timeline-year">2024</div>
+          <div class="timeline-items">
+
+            <div class="tl-item">
+              <div class="tl-dot-col">
+                <div class="tl-dot lost"></div>
+              </div>
+              <div class="tl-card lost">
+                <div class="tl-card-header">
+                  <span class="tl-fair-name">Hannover Messe 2024</span>
+                  <span class="tl-status-badge badge-lost">✕ Olumsuz</span>
+                </div>
+                <div class="tl-card-body">
+                  <div class="tl-meta-row">
+                    <span class="tl-meta-item">📅 22 Nis – 26 Nis 2024</span>
+                    <span class="tl-meta-item">💰 —</span>
+                  </div>
+                  <div class="pipeline-bar">
+                    <div class="pip-dot done"></div>
+                    <div class="pip-arrow"></div>
+                    <div class="pip-dot lost-dot"></div>
+                    <span class="pip-label">Tanışma · Olumsuz</span>
+                  </div>
+                  <div class="tl-note">"Fiyat rekabeti nedeniyle kaybedildi."</div>
+                </div>
+                <div class="tl-footer">
+                  <a class="btn-goto" href="#">Fırsata Git →</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /timeline-body -->
+    </div><!-- /section -->
+
+    <!-- NOTLAR -->
+    <div class="glass section fade-up delay-4">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-title-icon">💬</span>
+          Notlar
+        </div>
+        <span style="font-size:12px;color:var(--muted);">2 not</span>
+      </div>
+
+      <div class="notes-body">
+
+        <div class="note-item">
+          <div class="note-meta">
+            <span class="note-source">MCE Expocomfort 2026</span>
+            <span>Burak Çelik</span>
+            <div class="date-dot"></div>
+            <span>18 Mar 2026</span>
+          </div>
+          <div class="note-text">
+            Teknik şartname talebinde bulundu, önümüzdeki hafta geri dönecek. Ürün kataloğu gönderildi.
+          </div>
+          <div class="note-actions">
+            <button class="btn-icon">✏️</button>
+            <button class="btn-icon del">🗑</button>
+          </div>
+        </div>
+
+        <div class="note-item">
+          <div class="note-meta">
+            <span class="note-source">ISK-SODEX 2025</span>
+            <span>Ahmet Yılmaz</span>
+            <div class="date-dot"></div>
+            <span>10 Eki 2025</span>
+          </div>
+          <div class="note-text">
+            Sözleşme imzalandı. Teslimat Aralık 2025 olarak belirlendi. Lojistik koordinasyon ekibi bilgilendirildi.
+          </div>
+          <div class="note-actions">
+            <button class="btn-icon">✏️</button>
+            <button class="btn-icon del">🗑</button>
+          </div>
+        </div>
+
+        <button class="btn-add-note">+ Not Ekle</button>
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>

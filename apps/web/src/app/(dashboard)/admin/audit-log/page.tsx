@@ -46,16 +46,27 @@ function summary(entry: AuditLogEntry): string {
   return `${entity}${id} — ${action}`;
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminAuditLogPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [userId, setUserId] = useState('');
   const [entityType, setEntityType] = useState('');
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<AuditLogFilters>({});
 
-  const { data: entries, isLoading } = useAuditLog(filters);
+  const { data, isLoading } = useAuditLog({
+    ...filters,
+    page,
+    limit: PAGE_SIZE,
+  });
+
+  const entries = data?.data ?? [];
+  const meta = data?.meta;
 
   const handleApply = () => {
+    setPage(1);
     setFilters({
       from: from.trim() || undefined,
       to: to.trim() || undefined,
@@ -69,6 +80,7 @@ export default function AdminAuditLogPage() {
     setTo('');
     setUserId('');
     setEntityType('');
+    setPage(1);
     setFilters({});
   };
 
@@ -130,46 +142,76 @@ export default function AdminAuditLogPage() {
         {isLoading ? (
           <p className="mt-6 text-white/60">Yükleniyor...</p>
         ) : entries && entries.length > 0 ? (
-          <div className="mt-6 overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
-            <table className="w-full min-w-[700px] text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
-                  <th className="px-4 py-3 font-semibold text-white">Tarih</th>
-                  <th className="px-4 py-3 font-semibold text-white">Kullanıcı</th>
-                  <th className="px-4 py-3 font-semibold text-white">İşlem</th>
-                  <th className="px-4 py-3 font-semibold text-white">Özet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((e) => (
-                  <tr key={e.id} className="border-b border-white/10 hover:bg-white/5">
-                    <td className="whitespace-nowrap px-4 py-3 text-white/60">
-                      {formatDate(e.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 text-white">
-                      {e.userEmail ?? (e.userId ? `ID: ${e.userId}` : '—')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          e.action === 'delete'
-                            ? 'text-danger'
-                            : e.action === 'create'
-                              ? 'text-green-600'
-                              : 'text-violet-400'
-                        }
-                      >
-                        {ACTION_LABELS[e.action] ?? e.action}
-                      </span>
-                      <span className="ml-1 text-white/60">({e.entityType})</span>
-                    </td>
-                    <td className="max-w-[320px] truncate px-4 py-3 text-white/60" title={summary(e)}>
-                      {summary(e)}
-                    </td>
+          <div className="mt-6 space-y-4">
+            <div className="overflow-x-auto rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10">
+              <table className="w-full min-w-[700px] text-left text-[14px]">
+                <thead>
+                  <tr className="border-b border-white/20 backdrop-blur-xl bg-white/5">
+                    <th className="px-4 py-3 font-semibold text-white">Tarih</th>
+                    <th className="px-4 py-3 font-semibold text-white">Kullanıcı</th>
+                    <th className="px-4 py-3 font-semibold text-white">İşlem</th>
+                    <th className="px-4 py-3 font-semibold text-white">Özet</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {entries.map((e) => (
+                    <tr key={e.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="whitespace-nowrap px-4 py-3 text-white/60">
+                        {formatDate(e.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-white">
+                        {e.userEmail ?? (e.userId ? `ID: ${e.userId}` : '—')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={
+                            e.action === 'delete'
+                              ? 'text-danger'
+                              : e.action === 'create'
+                                ? 'text-green-600'
+                                : 'text-violet-400'
+                          }
+                        >
+                          {ACTION_LABELS[e.action] ?? e.action}
+                        </span>
+                        <span className="ml-1 text-white/60">({e.entityType})</span>
+                      </td>
+                      <td className="max-w-[320px] truncate px-4 py-3 text-white/60" title={summary(e)}>
+                        {summary(e)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {meta && (
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-xl border border-white/20 backdrop-blur-2xl bg-white/10 px-4 py-3">
+                <p className="text-[13px] text-white/60">
+                  {meta.total > 0
+                    ? `${(meta.page - 1) * meta.limit + 1}–${Math.min(meta.page * meta.limit, meta.total)} / ${meta.total} kayıt`
+                    : '0 kayıt'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={meta.page <= 1}
+                  >
+                    Önceki
+                  </Button>
+                  <span className="px-2 text-[13px] text-white/80">
+                    Sayfa {meta.page} / {meta.totalPages}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                    disabled={meta.page >= meta.totalPages}
+                  >
+                    Sonraki
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-6 rounded-xl border border-dashed border-white/20 py-16 text-center">

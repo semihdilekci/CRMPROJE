@@ -19,6 +19,23 @@ export interface AuditLogFilters {
   to?: string;
   userId?: string;
   entityType?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AuditLogListResult {
+  data: Array<{
+    id: string;
+    userId: string | null;
+    userEmail: string | null;
+    entityType: string;
+    entityId: string | null;
+    action: string;
+    before: unknown;
+    after: unknown;
+    createdAt: string;
+  }>;
+  meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
 @Injectable()
@@ -27,19 +44,7 @@ export class AuditService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: AuditLogFilters = {}): Promise<
-    Array<{
-      id: string;
-      userId: string | null;
-      userEmail: string | null;
-      entityType: string;
-      entityId: string | null;
-      action: string;
-      before: unknown;
-      after: unknown;
-      createdAt: string;
-    }>
-  > {
+  async findAll(filters: AuditLogFilters = {}): Promise<AuditLogListResult> {
     const where: {
       createdAt?: { gte?: Date; lte?: Date };
       userId?: string;
@@ -54,12 +59,24 @@ export class AuditService {
     if (filters.userId) where.userId = filters.userId;
     if (filters.entityType) where.entityType = filters.entityType;
 
-    const list = await this.prisma.auditLog.findMany({
-      where: Object.keys(where).length > 0 ? where : undefined,
-      orderBy: { createdAt: 'desc' },
-      take: 500,
-    });
-    return list.map((r) => ({
+    const page = Math.max(1, filters.page ?? 1);
+    const rawLimit = filters.limit ?? 20;
+    const limit = Math.min(100, Math.max(1, rawLimit));
+    const skip = (page - 1) * limit;
+
+    const [list, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where: Object.keys(where).length > 0 ? where : undefined,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      this.prisma.auditLog.count({
+        where: Object.keys(where).length > 0 ? where : undefined,
+      }),
+    ]);
+
+    const data = list.map((r) => ({
       id: r.id,
       userId: r.userId,
       userEmail: r.userEmail,
@@ -70,6 +87,16 @@ export class AuditService {
       after: r.after as unknown,
       createdAt: r.createdAt.toISOString(),
     }));
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 
   async log(payload: AuditLogPayload): Promise<void> {
