@@ -16,6 +16,8 @@ export function getNavForRole(role: UserRole | undefined): {
 } {
   const main: NavLink[] = [
     { href: '/fairs', label: 'Fuarlar' },
+    { href: '/customers', label: 'Müşteriler' },
+    { href: '/reports', label: 'Raporlar' },
     { href: '/chat', label: 'AI Analiz' },
   ];
 

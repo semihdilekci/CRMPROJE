@@ -34,8 +34,12 @@ export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair, actio
   }, []);
 
   const navActiveClass =
-    'bg-gradient-to-r from-violet-500/20 to-cyan-500/20 text-white border border-white/20';
-  const navInactiveClass = 'text-white/60 hover:text-white hover:bg-white/5';
+    'bg-gradient-to-br from-violet-500/[0.18] to-cyan-500/[0.12] text-[#f0ede8] border border-white/[0.14]';
+  const navInactiveClass = 'text-[#f0ede8]/50 hover:text-[#f0ede8] hover:bg-white/5';
+  const isLinkActive = (href: string) => {
+    if (href === '/customers') return pathname === href || pathname.startsWith('/customers/');
+    return pathname === href;
+  };
 
   return (
     <header className="sticky top-0 z-[100] border-b border-white/10 backdrop-blur-xl bg-slate-950/30">
@@ -72,7 +76,7 @@ export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair, actio
                 key={link.href}
                 href={link.href}
                 className={`rounded-lg px-3 py-2 text-[13px] transition-all duration-300 ${
-                  pathname === link.href ? navActiveClass : navInactiveClass
+                  isLinkActive(link.href) ? navActiveClass : navInactiveClass
                 }`}
               >
                 {link.label}

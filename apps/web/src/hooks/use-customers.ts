@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   ApiSuccessResponse,
   Customer,
+  CustomerListItem,
+  CustomerListSortBy,
+  CustomerProfileResponse,
+  OpportunityNote,
+  UpdateOpportunityNoteInput,
   CreateCustomerDto,
   UpdateCustomerDto,
 } from '@crm/shared';
@@ -20,6 +25,35 @@ export function useCustomers(search?: string) {
       );
       return data.data;
     },
+  });
+}
+
+export function useCustomerList(search?: string, sortBy: CustomerListSortBy = 'lastContact') {
+  return useQuery({
+    queryKey: queryKeys.customers.list(search, sortBy),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (sortBy) params.set('sortBy', sortBy);
+
+      const { data } = await api.get<ApiSuccessResponse<CustomerListItem[]>>(
+        `/customers?${params.toString()}`,
+      );
+      return data.data;
+    },
+  });
+}
+
+export function useCustomerProfile(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.customers.profile(id ?? ''),
+    queryFn: async () => {
+      const { data } = await api.get<ApiSuccessResponse<CustomerProfileResponse>>(
+        `/customers/${id}/profile`,
+      );
+      return data.data;
+    },
+    enabled: !!id,
   });
 }
 
@@ -63,6 +97,52 @@ export function useDeleteCustomer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+    },
+  });
+}
+
+export function useUpdateOpportunityNote(customerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      opportunityId,
+      noteId,
+      dto,
+    }: {
+      opportunityId: string;
+      noteId: string;
+      dto: UpdateOpportunityNoteInput;
+    }) => {
+      const { data } = await api.patch<ApiSuccessResponse<OpportunityNote>>(
+        `/opportunities/${opportunityId}/notes/${noteId}`,
+        dto,
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customers.profile(customerId),
+      });
+    },
+  });
+}
+
+export function useDeleteOpportunityNote(customerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      opportunityId,
+      noteId,
+    }: {
+      opportunityId: string;
+      noteId: string;
+    }) => {
+      await api.delete(`/opportunities/${opportunityId}/notes/${noteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customers.profile(customerId),
+      });
     },
   });
 }

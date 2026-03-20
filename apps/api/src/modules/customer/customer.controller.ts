@@ -14,6 +14,9 @@ import {
 import {
   ApiSuccessResponse,
   Customer,
+  CustomerListItem,
+  CustomerListSortBy,
+  CustomerProfileResponse,
   createCustomerSchema,
   updateCustomerSchema,
   CreateCustomerDto,
@@ -41,9 +44,18 @@ export class CustomerController {
   @Get()
   async findAll(
     @Query('search') search?: string,
-  ): Promise<ApiSuccessResponse<Customer[]>> {
-    const data = await this.customerService.findAll(search);
+    @Query('sortBy') sortBy?: CustomerListSortBy,
+  ): Promise<ApiSuccessResponse<CustomerListItem[]>> {
+    const data = await this.customerService.findAll(search, sortBy ?? 'lastContact');
     return { success: true, message: 'Müşteriler başarıyla getirildi', data };
+  }
+
+  @Get(':id/profile')
+  async findProfileById(
+    @Param('id') id: string,
+  ): Promise<ApiSuccessResponse<CustomerProfileResponse>> {
+    const data = await this.customerService.findProfileById(id);
+    return { success: true, message: 'Müşteri profili başarıyla getirildi', data };
   }
 
   @Get(':id')

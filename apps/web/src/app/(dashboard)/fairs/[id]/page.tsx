@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useFairDetail, useDeleteFair } from '@/hooks/use-fairs';
 import { useOpportunitiesByFair } from '@/hooks/use-opportunities';
 import { TopBar } from '@/components/layout/TopBar';
@@ -19,12 +19,16 @@ import type { OpportunityWithCustomer } from '@crm/shared';
 export default function FairDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const fairId = params.id as string;
+  const prefilledCompany = searchParams.get('company') ?? '';
+  const focusedOpportunityId = searchParams.get('opportunityId');
+  const focusedCustomerId = searchParams.get('customerId');
 
   const { data: fair, isLoading } = useFairDetail(fairId);
   const deleteFair = useDeleteFair();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(prefilledCompany);
   const [selectedRates, setSelectedRates] = useState<string[]>([]);
   const [stageFilter, setStageFilter] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -56,11 +60,23 @@ export default function FairDetailPage() {
 
   const baseOpportunities = opportunities ?? allOpportunities;
   const displayOpportunities = useMemo(() => {
-    if (selectedRates.length === 0) return baseOpportunities;
-    return baseOpportunities.filter(
+    const byRate =
+      selectedRates.length === 0
+        ? baseOpportunities
+        : baseOpportunities.filter(
       (o) => o.conversionRate && selectedRates.includes(o.conversionRate),
     );
-  }, [baseOpportunities, selectedRates]);
+
+    if (focusedOpportunityId) {
+      return byRate.filter((o) => o.id === focusedOpportunityId);
+    }
+
+    if (focusedCustomerId) {
+      return byRate.filter((o) => o.customer.id === focusedCustomerId);
+    }
+
+    return byRate;
+  }, [baseOpportunities, selectedRates, focusedOpportunityId, focusedCustomerId]);
 
   const handleDeleteFair = async () => {
     await deleteFair.mutateAsync(fairId);
@@ -126,6 +142,7 @@ export default function FairDetailPage() {
                 <OpportunityCard
                   opportunity={opp}
                   fairId={fairId}
+                  fairName={fair.name}
                   onEdit={() => {
                     setEditingOpportunity(opp);
                     setShowOpportunityModal(true);

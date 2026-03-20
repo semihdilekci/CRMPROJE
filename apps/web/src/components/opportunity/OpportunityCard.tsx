@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { OpportunityWithCustomer } from '@crm/shared';
 import {
   formatBudget,
@@ -39,12 +40,14 @@ function formatTonnageLine(quantity: number | null, unit: string): string {
 interface OpportunityCardProps {
   opportunity: OpportunityWithCustomer;
   fairId: string;
+  fairName?: string;
   onEdit: () => void;
 }
 
 export function OpportunityCard({
   opportunity,
   fairId,
+  fairName,
   onEdit,
 }: OpportunityCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -111,10 +114,16 @@ export function OpportunityCard({
           className="flex h-[144px] w-full cursor-pointer items-stretch justify-between p-4 text-left"
         >
           <div className="flex min-w-0 flex-1 flex-col">
-            <p className="text-[15px] font-bold text-white">{customer.name}</p>
-            <p className="text-[13px] font-semibold text-white/80">
-              {customer.company}
-            </p>
+            <Link
+              href={`/customers/${customer.id}?from=/fairs/${fairId}${fairName ? `&fromName=${encodeURIComponent(fairName)}` : ''}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex w-fit flex-col text-left hover:opacity-90"
+            >
+              <p className="text-[15px] font-bold text-white">{customer.name}</p>
+              <p className="text-[13px] font-semibold text-white/80">
+                {customer.company}
+              </p>
+            </Link>
             <div className="mt-auto flex flex-wrap gap-1.5">
               {opportunity.conversionRate && (
                 <Badge color={rateColor} className="whitespace-nowrap shrink-0">
