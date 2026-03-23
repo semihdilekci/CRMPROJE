@@ -8,6 +8,9 @@ import { ExecutiveSummaryDashboard } from '@/components/reports/dashboards/Execu
 import { FairPerformanceDashboard } from '@/components/reports/dashboards/FairPerformanceDashboard';
 import { FairComparisonDashboard } from '@/components/reports/dashboards/FairComparisonDashboard';
 import { FairTargetsDashboard } from '@/components/reports/dashboards/FairTargetsDashboard';
+import { PipelineOverviewDashboard } from '@/components/reports/dashboards/PipelineOverviewDashboard';
+import { PipelineVelocityDashboard } from '@/components/reports/dashboards/PipelineVelocityDashboard';
+import { WinLossDashboard } from '@/components/reports/dashboards/WinLossDashboard';
 import { ReportDashboardLayout } from '@/components/reports/ReportDashboardLayout';
 
 interface ReportDashboardPageProps {
@@ -27,6 +30,9 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType> = {
   'fair-performance': FairPerformanceDashboard,
   'fair-comparison': FairComparisonDashboard,
   'fair-targets': FairTargetsDashboard,
+  'pipeline-overview': PipelineOverviewDashboard,
+  'pipeline-velocity': PipelineVelocityDashboard,
+  'win-loss': WinLossDashboard,
 };
 
 export default function ReportDashboardPage({ params }: ReportDashboardPageProps) {
