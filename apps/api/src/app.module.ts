@@ -17,6 +17,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
 import { TeamModule } from '@modules/team/team.module';
 import { OpportunityModule } from '@modules/opportunity/opportunity.module';
 import { ChatModule } from '@modules/chat/chat.module';
+import { ReportModule } from '@modules/report/report.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ChatModule } from '@modules/chat/chat.module';
     AuditModule,
     SettingsModule,
     TeamModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
