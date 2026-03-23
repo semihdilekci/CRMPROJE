@@ -97,6 +97,15 @@ export function TeamPerformanceDashboard() {
       title="Takım Performansı"
       subtitle="Takımların fırsat, gelir ve kazanma karşılaştırması"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.tableData ?? []) as Record<string, unknown>[],
+        columns: TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'takim-performansi',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {kpis.map((kpi, i) => (

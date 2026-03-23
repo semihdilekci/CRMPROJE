@@ -52,6 +52,15 @@ export function ProductFairMatrixDashboard() {
       title="Ürün × Fuar Matrisi"
       subtitle="Ürün ve fuar kesişiminde fırsat ve tonaj yoğunluğu"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.tableData ?? []) as Record<string, unknown>[],
+        columns: TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'urun-fuar-matrisi',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <AnalyticsCard title="Fırsat Matrisi" subtitle="Satır: ürün · Sütun: fuar" delay={0.45}>

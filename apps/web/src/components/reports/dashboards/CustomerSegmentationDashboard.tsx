@@ -99,6 +99,15 @@ export function CustomerSegmentationDashboard() {
       title="Müşteri Segmentasyonu"
       subtitle="Değer, dönüşüm ve fuar bazlı müşteri dağılımı"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.tableData ?? []) as Record<string, unknown>[],
+        columns: TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'musteri-segmentasyonu',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AnalyticsCard

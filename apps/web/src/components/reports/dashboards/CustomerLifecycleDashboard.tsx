@@ -115,6 +115,15 @@ export function CustomerLifecycleDashboard() {
       title="Müşteri Yaşam Döngüsü"
       subtitle="Sadakat, fuar katılımı ve pasif müşteriler"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.inactiveCustomerTable ?? []) as Record<string, unknown>[],
+        columns: INACTIVE_TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'musteri-yasam-dongusu-pasif',
+      }}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

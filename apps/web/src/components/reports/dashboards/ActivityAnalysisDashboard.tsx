@@ -75,6 +75,15 @@ export function ActivityAnalysisDashboard() {
       title="Aktivite Analizi"
       subtitle="Sistem aktiviteleri, trend ve kullanıcı dağılımı"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.tableData ?? []) as Record<string, unknown>[],
+        columns: TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'aktivite-analizi',
+      }}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

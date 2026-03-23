@@ -89,6 +89,15 @@ export function PipelineVelocityDashboard() {
       subtitle="Fırsatların aşamalar arası geçiş hızları ve darboğaz tespiti"
       isLoading={isLoading}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
+      csvExportConfig={{
+        rows: data?.slowOpportunities ?? [],
+        columns: SLOW_TABLE_COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          ...(c.format && c.format !== 'text' ? { format: c.format } : {}),
+        })),
+        filename: 'pipeline-hiz',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}

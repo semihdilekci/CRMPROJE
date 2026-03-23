@@ -122,6 +122,15 @@ export function CustomerOverviewDashboard() {
       title="Müşteri Genel Bakış"
       subtitle="Müşteri hacmi, dağılım ve portföy özeti"
       isLoading={isLoading}
+      csvExportConfig={{
+        rows: (data?.tableData ?? []) as Record<string, unknown>[],
+        columns: TABLE_COLUMNS.map((c) =>
+          c.format === 'number' || c.format === 'currency' || c.format === 'percent' || c.format === 'date'
+            ? { key: c.key, label: c.label, format: c.format }
+            : { key: c.key, label: c.label },
+        ),
+        filename: 'musteri-genel-bakis',
+      }}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

@@ -114,6 +114,15 @@ export function WinLossDashboard() {
       subtitle="Neden kazanıyoruz, neden kaybediyoruz? Kayıp nedenleri detayı"
       isLoading={isLoading}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
+      csvExportConfig={{
+        rows: data?.lostOpportunities ?? [],
+        columns: LOST_TABLE_COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          ...(c.format && c.format !== 'text' ? { format: c.format } : {}),
+        })),
+        filename: 'kazan-kaybet-kayiplar',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}

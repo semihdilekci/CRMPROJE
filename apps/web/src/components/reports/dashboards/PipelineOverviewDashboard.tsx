@@ -90,6 +90,15 @@ export function PipelineOverviewDashboard() {
       subtitle="Satış hunisinin anlık durumu: aşama dağılımı, değerler, darboğazlar"
       isLoading={isLoading}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
+      csvExportConfig={{
+        rows: data?.tableData ?? [],
+        columns: TABLE_COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          ...(c.format && c.format !== 'text' ? { format: c.format } : {}),
+        })),
+        filename: 'pipeline-genel-bakis',
+      }}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}

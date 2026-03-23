@@ -211,6 +211,15 @@ export function ExecutiveSummaryDashboard() {
           onReset={handleReset}
         />
       }
+      csvExportConfig={{
+        rows: data?.recentWonOpportunities ?? [],
+        columns: WON_TABLE_COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          ...(c.format && c.format !== 'text' ? { format: c.format } : {}),
+        })),
+        filename: 'yonetici-ozeti',
+      }}
     >
       {/* KPI Cards — 6 cards in 2 rows of 3 on desktop */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

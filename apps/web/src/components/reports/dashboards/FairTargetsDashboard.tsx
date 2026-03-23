@@ -121,6 +121,15 @@ export function FairTargetsDashboard() {
           onReset={handleReset}
         />
       }
+      csvExportConfig={{
+        rows: data?.allFairTargets ?? [],
+        columns: TABLE_COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          ...(c.format && c.format !== 'text' ? { format: c.format } : {}),
+        })),
+        filename: 'fuar-hedefler',
+      }}
     >
       {/* KPI + Gauges */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
