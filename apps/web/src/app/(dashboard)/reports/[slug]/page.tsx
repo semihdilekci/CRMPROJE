@@ -11,6 +11,16 @@ import { FairTargetsDashboard } from '@/components/reports/dashboards/FairTarget
 import { PipelineOverviewDashboard } from '@/components/reports/dashboards/PipelineOverviewDashboard';
 import { PipelineVelocityDashboard } from '@/components/reports/dashboards/PipelineVelocityDashboard';
 import { WinLossDashboard } from '@/components/reports/dashboards/WinLossDashboard';
+import { ProductAnalysisDashboard } from '@/components/reports/dashboards/ProductAnalysisDashboard';
+import { ProductFairMatrixDashboard } from '@/components/reports/dashboards/ProductFairMatrixDashboard';
+import { TeamPerformanceDashboard } from '@/components/reports/dashboards/TeamPerformanceDashboard';
+import { IndividualPerformanceDashboard } from '@/components/reports/dashboards/IndividualPerformanceDashboard';
+import { ActivityAnalysisDashboard } from '@/components/reports/dashboards/ActivityAnalysisDashboard';
+import { RevenueDashboard } from '@/components/reports/dashboards/RevenueDashboard';
+import { ForecastDashboard } from '@/components/reports/dashboards/ForecastDashboard';
+import { CustomerOverviewDashboard } from '@/components/reports/dashboards/CustomerOverviewDashboard';
+import { CustomerSegmentationDashboard } from '@/components/reports/dashboards/CustomerSegmentationDashboard';
+import { CustomerLifecycleDashboard } from '@/components/reports/dashboards/CustomerLifecycleDashboard';
 import { ReportDashboardLayout } from '@/components/reports/ReportDashboardLayout';
 
 interface ReportDashboardPageProps {
@@ -33,6 +43,16 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType> = {
   'pipeline-overview': PipelineOverviewDashboard,
   'pipeline-velocity': PipelineVelocityDashboard,
   'win-loss': WinLossDashboard,
+  'product-analysis': ProductAnalysisDashboard,
+  'product-fair-matrix': ProductFairMatrixDashboard,
+  'team-performance': TeamPerformanceDashboard,
+  'individual-performance': IndividualPerformanceDashboard,
+  'activity-analysis': ActivityAnalysisDashboard,
+  'revenue': RevenueDashboard,
+  'forecast': ForecastDashboard,
+  'customer-overview': CustomerOverviewDashboard,
+  'customer-segmentation': CustomerSegmentationDashboard,
+  'customer-lifecycle': CustomerLifecycleDashboard,
 };
 
 export default function ReportDashboardPage({ params }: ReportDashboardPageProps) {
