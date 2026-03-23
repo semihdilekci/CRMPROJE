@@ -5,6 +5,9 @@ import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { REPORT_CATALOG } from '@crm/shared';
 import { ExecutiveSummaryDashboard } from '@/components/reports/dashboards/ExecutiveSummaryDashboard';
+import { FairPerformanceDashboard } from '@/components/reports/dashboards/FairPerformanceDashboard';
+import { FairComparisonDashboard } from '@/components/reports/dashboards/FairComparisonDashboard';
+import { FairTargetsDashboard } from '@/components/reports/dashboards/FairTargetsDashboard';
 import { ReportDashboardLayout } from '@/components/reports/ReportDashboardLayout';
 
 interface ReportDashboardPageProps {
@@ -21,6 +24,9 @@ function findReport(slug: string) {
 
 const DASHBOARD_COMPONENTS: Record<string, React.ComponentType> = {
   'executive-summary': ExecutiveSummaryDashboard,
+  'fair-performance': FairPerformanceDashboard,
+  'fair-comparison': FairComparisonDashboard,
+  'fair-targets': FairTargetsDashboard,
 };
 
 export default function ReportDashboardPage({ params }: ReportDashboardPageProps) {
