@@ -108,13 +108,13 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 4.1, 4.2 — Bütçe ve gelir odaklı 2 rapor
 
-- [ ] **R5.1** `apps/api` — `GET /api/v1/reports/revenue` endpoint: kazanılan gelir aggregation (fuar, ürün, müşteri, para birimi bazlı), aylık gelir trendi, ortalama fırsat değeri trendi
-- [ ] **R5.2** `apps/api` — `GET /api/v1/reports/forecast` endpoint: ağırlıklı pipeline hesabı (aşama ağırlığı × conversionRate çarpanı × bütçe), tahmini kazanma sayısı
-- [ ] **R5.3** `apps/web` — `useRevenue`, `useForecast` hook'ları
-- [ ] **R5.4** `apps/web` — Gelir Analizi dashboard sayfası: KPI kartları + alan grafik + bar grafikler + pasta + treemap + çizgi grafik + veri tablosu
-- [ ] **R5.5** `apps/web` — Bütçe Tahmini dashboard sayfası: KPI kartları + stacked bar + grouped bar + gauge + ağırlıklı pipeline tablosu
-- [ ] **R5.6** Smoke test: 2 endpoint yanıtı + 2 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R5.1** `apps/api` — `GET /api/v1/reports/revenue` endpoint: kazanılan gelir aggregation (fuar, ürün, müşteri, para birimi bazlı), aylık gelir trendi, ortalama fırsat değeri trendi
+- [x] **R5.2** `apps/api` — `GET /api/v1/reports/forecast` endpoint: ağırlıklı pipeline hesabı (aşama ağırlığı × conversionRate çarpanı × bütçe), tahmini kazanma sayısı
+- [x] **R5.3** `apps/web` — `useRevenue`, `useForecast` hook'ları
+- [x] **R5.4** `apps/web` — Gelir Analizi dashboard sayfası: KPI kartları + alan grafik + bar grafikler + pasta + treemap + çizgi grafik + veri tablosu
+- [x] **R5.5** `apps/web` — Bütçe Tahmini dashboard sayfası: KPI kartları + stacked bar + grouped bar + gauge + ağırlıklı pipeline tablosu
+- [x] **R5.6** Smoke test: 2 endpoint yanıtı + 2 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
@@ -123,15 +123,15 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 5.1, 5.2, 5.3 — Müşteri analizi ve yaşam döngüsü
 
-- [ ] **R6.1** `apps/api` — `GET /api/v1/reports/customer-overview` endpoint: müşteri KPI'ları, aylık yeni müşteri trendi, müşteri durum dağılımı, portföy değer verisi
-- [ ] **R6.2** `apps/api` — `GET /api/v1/reports/customer-segmentation` endpoint: değer vs. fırsat scatter verisi, top müşteriler, fuar bazlı müşteri dağılımı, müşteri×fuar matrisi
-- [ ] **R6.3** `apps/api` — `GET /api/v1/reports/customer-lifecycle` endpoint: tekrarlayan müşteri analizi, hareketsiz müşteri tespiti (90+ gün), fuar katılım sıklığı, yaşam boyu değer trendi, son etkileşimler
-- [ ] **R6.4** `apps/web` — `useCustomerOverview`, `useCustomerSegmentation`, `useCustomerLifecycle` hook'ları
-- [ ] **R6.5** `apps/web` — Müşteri Genel Bakış dashboard sayfası: KPI kartları + çizgi grafik + bar grafik + pasta + treemap + veri tablosu
-- [ ] **R6.6** `apps/web` — Müşteri Segmentasyonu dashboard sayfası: scatter plot + bar grafikler + pasta + heatmap + veri tablosu
-- [ ] **R6.7** `apps/web` — Müşteri Yaşam Döngüsü dashboard sayfası: KPI kartları + bar grafik + çizgi grafik + leaderboard + hareketsiz müşteri tablosu + activity feed
-- [ ] **R6.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R6.1** `apps/api` — `GET /api/v1/reports/customer-overview` endpoint: müşteri KPI'ları, aylık yeni müşteri trendi, müşteri durum dağılımı, portföy değer verisi
+- [x] **R6.2** `apps/api` — `GET /api/v1/reports/customer-segmentation` endpoint: değer vs. fırsat scatter verisi, top müşteriler, fuar bazlı müşteri dağılımı, müşteri×fuar matrisi
+- [x] **R6.3** `apps/api` — `GET /api/v1/reports/customer-lifecycle` endpoint: tekrarlayan müşteri analizi, hareketsiz müşteri tespiti (90+ gün), fuar katılım sıklığı, yaşam boyu değer trendi, son etkileşimler
+- [x] **R6.4** `apps/web` — `useCustomerOverview`, `useCustomerSegmentation`, `useCustomerLifecycle` hook'ları
+- [x] **R6.5** `apps/web` — Müşteri Genel Bakış dashboard sayfası: KPI kartları + çizgi grafik + bar grafik + pasta + treemap + veri tablosu
+- [x] **R6.6** `apps/web` — Müşteri Segmentasyonu dashboard sayfası: scatter plot + bar grafikler + pasta + heatmap + veri tablosu
+- [x] **R6.7** `apps/web` — Müşteri Yaşam Döngüsü dashboard sayfası: KPI kartları + bar grafik + çizgi grafik + leaderboard + hareketsiz müşteri tablosu + activity feed
+- [x] **R6.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
@@ -140,13 +140,13 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 6.1, 6.2 — Ürün talep ve fuar matrisi
 
-- [ ] **R7.1** `apps/api` — `GET /api/v1/reports/product-analysis` endpoint: ürün popülerlik sıralaması, tonaj dağılımı, aylık talep trendi (top 5 ürün), ürün detay metrikleri
-- [ ] **R7.2** `apps/api` — `GET /api/v1/reports/product-fair-matrix` endpoint: ürün×fuar matrisi (fırsat sayısı ve tonaj), fuar bazlı top ürünler
-- [ ] **R7.3** `apps/web` — `useProductAnalysis`, `useProductFairMatrix` hook'ları
-- [ ] **R7.4** `apps/web` — Ürün Talep & Performans dashboard sayfası: KPI kartları + bar grafikler + pasta + treemap + çizgi grafik + veri tablosu
-- [ ] **R7.5** `apps/web` — Ürün-Fuar Performans Matrisi dashboard sayfası: 2 heatmap + grouped bar + stacked bar + veri tablosu
-- [ ] **R7.6** Smoke test: 2 endpoint yanıtı + 2 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R7.1** `apps/api` — `GET /api/v1/reports/product-analysis` endpoint: ürün popülerlik sıralaması, tonaj dağılımı, aylık talep trendi (top 5 ürün), ürün detay metrikleri
+- [x] **R7.2** `apps/api` — `GET /api/v1/reports/product-fair-matrix` endpoint: ürün×fuar matrisi (fırsat sayısı ve tonaj), fuar bazlı top ürünler
+- [x] **R7.3** `apps/web` — `useProductAnalysis`, `useProductFairMatrix` hook'ları
+- [x] **R7.4** `apps/web` — Ürün Talep & Performans dashboard sayfası: KPI kartları + bar grafikler + pasta + treemap + çizgi grafik + veri tablosu
+- [x] **R7.5** `apps/web` — Ürün-Fuar Performans Matrisi dashboard sayfası: 2 heatmap + grouped bar + stacked bar + veri tablosu
+- [x] **R7.6** Smoke test: 2 endpoint yanıtı + 2 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
@@ -155,15 +155,15 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 7.1, 7.2, 7.3 — Ekip, bireysel ve aktivite analizi
 
-- [ ] **R8.1** `apps/api` — `GET /api/v1/reports/team-performance` endpoint: ekip bazlı fırsat sayıları, kazanma oranları, gelir (User.teamId + Fair.createdById üzerinden)
-- [ ] **R8.2** `apps/api` — `GET /api/v1/reports/individual-performance` endpoint: kullanıcı bazlı metrikler, leaderboard sıralaması, kişisel trend (son 6 ay)
-- [ ] **R8.3** `apps/api` — `GET /api/v1/reports/activity-analysis` endpoint: StageLog + OpportunityNote + AuditLog üzerinden aktivite aggregation, gün×saat heatmap verisi, aktivite tipi dağılımı
-- [ ] **R8.4** `apps/web` — `useTeamPerformance`, `useIndividualPerformance`, `useActivityAnalysis` hook'ları
-- [ ] **R8.5** `apps/web` — Ekip Performans dashboard sayfası: KPI kartları + grouped bar grafikler + leaderboard + veri tablosu
-- [ ] **R8.6** `apps/web` — Bireysel Performans dashboard sayfası: leaderboard + bar grafikler + sparkline satırlar + scatter plot + veri tablosu
-- [ ] **R8.7** `apps/web` — Aktivite Analizi dashboard sayfası: KPI kartları + çizgi grafik + heatmap + stacked bar + bar grafik + activity feed + veri tablosu
-- [ ] **R8.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R8.1** `apps/api` — `GET /api/v1/reports/team-performance` endpoint: ekip bazlı fırsat sayıları, kazanma oranları, gelir (User.teamId + Fair.createdById üzerinden)
+- [x] **R8.2** `apps/api` — `GET /api/v1/reports/individual-performance` endpoint: kullanıcı bazlı metrikler, leaderboard sıralaması, kişisel trend (son 6 ay)
+- [x] **R8.3** `apps/api` — `GET /api/v1/reports/activity-analysis` endpoint: StageLog + OpportunityNote + AuditLog üzerinden aktivite aggregation, gün×saat heatmap verisi, aktivite tipi dağılımı
+- [x] **R8.4** `apps/web` — `useTeamPerformance`, `useIndividualPerformance`, `useActivityAnalysis` hook'ları
+- [x] **R8.5** `apps/web` — Ekip Performans dashboard sayfası: KPI kartları + grouped bar grafikler + leaderboard + veri tablosu
+- [x] **R8.6** `apps/web` — Bireysel Performans dashboard sayfası: leaderboard + bar grafikler + sparkline satırlar + scatter plot + veri tablosu
+- [x] **R8.7** `apps/web` — Aktivite Analizi dashboard sayfası: KPI kartları + çizgi grafik + heatmap + stacked bar + bar grafik + activity feed + veri tablosu
+- [x] **R8.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
