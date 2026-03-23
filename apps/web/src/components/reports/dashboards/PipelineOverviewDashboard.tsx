@@ -89,6 +89,7 @@ export function PipelineOverviewDashboard() {
       title="Pipeline Genel Bakış"
       subtitle="Satış hunisinin anlık durumu: aşama dağılımı, değerler, darboğazlar"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
       csvExportConfig={{
         rows: data?.tableData ?? [],

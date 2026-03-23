@@ -75,6 +75,7 @@ export function ActivityAnalysisDashboard() {
       title="Aktivite Analizi"
       subtitle="Sistem aktiviteleri, trend ve kullanıcı dağılımı"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.tableData ?? []) as Record<string, unknown>[],
         columns: TABLE_COLUMNS.map((c) =>

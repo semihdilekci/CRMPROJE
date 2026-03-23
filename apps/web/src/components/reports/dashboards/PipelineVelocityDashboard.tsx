@@ -88,6 +88,7 @@ export function PipelineVelocityDashboard() {
       title="Pipeline Hız Analizi"
       subtitle="Fırsatların aşamalar arası geçiş hızları ve darboğaz tespiti"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
       csvExportConfig={{
         rows: data?.slowOpportunities ?? [],

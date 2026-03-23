@@ -203,6 +203,7 @@ export function ExecutiveSummaryDashboard() {
       title="Genel Durum Dashboard'u"
       subtitle="Satış operasyonunun anlık fotoğrafı — KPI'lar, trendler ve öne çıkan metrikler"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

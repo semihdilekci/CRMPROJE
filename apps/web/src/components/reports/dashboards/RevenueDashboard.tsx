@@ -117,6 +117,7 @@ export function RevenueDashboard() {
       title="Gelir Analizi"
       subtitle="Kazanılan fırsatların gelir dağılımı, trendleri ve müşteri bazlı görünüm"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

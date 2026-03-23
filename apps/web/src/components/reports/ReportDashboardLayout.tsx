@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
 import { exportDashboardToPdf } from '@/lib/export-pdf';
 import { exportToCsv } from '@/lib/export-csv';
+import { ReportEmptyState } from './ReportEmptyState';
 
 interface CsvExportConfig {
   rows: Record<string, unknown>[];
@@ -17,6 +18,10 @@ interface ReportDashboardLayoutProps {
   children: ReactNode;
   filterBar?: ReactNode;
   isLoading?: boolean;
+  isEmpty?: boolean;
+  emptyIcon?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
   csvExportConfig?: CsvExportConfig;
 }
 
@@ -26,6 +31,10 @@ export function ReportDashboardLayout({
   children,
   filterBar,
   isLoading,
+  isEmpty,
+  emptyIcon,
+  emptyTitle,
+  emptyDescription,
   csvExportConfig,
 }: ReportDashboardLayoutProps) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -158,14 +167,49 @@ export function ReportDashboardLayout({
         </div>
       )}
 
-      {/* Loading overlay */}
+      {/* Loading skeleton */}
       {isLoading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
-            <span className="text-sm text-white/40">Rapor verileri yükleniyor...</span>
+        <div className="flex flex-col gap-6">
+          {/* Skeleton KPI row */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className="mb-3 h-3 w-16 rounded bg-white/[0.08]" />
+                <div className="mb-2.5 h-8 w-24 rounded bg-white/[0.06]" />
+                <div className="h-4 w-20 rounded-full bg-white/[0.05]" />
+              </div>
+            ))}
+          </div>
+          {/* Skeleton chart row */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.03]"
+                style={{ animationDelay: `${600 + i * 150}ms` }}
+              >
+                <div className="border-b border-white/[0.05] px-5 py-4">
+                  <div className="h-3.5 w-40 rounded bg-white/[0.08]" />
+                </div>
+                <div className="flex items-end gap-2 px-5 py-6" style={{ height: 200 }}>
+                  {Array.from({ length: 8 }).map((_, j) => (
+                    <div
+                      key={j}
+                      className="flex-1 rounded-t bg-white/[0.05]"
+                      style={{ height: `${30 + Math.random() * 60}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      ) : isEmpty ? (
+        <ReportEmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
       ) : (
         <div className="flex flex-col gap-6">{children}</div>
       )}

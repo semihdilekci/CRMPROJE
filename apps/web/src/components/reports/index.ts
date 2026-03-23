@@ -7,3 +7,4 @@ export { ActivityFeed } from './ActivityFeed';
 export { ProgressBarGroup } from './ProgressBarGroup';
 export { AnalyticsCard } from './AnalyticsCard';
 export { ReportDashboardLayout } from './ReportDashboardLayout';
+export { ReportEmptyState } from './ReportEmptyState';

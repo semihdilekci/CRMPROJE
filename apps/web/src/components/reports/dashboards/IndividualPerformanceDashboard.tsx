@@ -86,6 +86,7 @@ export function IndividualPerformanceDashboard() {
       title="Bireysel Performans"
       subtitle="Kullanıcı bazlı gelir, pipeline ve kazanma analizi"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.tableData ?? []) as Record<string, unknown>[],
         columns: TABLE_COLUMNS.map((c) =>

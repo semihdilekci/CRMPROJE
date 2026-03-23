@@ -77,6 +77,7 @@ export function ForecastDashboard() {
       title="Bütçe Tahmini ve Pipeline Değerlemesi"
       subtitle="Açık fırsatların ham ve ağırlıklı pipeline görünümü — aşama ve dönüşüm kırılımı"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: tableRows,
         columns: TABLE_COLUMNS.map((c) => ({

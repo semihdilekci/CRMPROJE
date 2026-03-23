@@ -97,6 +97,7 @@ export function TeamPerformanceDashboard() {
       title="Takım Performansı"
       subtitle="Takımların fırsat, gelir ve kazanma karşılaştırması"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.tableData ?? []) as Record<string, unknown>[],
         columns: TABLE_COLUMNS.map((c) =>

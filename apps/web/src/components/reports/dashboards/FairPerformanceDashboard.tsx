@@ -112,6 +112,7 @@ export function FairPerformanceDashboard() {
       title="Fuar Genel Performans"
       subtitle="Tüm fuarların performans metrikleri ve karşılaştırmalı analizi"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

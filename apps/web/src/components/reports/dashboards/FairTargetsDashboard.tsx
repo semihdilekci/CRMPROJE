@@ -113,6 +113,7 @@ export function FairTargetsDashboard() {
       title="Fuar Hedef Takibi"
       subtitle="Bütçe, tonaj ve lead hedeflerinin gerçekleşme durumu"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={
         <ReportFilterBar
           filters={FILTERS}

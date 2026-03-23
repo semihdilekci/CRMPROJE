@@ -115,6 +115,7 @@ export function ProductAnalysisDashboard() {
       title="Ürün Analizi"
       subtitle="Ürün bazlı fırsat, tonaj ve kazanma dağılımı"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.tableData ?? []) as Record<string, unknown>[],
         columns: TABLE_COLUMNS.map((c) =>

@@ -52,6 +52,7 @@ export function ProductFairMatrixDashboard() {
       title="Ürün × Fuar Matrisi"
       subtitle="Ürün ve fuar kesişiminde fırsat ve tonaj yoğunluğu"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.tableData ?? []) as Record<string, unknown>[],
         columns: TABLE_COLUMNS.map((c) =>

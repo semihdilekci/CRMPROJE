@@ -115,6 +115,7 @@ export function CustomerLifecycleDashboard() {
       title="Müşteri Yaşam Döngüsü"
       subtitle="Sadakat, fuar katılımı ve pasif müşteriler"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: (data?.inactiveCustomerTable ?? []) as Record<string, unknown>[],
         columns: INACTIVE_TABLE_COLUMNS.map((c) =>

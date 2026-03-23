@@ -151,6 +151,7 @@ export function FairComparisonDashboard() {
       title="Fuar Karşılaştırma"
       subtitle="Seçilen fuarları birebir karşılaştır: fırsat, gelir, tonaj, dönüşüm"
       isLoading={isLoading && selectedIds.length >= 2}
+      isEmpty={!isLoading && !data}
       csvExportConfig={{
         rows: comparisonTable.rows,
         columns: comparisonTable.columns.map((c) => ({

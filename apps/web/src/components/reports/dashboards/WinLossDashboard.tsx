@@ -113,6 +113,7 @@ export function WinLossDashboard() {
       title="Kazanma / Kaybetme Analizi"
       subtitle="Neden kazanıyoruz, neden kaybediyoruz? Kayıp nedenleri detayı"
       isLoading={isLoading}
+      isEmpty={!isLoading && !data}
       filterBar={<ReportFilterBar filters={FILTERS} values={filterValues} onChange={handleFilterChange} onReset={handleReset} />}
       csvExportConfig={{
         rows: data?.lostOpportunities ?? [],
