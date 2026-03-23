@@ -25,6 +25,7 @@ import {
   safePercent,
   daysBetween,
   median,
+  calculateWeightedValue,
 } from './report.helpers';
 
 const OPEN_STAGES = ['tanisma', 'toplanti', 'teklif', 'sozlesme'];
@@ -835,172 +836,489 @@ export class ReportService {
     };
   }
 
-  async getRevenue(_params: {
-    startDate?: string;
-    endDate?: string;
-    fairIds: string[];
-    currency?: string;
-    products: string[];
+  async getRevenue(params: {
+    startDate?: string; endDate?: string; fairIds: string[]; currency?: string; products: string[];
   }): Promise<RevenueResponse> {
-    return {
-      kpis: {
-        totalRevenue: 0,
-        avgDealValue: 0,
-        largestDeal: { customerCompany: '', value: 0 },
-        monthlyAvgRevenue: 0,
+    const where: Record<string, unknown> = { currentStage: 'satisa_donustu' };
+    if (params.fairIds.length) where.fairId = { in: params.fairIds };
+    if (params.currency) where.budgetCurrency = params.currency;
+    if (params.startDate || params.endDate) {
+      const df: Record<string, unknown> = {};
+      if (params.startDate) df.gte = new Date(params.startDate);
+      if (params.endDate) df.lte = new Date(params.endDate);
+      where.updatedAt = df;
+    }
+    const opps = await this.prisma.opportunity.findMany({
+      where,
+      select: {
+        id: true, budgetRaw: true, budgetCurrency: true, updatedAt: true, products: true,
+        customer: { select: { company: true } },
+        fair: { select: { name: true } },
+        opportunityProducts: { select: { quantity: true, product: { select: { name: true } } } },
       },
-      monthlyRevenueTrend: [],
-      revenueByFair: [],
-      revenueByProduct: [],
-      currencyDistribution: [],
-      revenueByCustomerTreemap: [],
-      avgDealValueTrend: [],
-      tableData: [],
+    });
+    const totalRevenue = opps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const avgDealValue = opps.length > 0 ? totalRevenue / opps.length : 0;
+    let largestDeal = { customerCompany: '', value: 0 };
+    for (const o of opps) { const v = budgetToNumber(o.budgetRaw); if (v > largestDeal.value) largestDeal = { customerCompany: o.customer.company, value: v }; }
+
+    const ml = generateMonthLabels(12);
+    const monthlyRevenueTrend = ml.map((m) => {
+      const mo = opps.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
+      return { month: m.label, value: mo.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) };
+    });
+    const monthlyAvgRevenue = monthlyRevenueTrend.reduce((s, m) => s + m.value, 0) / Math.max(ml.length, 1);
+
+    const fairRevMap = new Map<string, number>();
+    const prodRevMap = new Map<string, number>();
+    const currMap = new Map<string, number>();
+    const custMap = new Map<string, number>();
+    for (const o of opps) {
+      const v = budgetToNumber(o.budgetRaw);
+      fairRevMap.set(o.fair.name, (fairRevMap.get(o.fair.name) ?? 0) + v);
+      custMap.set(o.customer.company, (custMap.get(o.customer.company) ?? 0) + v);
+      currMap.set(o.budgetCurrency ?? 'TRY', (currMap.get(o.budgetCurrency ?? 'TRY') ?? 0) + v);
+      for (const op of o.opportunityProducts) prodRevMap.set(op.product.name, (prodRevMap.get(op.product.name) ?? 0) + v);
+    }
+
+    const avgDealValueTrend = ml.map((m) => {
+      const mo = opps.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
+      return { month: m.label, avgValue: mo.length > 0 ? mo.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) / mo.length : 0 };
+    });
+
+    const tableData = opps.map((o) => ({
+      customerCompany: o.customer.company, fairName: o.fair.name,
+      budget: budgetToNumber(o.budgetRaw), currency: o.budgetCurrency ?? 'TRY',
+      products: o.products, tonnage: o.opportunityProducts.reduce((s, p) => s + (p.quantity ?? 0), 0),
+      closedAt: o.updatedAt.toISOString(),
+    }));
+
+    return {
+      kpis: { totalRevenue, avgDealValue, largestDeal, monthlyAvgRevenue },
+      monthlyRevenueTrend,
+      revenueByFair: [...fairRevMap.entries()].sort((a, b) => b[1] - a[1]).map(([fairName, revenue]) => ({ fairName, revenue })),
+      revenueByProduct: [...prodRevMap.entries()].sort((a, b) => b[1] - a[1]).map(([productName, revenue]) => ({ productName, revenue })),
+      currencyDistribution: [...currMap.entries()].map(([currency, value]) => ({ currency, value })),
+      revenueByCustomerTreemap: [...custMap.entries()].sort((a, b) => b[1] - a[1]).map(([customerCompany, revenue]) => ({ customerCompany, revenue })),
+      avgDealValueTrend, tableData,
     };
   }
 
-  async getForecast(_params: {
-    fairIds: string[];
-    startDate?: string;
-    endDate?: string;
+  async getForecast(params: {
+    fairIds: string[]; startDate?: string; endDate?: string;
   }): Promise<ForecastResponse> {
+    const where: Record<string, unknown> = { currentStage: { in: OPEN_STAGES } };
+    if (params.fairIds.length) where.fairId = { in: params.fairIds };
+    const opps = await this.prisma.opportunity.findMany({
+      where,
+      select: { budgetRaw: true, currentStage: true, conversionRate: true, customer: { select: { company: true } }, fair: { select: { name: true } } },
+    });
+    let rawPipelineValue = 0; let weightedPipelineValue = 0;
+    const stageMap = new Map<string, { raw: number; weighted: number }>();
+    const convMap = new Map<string, { raw: number; weighted: number }>();
+    const tbl: ForecastResponse['tableData'] = [];
+
+    for (const o of opps) {
+      const budget = budgetToNumber(o.budgetRaw);
+      const wv = calculateWeightedValue(o.budgetRaw, o.currentStage, o.conversionRate);
+      rawPipelineValue += budget;
+      weightedPipelineValue += wv;
+      const se = stageMap.get(o.currentStage) ?? { raw: 0, weighted: 0 };
+      se.raw += budget; se.weighted += wv; stageMap.set(o.currentStage, se);
+      const cr = o.conversionRate ?? 'medium';
+      const ce = convMap.get(cr) ?? { raw: 0, weighted: 0 };
+      ce.raw += budget; ce.weighted += wv; convMap.set(cr, ce);
+      tbl.push({
+        customerCompany: o.customer.company, fairName: o.fair.name,
+        stage: o.currentStage, budget, conversionRate: cr,
+        stageWeight: (await import('@crm/shared')).STAGE_WEIGHTS[o.currentStage] ?? 0,
+        weightedValue: wv,
+      });
+    }
+    const estimatedWinCount = opps.length > 0 ? Math.round(weightedPipelineValue / (rawPipelineValue / opps.length || 1)) : 0;
+
     return {
-      kpis: { rawPipelineValue: 0, weightedPipelineValue: 0, estimatedWinCount: 0 },
-      stageBreakdown: [],
-      conversionBreakdown: [],
-      tableData: [],
+      kpis: { rawPipelineValue, weightedPipelineValue, estimatedWinCount },
+      stageBreakdown: ALL_STAGES.filter((s) => OPEN_STAGES.includes(s.key)).map((s) => {
+        const e = stageMap.get(s.key) ?? { raw: 0, weighted: 0 };
+        return { stage: s.key, label: s.label, rawValue: e.raw, weightedValue: e.weighted };
+      }),
+      conversionBreakdown: Object.entries(CONVERSION_RATE_LABELS).map(([rate, label]) => {
+        const e = convMap.get(rate) ?? { raw: 0, weighted: 0 };
+        return { rate, label, rawValue: e.raw, weightedValue: e.weighted };
+      }),
+      tableData: tbl,
     };
   }
 
-  async getCustomerOverview(_params: {
-    fairIds: string[];
-    startDate?: string;
-    endDate?: string;
-    conversionRate?: string;
+  async getCustomerOverview(params: {
+    fairIds: string[]; startDate?: string; endDate?: string; conversionRate?: string;
   }): Promise<CustomerOverviewResponse> {
-    return {
-      kpis: { totalCustomers: 0, activeCustomers: 0, avgOpportunitiesPerCustomer: 0, customerConversionRate: 0 },
-      monthlyNewCustomerTrend: [],
-      topCustomersByOpportunities: [],
-      customerStatusDistribution: [],
-      portfolioTreemap: [],
-      tableData: [],
-    };
-  }
+    const oppWhere: Record<string, unknown> = {};
+    if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
+    if (params.conversionRate) oppWhere.conversionRate = params.conversionRate;
+    if (params.startDate || params.endDate) { const df: Record<string, unknown> = {}; if (params.startDate) df.gte = new Date(params.startDate); if (params.endDate) df.lte = new Date(params.endDate); oppWhere.createdAt = df; }
 
-  async getCustomerSegmentation(_params: {
-    fairIds: string[];
-    criterion?: string;
-  }): Promise<CustomerSegmentationResponse> {
-    return {
-      scatterData: [],
-      topCustomersByValue: [],
-      conversionSegments: [],
-      customersByFair: [],
-      customerFairMatrix: [],
-      tableData: [],
-    };
-  }
+    const customers = await this.prisma.customer.findMany({
+      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, conversionRate: true, createdAt: true, updatedAt: true } } },
+    });
+    const active = customers.filter((c) => c.opportunities.length > 0);
+    const totalOpps = active.reduce((s, c) => s + c.opportunities.length, 0);
+    const totalWon = active.reduce((s, c) => s + c.opportunities.filter((o) => o.currentStage === 'satisa_donustu').length, 0);
+    const totalClosed = active.reduce((s, c) => s + c.opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage)).length, 0);
 
-  async getCustomerLifecycle(_params: {
-    startDate?: string;
-    endDate?: string;
-    status?: string;
-    fairIds: string[];
-  }): Promise<CustomerLifecycleResponse> {
-    return {
-      kpis: { repeatCustomers: 0, repeatCustomerRate: 0, inactiveCustomers: 0, avgCustomerLifetimeDays: 0 },
-      fairParticipationFrequency: [],
-      lifetimeValueTrend: [],
-      loyalCustomers: [],
-      inactiveCustomerTable: [],
-      recentActivities: [],
-    };
-  }
+    const ml = generateMonthLabels(12);
+    const monthlyNewCustomerTrend = ml.map((m) => ({
+      month: m.label, count: customers.filter((c) => c.createdAt >= m.start && c.createdAt <= m.end).length,
+    }));
 
-  async getProductAnalysis(_params: {
-    fairIds: string[];
-    startDate?: string;
-    endDate?: string;
-    stageFilter?: string;
-  }): Promise<ProductAnalysisResponse> {
-    return {
-      kpis: { totalProducts: 0, mostPopularProduct: { name: '', count: 0 }, totalTonnage: 0, wonTonnage: 0 },
-      productPopularity: [],
-      productTonnage: [],
-      tonnageDistribution: [],
-      productTreemap: [],
-      productTrend: [],
-      tableData: [],
-    };
-  }
-
-  async getProductFairMatrix(_params: {
-    fairIds: string[];
-    products: string[];
-    metric?: string;
-  }): Promise<ProductFairMatrixResponse> {
-    return {
-      opportunityMatrix: [],
-      tonnageMatrix: [],
-      topProductsByFair: [],
-      productFairDistribution: [],
-      tableData: [],
-    };
-  }
-
-  async getTeamPerformance(_params: {
-    startDate?: string;
-    endDate?: string;
-    teamIds: string[];
-    fairIds: string[];
-  }): Promise<TeamPerformanceResponse> {
+    const topByOpps = active.sort((a, b) => b.opportunities.length - a.opportunities.length).slice(0, 10).map((c) => ({ company: c.company, count: c.opportunities.length }));
+    const statusDist = [
+      { status: 'Aktif (Açık Fırsatı Var)', count: active.filter((c) => c.opportunities.some((o) => OPEN_STAGES.includes(o.currentStage))).length },
+      { status: 'Kazanılan', count: active.filter((c) => c.opportunities.some((o) => o.currentStage === 'satisa_donustu')).length },
+      { status: 'Pasif', count: customers.filter((c) => c.opportunities.length === 0).length },
+    ];
+    const portfolioTreemap = active.slice(0, 30).map((c) => ({
+      company: c.company, totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      avgConversionRate: c.opportunities[0]?.conversionRate ?? 'medium',
+    }));
+    const tableData = active.map((c) => {
+      const won = c.opportunities.filter((o) => o.currentStage === 'satisa_donustu');
+      const lost = c.opportunities.filter((o) => o.currentStage === 'olumsuz');
+      const open = c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage));
+      const closed = c.opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
+      return {
+        company: c.company, name: c.name, opportunityCount: c.opportunities.length,
+        won: won.length, lost: lost.length, open: open.length,
+        totalBudget: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        firstContact: c.createdAt.toISOString(), lastContact: c.updatedAt.toISOString(),
+        conversionRate: safePercent(won.length, closed.length),
+      };
+    });
     return {
       kpis: {
-        totalTeams: 0,
-        bestTeam: { name: '', winRate: 0 },
-        mostActiveTeam: { name: '', opportunityCount: 0 },
+        totalCustomers: customers.length, activeCustomers: active.length,
+        avgOpportunitiesPerCustomer: active.length > 0 ? Math.round((totalOpps / active.length) * 10) / 10 : 0,
+        customerConversionRate: safePercent(totalWon, totalClosed),
       },
-      teamOpportunityCounts: [],
-      teamRevenue: [],
-      teamWinRates: [],
-      leaderboard: [],
-      tableData: [],
+      monthlyNewCustomerTrend, topCustomersByOpportunities: topByOpps,
+      customerStatusDistribution: statusDist, portfolioTreemap, tableData,
     };
   }
 
-  async getIndividualPerformance(_params: {
-    startDate?: string;
-    endDate?: string;
-    teamIds: string[];
-    fairIds: string[];
-    sortBy?: string;
+  async getCustomerSegmentation(params: {
+    fairIds: string[]; criterion?: string;
+  }): Promise<CustomerSegmentationResponse> {
+    const oppWhere: Record<string, unknown> = {};
+    if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
+    const customers = await this.prisma.customer.findMany({
+      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, conversionRate: true, fairId: true, fair: { select: { name: true } } } } },
+    });
+    const active = customers.filter((c) => c.opportunities.length > 0);
+    const scatterData = active.map((c) => ({
+      company: c.company, opportunityCount: c.opportunities.length,
+      totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      avgConversionRate: c.opportunities[0]?.conversionRate ?? 'medium',
+    }));
+    const topByValue = active.map((c) => ({
+      company: c.company,
+      wonValue: c.opportunities.filter((o) => o.currentStage === 'satisa_donustu').reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      openValue: c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage)).reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      lostValue: c.opportunities.filter((o) => o.currentStage === 'olumsuz').reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+    })).sort((a, b) => (b.wonValue + b.openValue) - (a.wonValue + a.openValue)).slice(0, 10);
+
+    const convSegments = Object.entries(CONVERSION_RATE_LABELS).map(([, label]) => ({
+      segment: label, count: active.filter((c) => c.opportunities.some((o) => (CONVERSION_RATE_LABELS[o.conversionRate ?? 'medium'] ?? 'Orta') === label)).length,
+    }));
+    const fairCustMap = new Map<string, Set<string>>();
+    for (const c of active) for (const o of c.opportunities) {
+      if (!fairCustMap.has(o.fair.name)) fairCustMap.set(o.fair.name, new Set());
+      fairCustMap.get(o.fair.name)!.add(c.id);
+    }
+    const customersByFair = [...fairCustMap.entries()].map(([fairName, set]) => ({ fairName, customerCount: set.size }));
+    const customerFairMatrix = active.slice(0, 20).map((c) => {
+      const fairs: Record<string, number> = {};
+      for (const o of c.opportunities) fairs[o.fair.name] = (fairs[o.fair.name] ?? 0) + 1;
+      return { company: c.company, fairs };
+    });
+    const tableData = active.map((c) => {
+      const won = c.opportunities.filter((o) => o.currentStage === 'satisa_donustu').length;
+      const closed = c.opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage)).length;
+      return {
+        company: c.company, segment: CONVERSION_RATE_LABELS[c.opportunities[0]?.conversionRate ?? 'medium'] ?? 'Orta',
+        totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        opportunityCount: c.opportunities.length, winRate: safePercent(won, closed), avgCycleDays: 0,
+      };
+    });
+    return { scatterData, topCustomersByValue: topByValue, conversionSegments: convSegments, customersByFair, customerFairMatrix, tableData };
+  }
+
+  async getCustomerLifecycle(params: {
+    startDate?: string; endDate?: string; status?: string; fairIds: string[];
+  }): Promise<CustomerLifecycleResponse> {
+    const oppWhere: Record<string, unknown> = {};
+    if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
+    const customers = await this.prisma.customer.findMany({
+      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, createdAt: true, updatedAt: true, fairId: true }, orderBy: { createdAt: 'desc' } } },
+    });
+    const now = new Date();
+    const active = customers.filter((c) => c.opportunities.length > 0);
+    const fairSets = active.map((c) => new Set(c.opportunities.map((o) => o.fairId)));
+    const repeatCustomers = fairSets.filter((s) => s.size > 1).length;
+    const inactiveDays = 90;
+    const inactiveCustomers = active.filter((c) => {
+      const last = c.opportunities[0];
+      return last && daysBetween(last.updatedAt, now) > inactiveDays;
+    });
+    const avgLifetime = active.length > 0
+      ? Math.round(active.reduce((s, c) => s + daysBetween(c.createdAt, c.opportunities[0]?.updatedAt ?? now), 0) / active.length)
+      : 0;
+
+    const freqMap = new Map<number, number>();
+    for (const s of fairSets) { freqMap.set(s.size, (freqMap.get(s.size) ?? 0) + 1); }
+    const fairParticipationFrequency = [...freqMap.entries()].sort((a, b) => a[0] - b[0]).map(([fairCount, customerCount]) => ({ fairCount, customerCount }));
+
+    const loyalCustomers = active
+      .map((c) => ({
+        company: c.company, fairCount: new Set(c.opportunities.map((o) => o.fairId)).size,
+        opportunityCount: c.opportunities.length, totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      }))
+      .sort((a, b) => b.fairCount - a.fairCount).slice(0, 10);
+
+    const inactiveCustomerTable = inactiveCustomers.slice(0, 20).map((c) => ({
+      company: c.company, name: c.name,
+      daysSinceLastActivity: daysBetween(c.opportunities[0]?.updatedAt ?? c.updatedAt, now),
+      openOpportunities: c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage)).length,
+      value: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+    }));
+
+    return {
+      kpis: { repeatCustomers, repeatCustomerRate: safePercent(repeatCustomers, active.length), inactiveCustomers: inactiveCustomers.length, avgCustomerLifetimeDays: avgLifetime },
+      fairParticipationFrequency, lifetimeValueTrend: [], loyalCustomers, inactiveCustomerTable, recentActivities: [],
+    };
+  }
+
+  async getProductAnalysis(params: {
+    fairIds: string[]; startDate?: string; endDate?: string; stageFilter?: string;
+  }): Promise<ProductAnalysisResponse> {
+    const oppWhere: Record<string, unknown> = {};
+    if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
+    if (params.stageFilter) oppWhere.currentStage = params.stageFilter;
+    if (params.startDate || params.endDate) { const df: Record<string, unknown> = {}; if (params.startDate) df.gte = new Date(params.startDate); if (params.endDate) df.lte = new Date(params.endDate); oppWhere.createdAt = df; }
+
+    const oppProducts = await this.prisma.opportunityProduct.findMany({
+      where: { opportunity: oppWhere },
+      select: { quantity: true, product: { select: { name: true } }, opportunity: { select: { id: true, currentStage: true, fairId: true } } },
+    });
+    const products = await this.prisma.product.findMany({ select: { name: true } });
+    const prodMap = new Map<string, { count: number; tonnage: number; wonTonnage: number; oppIds: Set<string>; fairIds: Set<string>; wonCount: number }>();
+    for (const op of oppProducts) {
+      const e = prodMap.get(op.product.name) ?? { count: 0, tonnage: 0, wonTonnage: 0, oppIds: new Set(), fairIds: new Set(), wonCount: 0 };
+      if (!e.oppIds.has(op.opportunity.id)) { e.count++; e.oppIds.add(op.opportunity.id); }
+      e.tonnage += op.quantity ?? 0;
+      e.fairIds.add(op.opportunity.fairId);
+      if (op.opportunity.currentStage === 'satisa_donustu') { e.wonTonnage += op.quantity ?? 0; e.wonCount++; }
+      prodMap.set(op.product.name, e);
+    }
+    const totalTonnage = [...prodMap.values()].reduce((s, p) => s + p.tonnage, 0);
+    const wonTonnage = [...prodMap.values()].reduce((s, p) => s + p.wonTonnage, 0);
+    let most = { name: '', count: 0 };
+    for (const [name, v] of prodMap) if (v.count > most.count) most = { name, count: v.count };
+
+    return {
+      kpis: { totalProducts: products.length, mostPopularProduct: most, totalTonnage, wonTonnage },
+      productPopularity: [...prodMap.entries()].sort((a, b) => b[1].count - a[1].count).map(([productName, v]) => ({ productName, opportunityCount: v.count })),
+      productTonnage: [...prodMap.entries()].sort((a, b) => b[1].tonnage - a[1].tonnage).map(([productName, v]) => ({ productName, tonnage: v.tonnage })),
+      tonnageDistribution: [...prodMap.entries()].map(([productName, v]) => ({ productName, percent: safePercent(v.tonnage, totalTonnage), tonnage: v.tonnage })),
+      productTreemap: [...prodMap.entries()].map(([productName, v]) => ({ productName, opportunityCount: v.count, winRate: safePercent(v.wonCount, v.count) })),
+      productTrend: [],
+      tableData: [...prodMap.entries()].map(([productName, v]) => ({
+        productName, opportunityCount: v.count, totalTonnage: v.tonnage, wonTonnage: v.wonTonnage,
+        winRate: safePercent(v.wonCount, v.count), fairCount: v.fairIds.size,
+      })),
+    };
+  }
+
+  async getProductFairMatrix(params: {
+    fairIds: string[]; products: string[]; metric?: string;
+  }): Promise<ProductFairMatrixResponse> {
+    const oppWhere: Record<string, unknown> = {};
+    if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
+    const ops = await this.prisma.opportunityProduct.findMany({
+      where: { opportunity: oppWhere, ...(params.products.length ? { product: { name: { in: params.products } } } : {}) },
+      select: { quantity: true, product: { select: { name: true } }, opportunity: { select: { id: true, currentStage: true, fair: { select: { name: true } } } } },
+    });
+
+    const oppMatrix = new Map<string, Map<string, number>>();
+    const tonMatrix = new Map<string, Map<string, number>>();
+    const fairProdMap = new Map<string, Map<string, number>>();
+    const prodFairMap = new Map<string, Map<string, number>>();
+    const tdMap = new Map<string, { opp: number; ton: number; wonTon: number; won: number; total: number }>();
+
+    for (const op of ops) {
+      const prod = op.product.name; const fair = op.opportunity.fair.name;
+      if (!oppMatrix.has(prod)) oppMatrix.set(prod, new Map());
+      oppMatrix.get(prod)!.set(fair, (oppMatrix.get(prod)!.get(fair) ?? 0) + 1);
+      if (!tonMatrix.has(prod)) tonMatrix.set(prod, new Map());
+      tonMatrix.get(prod)!.set(fair, (tonMatrix.get(prod)!.get(fair) ?? 0) + (op.quantity ?? 0));
+      if (!fairProdMap.has(fair)) fairProdMap.set(fair, new Map());
+      fairProdMap.get(fair)!.set(prod, (fairProdMap.get(fair)!.get(prod) ?? 0) + 1);
+      if (!prodFairMap.has(prod)) prodFairMap.set(prod, new Map());
+      prodFairMap.get(prod)!.set(fair, (prodFairMap.get(prod)!.get(fair) ?? 0) + 1);
+      const key = `${prod}|${fair}`;
+      const e = tdMap.get(key) ?? { opp: 0, ton: 0, wonTon: 0, won: 0, total: 0 };
+      e.opp++; e.ton += op.quantity ?? 0; e.total++;
+      if (op.opportunity.currentStage === 'satisa_donustu') { e.wonTon += op.quantity ?? 0; e.won++; }
+      tdMap.set(key, e);
+    }
+
+    return {
+      opportunityMatrix: [...oppMatrix.entries()].map(([productName, fairs]) => ({ productName, fairs: Object.fromEntries(fairs) })),
+      tonnageMatrix: [...tonMatrix.entries()].map(([productName, fairs]) => ({ productName, fairs: Object.fromEntries(fairs) })),
+      topProductsByFair: [...fairProdMap.entries()].map(([fairName, prods]) => ({
+        fairName, products: [...prods.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([productName, count]) => ({ productName, count })),
+      })),
+      productFairDistribution: [...prodFairMap.entries()].map(([productName, fairs]) => ({
+        productName, fairs: [...fairs.entries()].map(([fairName, count]) => ({ fairName, count })),
+      })),
+      tableData: [...tdMap.entries()].map(([key, v]) => {
+        const [productName, fairName] = key.split('|');
+        return { productName: productName!, fairName: fairName!, opportunityCount: v.opp, tonnage: v.ton, wonTonnage: v.wonTon, winRate: safePercent(v.won, v.total) };
+      }),
+    };
+  }
+
+  async getTeamPerformance(params: {
+    startDate?: string; endDate?: string; teamIds: string[]; fairIds: string[];
+  }): Promise<TeamPerformanceResponse> {
+    const teamWhere: Record<string, unknown> = { active: true };
+    if (params.teamIds.length) teamWhere.id = { in: params.teamIds };
+    const teams = await this.prisma.team.findMany({
+      where: teamWhere,
+      include: {
+        users: {
+          select: {
+            id: true, name: true,
+            fairs: { select: { opportunities: { select: { budgetRaw: true, currentStage: true } } } },
+          },
+        },
+      },
+    });
+
+    const data: TeamPerformanceResponse['tableData'] = [];
+    let bestTeam = { name: '', winRate: 0 };
+    let mostActiveTeam = { name: '', opportunityCount: 0 };
+
+    for (const team of teams) {
+      const allOpps = team.users.flatMap((u) => u.fairs.flatMap((f) => f.opportunities));
+      const won = allOpps.filter((o) => o.currentStage === 'satisa_donustu');
+      const lost = allOpps.filter((o) => o.currentStage === 'olumsuz');
+      const open = allOpps.filter((o) => OPEN_STAGES.includes(o.currentStage));
+      const closed = allOpps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
+      const winRate = safePercent(won.length, closed.length);
+      if (winRate > bestTeam.winRate) bestTeam = { name: team.name, winRate };
+      if (allOpps.length > mostActiveTeam.opportunityCount) mostActiveTeam = { name: team.name, opportunityCount: allOpps.length };
+      data.push({
+        teamName: team.name, memberCount: team.users.length,
+        totalOpportunities: allOpps.length, won: won.length, lost: lost.length, open: open.length,
+        winRate, pipelineValue: open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        wonRevenue: won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0), avgCycleDays: 0,
+      });
+    }
+
+    return {
+      kpis: { totalTeams: teams.length, bestTeam, mostActiveTeam },
+      teamOpportunityCounts: data.map((d) => ({ teamName: d.teamName, total: d.totalOpportunities, won: d.won, lost: d.lost, open: d.open })),
+      teamRevenue: data.map((d) => ({ teamName: d.teamName, pipelineValue: d.pipelineValue, wonRevenue: d.wonRevenue })),
+      teamWinRates: data.map((d) => ({ teamName: d.teamName, winRate: d.winRate })),
+      leaderboard: data.sort((a, b) => b.wonRevenue - a.wonRevenue).map((d) => ({
+        teamName: d.teamName, opportunityCount: d.totalOpportunities, won: d.won, winRate: d.winRate, totalRevenue: d.wonRevenue,
+      })),
+      tableData: data,
+    };
+  }
+
+  async getIndividualPerformance(params: {
+    startDate?: string; endDate?: string; teamIds: string[]; fairIds: string[]; sortBy?: string;
   }): Promise<IndividualPerformanceResponse> {
+    const userWhere: Record<string, unknown> = {};
+    if (params.teamIds.length) userWhere.teamId = { in: params.teamIds };
+    const users = await this.prisma.user.findMany({
+      where: userWhere,
+      select: {
+        id: true, name: true,
+        team: { select: { name: true } },
+        fairs: { select: { opportunities: { select: { budgetRaw: true, currentStage: true, updatedAt: true } } } },
+      },
+    });
+
+    const leaderboard: IndividualPerformanceResponse['leaderboard'] = [];
+    for (const user of users) {
+      const opps = user.fairs.flatMap((f) => f.opportunities);
+      if (opps.length === 0) continue;
+      const won = opps.filter((o) => o.currentStage === 'satisa_donustu');
+      const closed = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
+      leaderboard.push({
+        userId: user.id, name: user.name, teamName: user.team?.name ?? '',
+        opportunityCount: opps.length, won: won.length,
+        winRate: safePercent(won.length, closed.length),
+        revenue: won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      });
+    }
+    leaderboard.sort((a, b) => b.revenue - a.revenue);
+
     return {
-      leaderboard: [],
-      revenueByUser: [],
-      pipelineByUser: [],
-      personalTrends: [],
-      scatterData: [],
-      tableData: [],
+      leaderboard,
+      revenueByUser: leaderboard.map((u) => ({ name: u.name, revenue: u.revenue })),
+      pipelineByUser: users.filter((u) => u.fairs.some((f) => f.opportunities.length > 0)).map((u) => {
+        const opps = u.fairs.flatMap((f) => f.opportunities);
+        return { name: u.name, open: opps.filter((o) => OPEN_STAGES.includes(o.currentStage)).length, won: opps.filter((o) => o.currentStage === 'satisa_donustu').length, lost: opps.filter((o) => o.currentStage === 'olumsuz').length };
+      }),
+      personalTrends: [], scatterData: leaderboard.map((u) => ({ name: u.name, opportunityCount: u.opportunityCount, winRate: u.winRate, revenue: u.revenue })),
+      tableData: leaderboard.map((u) => ({ name: u.name, teamName: u.teamName, opportunityCount: u.opportunityCount, won: u.won, lost: 0, open: 0, winRate: u.winRate, pipelineValue: 0, wonRevenue: u.revenue, avgCycleDays: 0, lastActivity: '' })),
     };
   }
 
-  async getActivityAnalysis(_params: {
-    startDate?: string;
-    endDate?: string;
-    userIds: string[];
-    teamIds: string[];
-    activityType?: string;
+  async getActivityAnalysis(params: {
+    startDate?: string; endDate?: string; userIds: string[]; teamIds: string[]; activityType?: string;
   }): Promise<ActivityAnalysisResponse> {
+    const dateFilter: Record<string, unknown> = {};
+    if (params.startDate) dateFilter.gte = new Date(params.startDate);
+    if (params.endDate) dateFilter.lte = new Date(params.endDate);
+    const where: Record<string, unknown> = {};
+    if (Object.keys(dateFilter).length > 0) where.createdAt = dateFilter;
+    if (params.userIds.length) where.changedById = { in: params.userIds };
+
+    const stageLogs = await this.prisma.opportunityStageLog.findMany({
+      where, orderBy: { createdAt: 'desc' }, take: 500,
+      select: { id: true, stage: true, createdAt: true, changedBy: { select: { name: true } }, opportunity: { select: { id: true, customer: { select: { company: true } }, fair: { select: { name: true } } } } },
+    });
+
+    const userCounts = new Map<string, number>();
+    for (const log of stageLogs) userCounts.set(log.changedBy.name, (userCounts.get(log.changedBy.name) ?? 0) + 1);
+    let mostActive = { name: '', count: 0 };
+    for (const [name, count] of userCounts) if (count > mostActive.count) mostActive = { name, count };
+
+    const days = new Set(stageLogs.map((l) => l.createdAt.toISOString().split('T')[0]));
+    const dailyAvg = days.size > 0 ? Math.round(stageLogs.length / days.size) : 0;
+
+    const dailyActivityTrend = [...days].sort().map((date) => ({
+      date: date!, count: stageLogs.filter((l) => l.createdAt.toISOString().startsWith(date!)).length,
+    }));
+
     return {
-      kpis: { totalActivities: 0, dailyAvg: 0, mostActiveUser: { name: '', count: 0 } },
-      dailyActivityTrend: [],
-      dayHourHeatmap: [],
-      activityTypeDistribution: [],
-      userActivityCounts: [],
-      recentActivities: [],
-      tableData: [],
+      kpis: { totalActivities: stageLogs.length, dailyAvg, mostActiveUser: mostActive },
+      dailyActivityTrend, dayHourHeatmap: [], activityTypeDistribution: [],
+      userActivityCounts: [...userCounts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
+      recentActivities: stageLogs.slice(0, 20).map((l) => ({
+        id: l.id, text: `${l.changedBy.name} → ${l.stage}`, timestamp: l.createdAt.toISOString(),
+        context: `${l.opportunity.customer.company} | ${l.opportunity.fair.name}`,
+      })),
+      tableData: stageLogs.slice(0, 100).map((l) => ({
+        date: l.createdAt.toISOString(), userName: l.changedBy.name, activityType: 'Aşama Değişikliği',
+        opportunityId: l.opportunity.id, customerCompany: l.opportunity.customer.company,
+        fairName: l.opportunity.fair.name, detail: `→ ${l.stage}`,
+      })),
     };
   }
 }
