@@ -302,28 +302,241 @@ export class ReportService {
     };
   }
 
-  async getFairPerformance(_params: {
+  async getFairPerformance(params: {
     startDate?: string;
     endDate?: string;
     status?: string;
     createdById?: string;
   }): Promise<FairPerformanceResponse> {
+    const now = new Date();
+    const where: Record<string, unknown> = {};
+
+    if (params.startDate) where.startDate = { ...(where.startDate as object ?? {}), gte: new Date(params.startDate) };
+    if (params.endDate) where.startDate = { ...(where.startDate as object ?? {}), lte: new Date(params.endDate) };
+    if (params.createdById) where.createdById = params.createdById;
+    if (params.status === 'active') {
+      where.startDate = { ...(where.startDate as object ?? {}), lte: now };
+      where.endDate = { gte: now };
+    } else if (params.status === 'past') {
+      where.endDate = { lt: now };
+    }
+
+    const fairs = await this.prisma.fair.findMany({
+      where,
+      include: {
+        opportunities: {
+          select: {
+            id: true,
+            budgetRaw: true,
+            currentStage: true,
+            conversionRate: true,
+          },
+        },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    let totalOpportunities = 0;
+    let totalWonRevenue = 0;
+    let totalWon = 0;
+    let totalClosed = 0;
+
+    const fairOpportunityCounts: FairPerformanceResponse['fairOpportunityCounts'] = [];
+    const fairPipelineValues: FairPerformanceResponse['fairPipelineValues'] = [];
+    const fairConversionRates: FairPerformanceResponse['fairConversionRates'] = [];
+    const scatterData: FairPerformanceResponse['scatterData'] = [];
+    const tableData: FairPerformanceResponse['tableData'] = [];
+
+    for (const fair of fairs) {
+      const opps = fair.opportunities;
+      const won = opps.filter((o) => o.currentStage === 'satisa_donustu');
+      const lost = opps.filter((o) => o.currentStage === 'olumsuz');
+      const open = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
+      const closed = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
+      const wonRev = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const pipelineVal = open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const rate = safePercent(won.length, closed.length);
+
+      totalOpportunities += opps.length;
+      totalWonRevenue += wonRev;
+      totalWon += won.length;
+      totalClosed += closed.length;
+
+      const totalTonnage = await this.prisma.opportunityProduct.aggregate({
+        where: { opportunity: { fairId: fair.id } },
+        _sum: { quantity: true },
+      });
+
+      fairOpportunityCounts.push({
+        fairId: fair.id, fairName: fair.name,
+        total: opps.length, won: won.length, lost: lost.length, open: open.length,
+      });
+      fairPipelineValues.push({ fairId: fair.id, fairName: fair.name, pipelineValue: pipelineVal, wonRevenue: wonRev });
+      fairConversionRates.push({ fairId: fair.id, fairName: fair.name, rate });
+      scatterData.push({
+        fairId: fair.id, fairName: fair.name,
+        opportunityCount: opps.length, wonRevenue: wonRev, totalOpportunities: opps.length,
+      });
+      tableData.push({
+        fairId: fair.id, fairName: fair.name,
+        startDate: fair.startDate.toISOString(), endDate: fair.endDate.toISOString(),
+        opportunityCount: opps.length, won: won.length, lost: lost.length, open: open.length,
+        pipelineValue: pipelineVal, wonRevenue: wonRev, conversionRate: rate,
+        totalTonnage: totalTonnage._sum.quantity ?? 0,
+      });
+    }
+
     return {
-      kpis: { totalFairs: 0, totalOpportunities: 0, totalWonRevenue: 0, avgConversionRate: 0 },
-      fairOpportunityCounts: [],
-      fairPipelineValues: [],
-      fairConversionRates: [],
-      scatterData: [],
-      tableData: [],
+      kpis: {
+        totalFairs: fairs.length,
+        totalOpportunities,
+        totalWonRevenue,
+        avgConversionRate: safePercent(totalWon, totalClosed),
+      },
+      fairOpportunityCounts,
+      fairPipelineValues,
+      fairConversionRates: fairConversionRates.sort((a, b) => b.rate - a.rate),
+      scatterData,
+      tableData,
     };
   }
 
-  async getFairComparison(_fairIds: string[]): Promise<FairComparisonResponse> {
-    return { fairs: [], stageMatrix: [], productMatrix: [] };
+  async getFairComparison(fairIds: string[]): Promise<FairComparisonResponse> {
+    if (fairIds.length === 0) return { fairs: [], stageMatrix: [], productMatrix: [] };
+
+    const fairs = await this.prisma.fair.findMany({
+      where: { id: { in: fairIds } },
+      include: {
+        opportunities: {
+          select: {
+            id: true,
+            budgetRaw: true,
+            currentStage: true,
+            conversionRate: true,
+            opportunityProducts: {
+              select: {
+                quantity: true,
+                product: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const fairsData: FairComparisonResponse['fairs'] = [];
+    const stageMatrix: FairComparisonResponse['stageMatrix'] = [];
+    const productMatrix: FairComparisonResponse['productMatrix'] = [];
+
+    for (const fair of fairs) {
+      const opps = fair.opportunities;
+      const won = opps.filter((o) => o.currentStage === 'satisa_donustu');
+      const lost = opps.filter((o) => o.currentStage === 'olumsuz');
+      const open = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
+      const closed = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
+      const wonRev = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const pipelineVal = open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+
+      let totalTonnage = 0;
+      let wonTonnage = 0;
+      const stages: Record<string, number> = {};
+      const products: Record<string, number> = {};
+
+      for (const opp of opps) {
+        stages[opp.currentStage] = (stages[opp.currentStage] ?? 0) + 1;
+        for (const op of opp.opportunityProducts) {
+          products[op.product.name] = (products[op.product.name] ?? 0) + (op.quantity ?? 0);
+          totalTonnage += op.quantity ?? 0;
+          if (opp.currentStage === 'satisa_donustu') wonTonnage += op.quantity ?? 0;
+        }
+      }
+
+      fairsData.push({
+        fairId: fair.id, fairName: fair.name,
+        total: opps.length, won: won.length, lost: lost.length, open: open.length,
+        pipelineValue: pipelineVal, wonRevenue: wonRev,
+        totalTonnage, wonTonnage,
+        conversionRate: safePercent(won.length, closed.length),
+        avgDealValue: opps.length > 0
+          ? opps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) / opps.length
+          : 0,
+      });
+
+      stageMatrix.push({ fairId: fair.id, fairName: fair.name, stages });
+      productMatrix.push({ fairId: fair.id, fairName: fair.name, products });
+    }
+
+    return { fairs: fairsData, stageMatrix, productMatrix };
   }
 
-  async getFairTargets(_fairIds: string[], _status?: string): Promise<FairTargetsResponse> {
-    return { allFairTargets: [], avgTargetCompletion: 0 };
+  async getFairTargets(fairIds: string[], status?: string): Promise<FairTargetsResponse> {
+    const now = new Date();
+    const where: Record<string, unknown> = {};
+    if (fairIds.length > 0) where.id = { in: fairIds };
+    if (status === 'active') {
+      where.startDate = { lte: now };
+      where.endDate = { gte: now };
+    } else if (status === 'past') {
+      where.endDate = { lt: now };
+    }
+
+    const fairs = await this.prisma.fair.findMany({
+      where,
+      include: {
+        opportunities: {
+          select: {
+            id: true,
+            budgetRaw: true,
+            currentStage: true,
+            opportunityProducts: { select: { quantity: true } },
+          },
+        },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    const allFairTargets: FairTargetsResponse['allFairTargets'] = [];
+
+    for (const fair of fairs) {
+      const won = fair.opportunities.filter((o) => o.currentStage === 'satisa_donustu');
+      const budgetActual = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const tonnageActual = won.reduce(
+        (s, o) => s + o.opportunityProducts.reduce((ts, p) => ts + (p.quantity ?? 0), 0),
+        0,
+      );
+      const leadActual = fair.opportunities.length;
+
+      const budgetTarget = budgetToNumber(fair.targetBudget);
+      const tonnageTarget = fair.targetTonnage ?? 0;
+      const leadTarget = fair.targetLeadCount ?? 0;
+
+      allFairTargets.push({
+        fairId: fair.id,
+        fairName: fair.name,
+        budgetTarget,
+        budgetActual,
+        budgetPercent: safePercent(budgetActual, budgetTarget),
+        tonnageTarget,
+        tonnageActual,
+        tonnagePercent: safePercent(tonnageActual, tonnageTarget),
+        leadTarget,
+        leadActual,
+        leadPercent: safePercent(leadActual, leadTarget),
+      });
+    }
+
+    const avgTargetCompletion =
+      allFairTargets.length > 0
+        ? allFairTargets.reduce(
+            (s, f) => s + (f.budgetPercent + f.tonnagePercent + f.leadPercent) / 3,
+            0,
+          ) / allFairTargets.length
+        : 0;
+
+    const selectedFairTargets =
+      fairIds.length === 1 ? allFairTargets[0] : undefined;
+
+    return { selectedFairTargets, allFairTargets, avgTargetCompletion: Math.round(avgTargetCompletion * 100) / 100 };
   }
 
   async getPipelineOverview(_params: {
