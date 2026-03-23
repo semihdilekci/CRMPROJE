@@ -3,8 +3,9 @@
 import { use } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
-import { ReportDashboardLayout } from '@/components/reports/ReportDashboardLayout';
 import { REPORT_CATALOG } from '@crm/shared';
+import { ExecutiveSummaryDashboard } from '@/components/reports/dashboards/ExecutiveSummaryDashboard';
+import { ReportDashboardLayout } from '@/components/reports/ReportDashboardLayout';
 
 interface ReportDashboardPageProps {
   params: Promise<{ slug: string }>;
@@ -17,6 +18,10 @@ function findReport(slug: string) {
   }
   return null;
 }
+
+const DASHBOARD_COMPONENTS: Record<string, React.ComponentType> = {
+  'executive-summary': ExecutiveSummaryDashboard,
+};
 
 export default function ReportDashboardPage({ params }: ReportDashboardPageProps) {
   const { slug } = use(params);
@@ -45,32 +50,37 @@ export default function ReportDashboardPage({ params }: ReportDashboardPageProps
   }
 
   const { report, category } = result;
+  const DashboardComponent = DASHBOARD_COMPONENTS[slug];
 
   return (
     <div className="min-h-screen">
       <TopBar breadcrumb={report.name} />
       <ContentWrapper>
-        <ReportDashboardLayout
-          title={report.name}
-          subtitle={report.description}
-        >
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center">
-            <span className="text-5xl">{report.icon}</span>
-            <h2
-              className="text-xl text-white/80"
-              style={{ fontFamily: 'Playfair Display, serif' }}
-            >
-              {report.name}
-            </h2>
-            <p className="max-w-md text-sm text-white/40">
-              Bu dashboard {category.title} kategorisindeki raporlar geliştirildiğinde
-              aktif olacaktır. Grafik, KPI ve tablo bileşenleri hazır.
-            </p>
-            <div className="mt-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2 text-[12px] text-violet-400">
-              Altyapı hazır &mdash; R2+ feature&apos;larında bu sayfa dolacak
+        {DashboardComponent ? (
+          <DashboardComponent />
+        ) : (
+          <ReportDashboardLayout
+            title={report.name}
+            subtitle={report.description}
+          >
+            <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center">
+              <span className="text-5xl">{report.icon}</span>
+              <h2
+                className="text-xl text-white/80"
+                style={{ fontFamily: 'Playfair Display, serif' }}
+              >
+                {report.name}
+              </h2>
+              <p className="max-w-md text-sm text-white/40">
+                Bu dashboard {category.title} kategorisindeki raporlar geliştirildiğinde
+                aktif olacaktır. Grafik, KPI ve tablo bileşenleri hazır.
+              </p>
+              <div className="mt-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2 text-[12px] text-violet-400">
+                Altyapı hazır &mdash; ilgili feature&apos;da bu sayfa dolacak
+              </div>
             </div>
-          </div>
-        </ReportDashboardLayout>
+          </ReportDashboardLayout>
+        )}
       </ContentWrapper>
     </div>
   );
