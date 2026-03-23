@@ -96,7 +96,7 @@ export function IndividualPerformanceDashboard() {
         filename: 'bireysel-performans',
       }}
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Kişi Bazlı Gelir" subtitle="Kazanılan gelir" delay={0.45}>
           <ReportBarChart
             data={revenueData}
@@ -120,7 +120,7 @@ export function IndividualPerformanceDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard
           title="Fırsat Sayısı vs Kazanma Oranı"
           subtitle="Nokta boyutu: gelir"

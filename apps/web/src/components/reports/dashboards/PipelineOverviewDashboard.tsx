@@ -104,7 +104,7 @@ export function PipelineOverviewDashboard() {
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Pipeline Funnel" subtitle="Aşama bazlı fırsat sayısı" delay={0.5}>
           <ReportBarChart data={funnelData} bars={[{ dataKey: 'Adet', name: 'Fırsat', color: CHART_COLORS.neutral }]} layout="vertical" height={250} showLegend={false} />
         </AnalyticsCard>
@@ -117,7 +117,7 @@ export function PipelineOverviewDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <AnalyticsCard title="Aşama Dağılımı" delay={0.7}>
           <ReportPieChart data={stagePieData} height={240} innerRadius={45} />
         </AnalyticsCard>

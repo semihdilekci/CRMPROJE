@@ -183,7 +183,7 @@ export function FairTargetsDashboard() {
       </AnalyticsCard>
 
       {/* Budget and Tonnage bar charts */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Hedef vs Gerçekleşen Bütçe" delay={0.7}>
           <ReportBarChart
             data={budgetBarData}

@@ -139,7 +139,7 @@ export function CustomerLifecycleDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Fuar Katılım Frekansı" subtitle="Kaç fuarda yer alan kaç müşteri" delay={0.5}>
           <ReportBarChart
             data={fairFreqData}

@@ -109,7 +109,7 @@ export function CustomerSegmentationDashboard() {
         filename: 'musteri-segmentasyonu',
       }}
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard
           title="Fırsat Sayısı vs Toplam Değer"
           subtitle="Her nokta bir müşteri"
@@ -141,7 +141,7 @@ export function CustomerSegmentationDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Dönüşüm Segmenti" delay={0.6}>
           <ReportPieChart data={segmentPieData} height={280} innerRadius={50} showLabel={false} />
         </AnalyticsCard>

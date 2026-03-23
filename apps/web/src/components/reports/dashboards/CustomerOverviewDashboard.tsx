@@ -146,7 +146,7 @@ export function CustomerOverviewDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Aylık Yeni Müşteri" subtitle="Kayıt trendi" delay={0.5}>
           <ReportBarChart
             data={monthlyNewData}
@@ -167,7 +167,7 @@ export function CustomerOverviewDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Müşteri Durum Dağılımı" delay={0.7}>
           <ReportPieChart data={statusPieData} height={280} innerRadius={50} showLabel={false} />
         </AnalyticsCard>

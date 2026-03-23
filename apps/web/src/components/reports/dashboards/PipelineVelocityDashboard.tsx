@@ -99,11 +99,11 @@ export function PipelineVelocityDashboard() {
         filename: 'pipeline-hiz',
       }}
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Aşama Bazlı Ort. Bekleme Süresi" subtitle="Gün" delay={0.5}>
           <ReportBarChart data={stageBarData} bars={[{ dataKey: 'Gün', name: 'Ortalama Gün', color: CHART_COLORS.neutral }]} height={260} showLegend={false} />
         </AnalyticsCard>
@@ -112,7 +112,7 @@ export function PipelineVelocityDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Fırsat Değeri vs Döngü Süresi" subtitle="Büyük fırsatlar daha mı uzun sürüyor?" delay={0.7}>
           <ReportScatterChart
             series={scatterSeries}

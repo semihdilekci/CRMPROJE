@@ -194,7 +194,7 @@ export function FairComparisonDashboard() {
 
       {data && selectedIds.length >= 2 && (
         <>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <AnalyticsCard title="Fırsat Sayıları" delay={0.3}>
               <ReportBarChart
                 data={oppBarData}
@@ -220,7 +220,7 @@ export function FairComparisonDashboard() {
             </AnalyticsCard>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <AnalyticsCard title="Tonaj Karşılaştırma" delay={0.5}>
               <ReportBarChart
                 data={tonnageBarData}
@@ -243,7 +243,7 @@ export function FairComparisonDashboard() {
             </AnalyticsCard>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <AnalyticsCard title="Fuar × Aşama Matrisi" subtitle="Fırsat sayıları" delay={0.7}>
               <ReportHeatmap
                 data={stageHeatmapData.cells}

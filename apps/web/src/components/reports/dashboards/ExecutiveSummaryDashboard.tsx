@@ -229,7 +229,7 @@ export function ExecutiveSummaryDashboard() {
       </div>
 
       {/* Charts Row 1: Revenue Trend + Pipeline Stage */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard
           title="Aylık Kazanılan Gelir Trendi"
           subtitle="Son 12 ay"
@@ -260,7 +260,7 @@ export function ExecutiveSummaryDashboard() {
       </div>
 
       {/* Charts Row 2: Conversion Rate Pie + Leaderboards */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <AnalyticsCard
           title="Dönüşüm Oranı Dağılımı"
           subtitle="Fırsatların conversionRate dağılımı"

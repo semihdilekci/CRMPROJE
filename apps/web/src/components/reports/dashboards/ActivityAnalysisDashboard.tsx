@@ -93,13 +93,13 @@ export function ActivityAnalysisDashboard() {
         />
       }
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {kpis.map((kpi, i) => (
           <KpiCard key={kpi.label} {...kpi} index={i} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Günlük Aktivite Trendi" subtitle="Seçilen dönem" delay={0.5}>
           <ReportLineChart
             data={trendData}

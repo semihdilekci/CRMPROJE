@@ -128,7 +128,7 @@ export function WinLossDashboard() {
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} index={i} />)}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <AnalyticsCard title="Kazanma / Kayıp Oranı" delay={0.5}>
           <ReportPieChart data={donutData} height={240} innerRadius={55} showLabel={false} />
         </AnalyticsCard>
@@ -140,7 +140,7 @@ export function WinLossDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Aylık Kazanma Oranı Trendi" subtitle="Son 12 ay" delay={0.8}>
           <ReportLineChart data={trendData} lines={[{ dataKey: 'Oran', name: 'Kazanma %', color: CHART_COLORS.positive }]} height={260} showLegend={false} formatter={(val) => `%${Number(val).toFixed(1)}`} />
         </AnalyticsCard>
@@ -161,7 +161,7 @@ export function WinLossDashboard() {
         />
       </AnalyticsCard>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Kaybedilen Fırsatlar" badge={data ? `${data.lostOpportunities.length}` : undefined} delay={1.1}>
           <ReportTable columns={LOST_TABLE_COLUMNS} rows={data?.lostOpportunities ?? []} defaultSortBy="value" defaultSortOrder="desc" maxRows={15} />
         </AnalyticsCard>

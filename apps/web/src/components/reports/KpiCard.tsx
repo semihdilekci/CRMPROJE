@@ -97,7 +97,7 @@ export function KpiCard({
       </div>
 
       <div
-        className="mb-2.5 text-[34px] font-bold leading-none"
+        className="mb-2.5 text-[26px] sm:text-[30px] lg:text-[34px] font-bold leading-none"
         style={{ fontFamily: 'Playfair Display, serif', color: textColor }}
       >
         {displayValue}

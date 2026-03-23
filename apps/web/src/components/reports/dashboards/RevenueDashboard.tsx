@@ -141,7 +141,7 @@ export function RevenueDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Aylık Gelir Trendi" subtitle="Son 12 ay" delay={0.5}>
           <ReportAreaChart
             data={monthlyRevenueData}
@@ -162,7 +162,7 @@ export function RevenueDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Fuara Göre Gelir" delay={0.6}>
           <ReportBarChart
             data={revenueByFairData}
@@ -181,7 +181,7 @@ export function RevenueDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Para Birimi Dağılımı" delay={0.7}>
           <ReportPieChart data={currencyPieData} height={280} innerRadius={50} formatter={formatCurrency} />
         </AnalyticsCard>

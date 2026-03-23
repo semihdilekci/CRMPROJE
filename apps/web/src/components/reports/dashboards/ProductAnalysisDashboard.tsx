@@ -139,7 +139,7 @@ export function ProductAnalysisDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Ürün Popülerliği" subtitle="Fırsat sayısına göre" delay={0.5}>
           <ReportBarChart
             data={popularityData}
@@ -161,7 +161,7 @@ export function ProductAnalysisDashboard() {
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AnalyticsCard title="Tonaj Dağılımı" subtitle="Ürünlere göre tonaj payı" delay={0.65}>
           <ReportPieChart data={tonnagePieData} height={280} innerRadius={50} formatter={formatTonnage} />
         </AnalyticsCard>
