@@ -9,7 +9,9 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 | Konu | DEV | PROD |
 |------|-----|------|
 | **Web → API adresi** | `NEXT_PUBLIC_API_URL` yoksa `http://localhost:3001/api/v1` kullanılır | **Zorunlu:** `NEXT_PUBLIC_API_URL` canlı API base URL olarak set edilmeli (örn. `https://api.uygulama.com/api/v1`) |
-| **API CORS** | Tüm `http(s)://localhost:*` origin’lere izin verilir | Sadece `CORS_ORIGIN` ile belirtilen origin(ler) kabul edilir |
+| **API dinleme adresi (HOST)** | DEV: `HOST` yoksa `0.0.0.0` — LAN’dan mobil test için | Container / sunucuda genelde `0.0.0.0` veya platform dokümantasyonu |
+| **Mobil → API** | Fiziksel cihaz: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:3001/api/v1`; Android emülatör: `10.0.2.2`; iOS Simülatör: `127.0.0.1` (localhost/IPv6 kaçağı) | `EXPO_PUBLIC_API_URL` canlı API HTTPS base URL |
+| **API CORS** | DEV: `origin: true` (Expo Metro `127.0.0.1` / LAN IP / farklı portlar — mobil preflight) | PROD: Sadece `CORS_ORIGIN` ile belirtilen origin(ler) |
 | **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
 
@@ -58,7 +60,9 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **CORS:** `apps/api/src/main.ts` — `NODE_ENV === 'production'` iken `CORS_ORIGIN` kullanılır.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez.
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
-- **API base URL (mobile):** `apps/mobile/lib/api.ts` — `EXPO_PUBLIC_API_URL` kullanılır (Phase 4).
+- **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
+- **API HOST:** `apps/api/src/main.ts` — `HOST` (varsayılan `0.0.0.0`) ile LAN erişimi.
+- **Expo fiziksel cihaz:** `apps/mobile` — `npm run start:lan` (Metro LAN); `EXPO_PUBLIC_API_URL` Mac’in telefonun görebildiği IP’si + `/api/v1` (aynı Wi‑Fi veya hotspot). `docs/environment-setup.md`.
 
 ---
 

@@ -8,16 +8,20 @@ import type {
 } from '@crm/shared';
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { useAuthStore } from '@/stores/auth-store';
 
 export type FairWithCount = Fair & { _count?: { opportunities: number } };
 
 export function useFairs() {
+  const isAuthReady = useAuthStore((s) => !s.isLoading && s.isAuthenticated);
+
   return useQuery({
     queryKey: queryKeys.fairs.all,
     queryFn: async () => {
       const { data } = await api.get<ApiSuccessResponse<FairWithCount[]>>('/fairs');
       return data.data;
     },
+    enabled: isAuthReady,
   });
 }
 

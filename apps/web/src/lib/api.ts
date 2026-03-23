@@ -6,7 +6,7 @@ import axios from 'axios';
 const getBaseURL = () => {
   if (typeof window !== 'undefined') return '/api/v1';
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  return envUrl || 'http://localhost:3001/api/v1';
+  return envUrl || 'http://localhost:3002/api/v1';
 };
 
 const api = axios.create({

@@ -37,3 +37,6 @@ Next.js version: 16.1.6 (Turbopack)
 
 6. < Bug Çözüldü > AI chat yanıtında grafikler ve tablolar parse edilmiyor; JSON ham metin olarak görünüyor. Metin, grafik ve tablo olarak ayrı ayrı render edilmesi gerekiyor.
 
+
+7. < Bug Çözüldü > Mobil (Expo Go): API’ye LAN üzerinden erişilemiyor; web çalışıyor. Kök nedenler: fiziksel cihazda `localhost` telefonu işaret eder; API yalnızca loopback dinliyorsa LAN’dan erişilemez; Android emülatörde `localhost` geliştirme makinesine gitmez; `EXPO_PUBLIC_API_URL` pakete gömülmezken veya iOS’ta simülatör dalı `.env`’den önce çalışırken yanlış taban URL. Çözüm: `HOST=0.0.0.0`, DEV CORS `origin: true`, `getApiBaseUrl()` (önce `EXPO_PUBLIC_API_URL`, sonra Android emülatör / iOS simülatör varsayılanları), auth hydrate sonrası `useFairs` sorgusu, dokümantasyon.
+

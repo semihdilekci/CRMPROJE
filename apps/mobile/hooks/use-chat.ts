@@ -6,7 +6,7 @@ import type {
   ChatQueryInput,
   ChatQueryResponse,
 } from '@crm/shared';
-import api from '@/lib/api';
+import api, { getApiBaseUrl } from '@/lib/api';
 import { getAccessToken } from '@/lib/storage';
 
 export function useChatQuery() {
@@ -22,7 +22,7 @@ export function useChatQuery() {
 }
 
 export async function downloadChatExport(exportId: string): Promise<void> {
-  const baseURL = api.defaults.baseURL ?? 'http://localhost:3001/api/v1';
+  const baseURL = api.defaults.baseURL ?? getApiBaseUrl();
   const url = `${baseURL}/chat/export/${exportId}`;
   const token = await getAccessToken();
   const fileUri = `${FileSystem.documentDirectory}analiz-${exportId}.xlsx`;

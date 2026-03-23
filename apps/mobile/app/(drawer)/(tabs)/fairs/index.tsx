@@ -9,11 +9,20 @@ import { useFairs } from '@/hooks/use-fairs';
 import { FairCard } from '@/components/fair/FairCard';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { isNetworkError } from '@/lib/error-utils';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function FairsScreen() {
   const navigation = useNavigation();
   const openFairForm = useFairFormStore((s) => s.open);
-  const { data: fairs, isLoading, error, refetch } = useFairs();
+  const authLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data: fairs, isLoading: fairsLoading, error, refetch } = useFairs();
+
+  const isLoading = authLoading || (isAuthenticated && fairsLoading);
+
+  if (!authLoading && !isAuthenticated) {
+    return null;
+  }
 
   const totalOpportunities = fairs?.reduce(
     (sum, f) => sum + (f._count?.opportunities ?? 0),
@@ -61,7 +70,9 @@ export default function FairsScreen() {
             (navigation as { openDrawer?: () => void }).openDrawer?.();
           }}
         />
-        <LoadingView message="Fuarlar yükleniyor..." />
+        <LoadingView
+          message={authLoading ? 'Oturum kontrol ediliyor...' : 'Fuarlar yükleniyor...'}
+        />
       </GradientBackground>
     );
   }

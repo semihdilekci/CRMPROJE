@@ -66,15 +66,71 @@ JWT_REFRESH_SECRET="dev-refresh-secret-change-in-production"
 JWT_ACCESS_EXPIRATION="15m"
 JWT_REFRESH_EXPIRATION="7d"
 PORT=3001
+HOST=0.0.0.0
 NODE_ENV="development"
 CORS_ORIGIN="http://localhost:3000"
+
+`HOST=0.0.0.0` (varsayılan): API tüm ağ arayüzlerinde dinler; fiziksel telefon veya emülatörden LAN IP ile test için gereklidir. Yalnızca bu makineden erişim istiyorsanız `HOST=127.0.0.1` kullanın.
 
 Frontend (apps/web/.env.local):
 cp apps/web/.env.example apps/web/.env.local
 
 NEXT_PUBLIC_API_URL="http://localhost:3001/api/v1"
 
+Mobil (apps/mobile/.env — Expo):
+cp apps/mobile/.env.example apps/mobile/.env
+
+Fiziksel cihaz + Expo Go ile test: bilgisayarın yerel ağ IP’sini kullanın, örn. `EXPO_PUBLIC_API_URL=http://192.168.1.42:3001/api/v1`. Telefon ve bilgisayar aynı Wi‑Fi’de olmalı; misafir ağı / istemci izolasyonu (AP isolation) açıksa bağlantı kurulamaz. **iOS Simülatör:** `EXPO_PUBLIC_API_URL` tanımlıysa o adres kullanılır; tanımlı değilse `http://127.0.0.1:3001/api/v1`. Android emülatör: `localhost`/`127` ile eşleşen env yoksa `10.0.2.2` kullanılır (`getApiBaseUrl()`).
+
 UYARI: .env dosyalarını ASLA git'e commit etmeyin.
+
+---
+
+### Fiziksel iPhone + Expo Go (şirket Wi‑Fi dahil)
+
+İki uç nokta gerekir; ikisi de **telefonun Mac’e LAN üzerinden** erişebilmesine bağlıdır:
+
+| Ne | Port | Açıklama |
+|----|------|----------|
+| **Metro (JS bundle)** | 8081 | Expo Go önce projeyi buradan indirir. Varsayılan `expo start` çoğu zaman yalnızca `localhost` içindir; **telefonda “başlatılamıyor”** görürsen **`--lan` kullan.** |
+| **Nest API** | 3001 | `EXPO_PUBLIC_API_URL=http://<Mac-LAN-IP>:3001/api/v1` — API `HOST=0.0.0.0` ile dinlemeli. |
+
+**Önerilen komut (Mac):**
+
+```bash
+cd apps/mobile
+npm run start:lan
+```
+
+Terminalde görünen **QR** veya `exp://<LAN-IP>:8081` adresini Expo Go ile aç. Mac IP’sini öğrenmek için (Wi‑Fi genelde `en0`): `ipconfig getifaddr en0`
+
+**apps/mobile/.env** (fiziksel cihazda LAN IP zorunlu; simülatörde isteğe bağlı):
+
+```env
+EXPO_PUBLIC_API_URL=http://192.168.x.x:3001/api/v1
+```
+
+`192.168.x.x` **Metro ile aynı Mac’in** güncel LAN IP’si olmalı (DHCP değiştiyse güncelle). Sonra: `npx expo start --clear` veya en azından Metro’yu yeniden başlat.
+
+**Şirket ağında hâlâ Expo Go projeyi açmıyorsa:**
+
+1. **İstemci izolasyonu (AP isolation)** açıksa cihazlar birbirini görmez — IT’den istisna veya **kişisel hotspot** (telefondan internet paylaş, Mac’i ona bağla) deneyin.
+2. **macOS Güvenlik Duvarı:** Sistem Ayarları → Ağ → Güvenlik Duvarı → Node / Terminal / Expo için gelen bağlantılara izin.
+3. **iOS:** Ayarlar → Gizlilik ve Güvenlik → **Yerel Ağ** → **Expo Go** açık olsun.
+4. **`exp://…:8081` request timeout** — Metro’ya telefon LAN’dan ulaşamıyorsa (şirket AP izolasyonu vb.) **kişisel hotspot** kullanın: test telefonunuzdan hotspot açın, Mac’i bu ağa bağlayın; `ipconfig getifaddr en0` ile Mac’in IP’sini alın; `npm run start:lan` ve QR ile yeniden deneyin.
+
+### Expo Go açıldı, uygulama: "Sunucuya bağlanılamıyor…" (Metro / QR çalışıyor)
+
+Bu mesaj **Nest API’ye** (axios) erişilemediğinde çıkar; **telefon `EXPO_PUBLIC_API_URL` adresine (Mac IP + port 3001) gidemiyordur**.
+
+**Çözüm — aynı ağ + doğru IP:**
+
+1. API çalışsın: `npm run dev -w apps/api` (port 3001); API `0.0.0.0` üzerinden dinlemeli (varsayılan `HOST`).
+2. Mac ile telefon **aynı ağda** olsun (tercihen **kişisel hotspot**: telefon hotspot, Mac bağlı).
+3. Mac’te: `ipconfig getifaddr en0` (gerekirse ilgili arayüz) → `apps/mobile/.env`:  
+   `EXPO_PUBLIC_API_URL=http://<bu-ip>:3001/api/v1`
+4. Metro’yu yeniden başlatın: `cd apps/mobile && npm run start:lan` ve env değiştiyse `npx expo start --clear`.
+5. Telefonda tarayıcıdan dene: `http://<aynı-ip>:3001/api/v1` — yanıt yoksa önce ağ / güvenlik duvarı.
 
 # ============================== 4. VERİTABANI MIGRATION
 
@@ -154,6 +210,16 @@ npm run build — tüm app'leri build et
 ==============================
 SORUN GİDERME
 ==============================
+
+"Expo Go telefonda projeyi açmıyor / zaman aşımı":
+
+- `cd apps/mobile && npm run start:lan` kullanın; QR’da **localhost** değil **Mac LAN IP** görünmeli.
+- Telefon ve Mac **aynı SSID** (aynı Wi‑Fi); misafir ağı kullanmayın.
+- iOS **Yerel Ağ** izni: Expo Go açık olsun.
+
+"API’ye telefondan erişilemiyor (web çalışıyor)":
+
+- `apps/mobile/.env` içinde `EXPO_PUBLIC_API_URL=http://<Mac-LAN-IP>:3001/api/v1` ve API `HOST=0.0.0.0` (veya varsayılan).
 
 "Cannot connect to PostgreSQL":
 

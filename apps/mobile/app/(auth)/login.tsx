@@ -24,8 +24,15 @@ function getErrorMessage(err: unknown): string {
   if (status === 429) return 'Çok fazla deneme. Lütfen birkaç dakika bekleyin.';
   if (status === 401 && message) return message;
   if (message) return message;
-  if (axiosErr?.code === 'ERR_NETWORK')
-    return 'Sunucuya bağlanılamıyor. İnternet bağlantınızı kontrol edin.';
+  const msg = typeof axiosErr?.message === 'string' ? axiosErr.message : '';
+  const isUnreachable =
+    axiosErr?.code === 'ERR_NETWORK' ||
+    axiosErr?.code === 'ECONNABORTED' ||
+    msg.includes('Network Error') ||
+    msg.toLowerCase().includes('timeout');
+  if (isUnreachable) {
+    return 'Sunucuya bağlanılamıyor. Ağ ve apps/mobile/.env içindeki EXPO_PUBLIC_API_URL değerini kontrol edin (Metro’yu yeniden başlatın).';
+  }
   if (axiosErr?.message) return axiosErr.message;
   return 'Bir hata oluştu. Lütfen tekrar deneyin.';
 }

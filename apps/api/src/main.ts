@@ -20,13 +20,7 @@ async function bootstrap(): Promise<void> {
     origin:
       process.env.NODE_ENV === 'production'
         ? process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000']
-        : (origin, cb) => {
-            if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
-              cb(null, true);
-              return;
-            }
-            cb(null, false);
-          },
+        : true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -39,10 +33,15 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
+  const port = Number(process.env.PORT) || 3001;
+  /** 0.0.0.0: LAN üzerinden fiziksel telefon / emülatörden erişim (yalnızca 127.0.0.1 dinlenirse mobil test edilemez) */
+  const host = process.env.HOST ?? '0.0.0.0';
+  await app.listen(port, host);
 
-  Logger.log(`API running on http://localhost:${port}/api/v1`, 'Bootstrap');
+  Logger.log(
+    `API running on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/api/v1 (bound ${host}:${port})`,
+    'Bootstrap',
+  );
 }
 
 bootstrap();

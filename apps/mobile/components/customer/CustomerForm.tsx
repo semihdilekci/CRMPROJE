@@ -94,7 +94,7 @@ export function CustomerForm({
           }
           await pickImageAndRunOcr(() =>
             ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              mediaTypes: ['images'],
               allowsEditing: true,
               aspect: [3, 4],
               quality: 0.8,
@@ -115,7 +115,7 @@ export function CustomerForm({
         }
         await pickImageAndRunOcr(() =>
           ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [3, 4],
             quality: 0.8,
@@ -141,7 +141,7 @@ export function CustomerForm({
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [3, 4],
       quality: 0.8,

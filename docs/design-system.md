@@ -1,146 +1,169 @@
-# Fuar CRM — Design System (Glassmorphism)
+# Fuar CRM — Dashboard & Rapor Design System
 
-Bu doküman, Fuar CRM web uygulamasının Glassmorphism tabanlı tasarım sistemini tanımlar. Yeni bileşen veya sayfa geliştirirken bu kurallara uyulmalıdır.
+Bu doküman, `docs/expo-crm-dashboard.html` referansına göre dashboard ve rapor sayfalarının görsel dili ile animasyon davranışlarını standartlar.
 
----
+## Amaç
 
-## Tasarım Prensipleri
+- Tüm dashboard/rapor ekranlarında aynı "premium glass" hissini korumak
+- Sayfa açılışında kademeli giriş efekti kullanmak
+- Veri yüklenirken "doldurma" hissi veren sayaç ve grafik animasyonları sunmak
 
-1. **Glassmorphism:** Yarı saydam arka planlar, `backdrop-blur` ile bulanık cam efekti.
-2. **Tutarlılık:** Tüm sayfa ve bileşenler aynı tasarım dilini kullanır.
-3. **Erişilebilirlik:** Yeterli kontrast, okunabilir metin boyutları.
+## Tasarım Dili
 
----
+### Stil Prensipleri
 
-## Renk Paleti
+1. Glassmorphism tabanlı koyu tema kullanılır.
+2. Vurgu dili mor + cyan gradienttir.
+3. Bilgi yoğunluğu yüksek olsa da görsel hiyerarşi sade kalır.
+4. Hareketler kısa, yumuşak ve dikkat dağıtmayan seviyede tutulur.
 
-### Arka Plan
-- **Ana gradient:** Koyu taban (#030712) + mor glow (sol üst) + turkuaz glow (sağ alt)
-- **Body:** `globals.css` içinde çok katmanlı `radial-gradient` + `linear-gradient` ile tanımlı
+### Renk Tokenlari
 
-### Vurgu Renkleri (Mor–Turkuaz)
-- **Primary gradient:** `from-violet-500 to-cyan-500`
-- **Accent:** `#8b5cf6` (violet-500)
-- **Accent-to:** `#06b6d4` (cyan-500)
+| Token | Değer | Kullanım |
+|---|---|---|
+| `--bg` | `#030712` | Ana arka plan |
+| `--accent` | `#8b5cf6` | Birincil vurgu |
+| `--accent-to` | `#06b6d4` | İkincil vurgu |
+| `--text` | `#f8fafc` | Ana metin |
+| `--muted` | `rgba(248,250,252,0.55)` | Yardımcı metin |
+| `--glass-bg` | `rgba(255,255,255,0.05)` | Kart yüzeyi |
+| `--glass-border` | `rgba(255,255,255,0.12)` | Kart kenarlığı |
+| `--green` | `#4ade80` | Pozitif metrik |
+| `--orange` | `#fb923c` | Uyarı/orta önem |
+| `--red` | `#f87171` | Negatif metrik |
+| `--amber` | `#fbbf24` | Vurgu/ikincil KPI |
 
-### Metin
-- **Ana metin:** `text-white` veya `#f8fafc`
-- **İkincil metin:** `text-white/60` veya `text-white/80`
+### Tipografi
 
-### Font
-- **Font stack:** `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
-- **Body:** 16px, `font-sans`
-- **Başlıklar:** h1 (32px), h2 (24px), h3 (18px), h4 (16px)
+- Başlık: `Playfair Display`
+- Gövde/UI: `DM Sans`
+- Dashboard başlıkları: 28px / 700
+- KPI büyük değerleri: 30-34px / 700
+- Yardımcı metinler: 10-13px aralığı
 
-### Font Boyutları (Token)
-| Sınıf | Boyut |
-|-------|-------|
-| `text-xs` | 12px |
-| `text-sm` | 14px |
-| `text-base` | 16px |
-| `text-lg` | 18px |
-| `text-xl` | 20px |
-| `text-2xl` | 24px |
-| `text-3xl` | 30px |
-| `text-4xl` | 32px |
+## Yerleşim Standartlari
 
-### Glass Token'ları
-- **Glass arka plan:** `bg-white/5` veya `bg-white/10`
-- **Glass border:** `border-white/10` veya `border-white/20`
-- **Blur:** `backdrop-blur-sm`, `backdrop-blur-xl`, `backdrop-blur-2xl`
+- Topbar: `position: sticky`, blur arka plan, ince border
+- Ana konteyner: `max-width: 1400px`, merkezde, yeterli iç boşluk
+- KPI grid: masaüstünde 4 kolon
+- İçerik grid: analitik kartlar + tablo + yardımcı kartlar
+- Kart dili: `border-radius: 16px`, `backdrop-filter: blur(20px)`, `glass-bg`
 
----
+## Dashboard Açılış Efekt Akışı (Zorunlu)
 
-## Bileşen Stilleri
+Sayfa ilk açıldığında aşağıdaki sıra uygulanır:
 
-### Kart (Glass Card)
-```
-backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl
-```
-Hover: `hover:border-white/30`, `hover:scale-[1.02]` (opsiyonel)
+1. **Header giriş**: `fadeUp`, gecikme `~100ms`
+2. **KPI kartları**: soldan sağa `fadeUp` (100ms aralıklı gecikme)
+3. **Ana analitik kartlar**: `fadeUp` ile ikinci dalga
+4. **Tablo satırları ve listeler**: `slideIn` veya `fadeUp` ile sıra sıra
 
-### Primary Button
-```
-bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/50
-hover:shadow-violet-500/70 hover:opacity-95
-```
+Kural:
+- Bir ekranda aynı anda en fazla 2 farklı giriş animasyonu kullan.
+- Toplam açılış süresi 1.2s-1.8s bandını geçmesin.
 
-### Secondary Button
-```
-backdrop-blur-xl bg-white/5 border border-white/10 text-white
-hover:bg-white/10 hover:border-white/20
-```
+## Veri Doldurma Efekti (Zorunlu)
 
-### Form Alanları (Input, Select, Textarea)
-```
-rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm
-focus:border-violet-400/60 focus:ring-1 focus:ring-violet-400/30
-placeholder:text-white/50
-```
+Rapor ekranlarında veri hissi statik olmamalıdır. Aşağıdaki desenler kullanılır:
 
-### Modal
-- **Overlay:** `backdrop-blur-sm bg-black/60`
-- **Panel:** `backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl`
+### 1) Sayaç Doldurma (Counter)
 
-### TopBar / Header
-```
-backdrop-blur-xl bg-slate-950/30 border-b border-white/10
-```
-- **Aktif nav:** `bg-gradient-to-r from-violet-500/20 to-cyan-500/20 text-white border border-white/20`
-- **İnaktif nav:** `text-white/60 hover:text-white hover:bg-white/5`
+- KPI değerleri "0"dan hedef değere akar.
+- Süre: `700ms-1200ms`
+- Easing: `ease-out`
+- Gecikme: kartın giriş gecikmesinden sonra başlar
 
-### Badge
-- **Varsayılan:** `backdrop-blur-xl bg-white/10 border border-white/20 text-white/90 rounded-full`
-- **Renkli:** `color` prop ile dinamik `backgroundColor` ve `borderColor`
+Önerilen davranış:
+- Büyük sayılar adım adım artar (`requestAnimationFrame`)
+- Para birimi ve yüzde formatı animasyon sonrası doğru formatta sabitlenir
 
----
+### 2) Dikey Çubuk Doldurma
 
-## Fuar Kartı Gradient'leri
+- Sparkline ve column chart için `transform: scaleY(0 -> 1)`
+- `transform-origin: bottom`
+- Süre: `700ms-1000ms`
 
-Her fuar kartı için farklı gradient kullanılır (kart ID'sine göre hash):
+### 3) Yatay Çubuk Doldurma
 
-| Sıra | Gradient |
-|------|----------|
-| 1 | `from-violet-500/20 to-purple-500/20` |
-| 2 | `from-blue-500/20 to-cyan-500/20` |
-| 3 | `from-pink-500/20 to-rose-500/20` |
-| 4 | `from-emerald-500/20 to-teal-500/20` |
-| 5 | `from-amber-500/20 to-orange-500/20` |
-| 6 | `from-indigo-500/20 to-blue-500/20` |
-| 7 | `from-fuchsia-500/20 to-pink-500/20` |
-| 8 | `from-lime-500/20 to-green-500/20` |
-| 9 | `from-cyan-500/20 to-sky-500/20` |
+- Pipeline/progress satırları için `transform: scaleX(0 -> 1)`
+- `transform-origin: left`
+- Süre: `800ms-1200ms`
 
----
+### 4) Donut/Progress Ring Çizim Efekti
 
-## Token Referansı (globals.css)
+- `stroke-dasharray` + `stroke-dashoffset` ile çizim animasyonu
+- Segmentler sırayla gelir (stagger)
+- Toplam süre: `1200ms-1800ms`
+
+## Animasyon Tokenlari
 
 | Token | Değer |
-|-------|-------|
-| `--color-bg` | `#020617` |
-| `--color-accent-from` | `#8b5cf6` |
-| `--color-accent-to` | `#06b6d4` |
-| `--color-glass-bg` | `rgba(255,255,255,0.05)` |
-| `--color-glass-border` | `rgba(255,255,255,0.2)` |
-| `--blur-sm` | `4px` |
-| `--blur-md` | `12px` |
-| `--blur-xl` | `24px` |
-| `--blur-2xl` | `40px` |
+|---|---|
+| `--motion-fast` | `0.2s` |
+| `--motion-normal` | `0.5s` |
+| `--motion-slow` | `0.9s` |
+| `--stagger-step` | `0.1s` |
+| `--ease-standard` | `ease` |
+| `--ease-emphasis` | `cubic-bezier(0.22, 1, 0.36, 1)` |
 
----
+## Standart Keyframe Seti
 
-## Yeni Bileşen Eklerken
+Dashboard/rapor ekranlarında aşağıdaki isimler korunur:
 
-1. **Kart tipi:** Yukarıdaki Glass Card pattern'ini kullan.
-2. **Buton:** Primary için gradient, secondary için glass.
-3. **Form alanı:** Input/Select/Textarea ile uyumlu glass stil.
-4. **Modal:** Modal bileşenini kullan; içerik zaten glass panel içinde.
-5. **Tablo:** `backdrop-blur-2xl bg-white/10 border border-white/20` container.
+- `fadeUp`: alt eksenden opaklığa geçiş
+- `slideIn`: yatay satır girişi
+- `barGrow`: dikey bar büyümesi
+- `barH`: yatay bar büyümesi
+- `dashAnim`: donut/ring stroke çizimi
 
----
+Not: Keyframe adlarının sabit tutulması, bileşenler arası tekrar kullanılabilirliği artırır.
+
+## Bileşen Bazlı Kurallar
+
+### KPI Kartı
+
+- Başlık + değer + trend + mini grafik düzeni korunur
+- Değerde sayaç animasyonu zorunlu
+- Mini barlarda kademeli gecikme zorunlu
+
+### Analitik Kart
+
+- Kart header ve body ayrımı yapılır
+- Başlık 13px/600, subtitle 11px/muted
+- Chart elemanlarında mutlaka doldurma animasyonu bulunur
+
+### Tablo/Liste Kartı
+
+- Satırlar tek tek girer (`slideIn` veya `fadeUp`)
+- Satır gecikmeleri 60-120ms aralığında artar
+- Border opaklığı düşük tutulur (`~0.05-0.08`)
+
+### Durum Badge/Pill
+
+- Pozitif: yeşil ton
+- Nötr/planlı: mor veya gri ton
+- Negatif: kırmızı ton
+- Her badge düşük opak glass taban üzerinde görünmelidir
+
+## Erişilebilirlik ve Performans
+
+- Yalnızca `transform` ve `opacity` animasyonları tercih edilir.
+- Uzun listelerde ilk 6-8 öğeden sonra animasyon sadeleştirilir.
+- `prefers-reduced-motion` desteklenir; bu modda animasyonlar kapatılır veya anlık geçişe döner.
+- Kontrast oranı düşük metinlerde `muted` kullanımını aşırıya kaçırma.
+
+## Uygulama Kontrol Listesi
+
+Dashboard/rapor sayfası tesliminden önce:
+
+- [ ] Açılış sırası header -> KPI -> kartlar -> satırlar akışını izliyor
+- [ ] KPI sayıları 0'dan doluyor
+- [ ] Çubuk grafikler scale tabanlı doluyor
+- [ ] Donut/ring segmentleri çizim animasyonuyla geliyor
+- [ ] Renk ve tipografi tokenları bu dokümana uyuyor
+- [ ] `prefers-reduced-motion` için güvenli davranış var
 
 ## Referanslar
 
-- **Figma tasarım:** [Dark Mode Glassmorphism Design](https://www.figma.com/design/TLSeAb4pXt3ST72bPvT2VX/Dark-Mode-Glassmorphism-Design)
-- **Kod örneği:** `docs/ui-example/` klasörü
-- **Token tanımları:** `apps/web/src/app/globals.css`
+- Tasarım örneği: `docs/expo-crm-dashboard.html`
+- Genel stil token kaynakları: `apps/web/src/app/globals.css`

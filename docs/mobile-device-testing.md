@@ -86,7 +86,7 @@ Terminal'de bir **QR kod** görünecektir.
 2. **Kamera** ile terminaldeki QR kodu tarayın
 3. "Open in Expo Go" ile uygulama açılacak
 
-> **Alternatif:** QR kod çalışmazsa `expo start --tunnel` kullanın (ngrok tüneli; ilk seferde `npx expo install @expo/ngrok` gerekebilir).
+> **Alternatif:** Mac ve telefon aynı Wi‑Fi / hotspot’ta değilse veya AP izolasyonu varsa önce ağı düzeltin; QR için `npm run start:lan` ile Metro’nun verdiği adresi kullanın.
 
 ---
 
@@ -102,7 +102,7 @@ Terminal'de bir **QR kod** görünecektir.
 - Tarayıcıda `http://192.168.1.8:3001/api/v1` adresini açın; JSON yanıt görmelisiniz
 
 ### QR kod taranmıyor
-- `npx expo start --tunnel` ile tünel modunu deneyin
+- `npm run start:lan` ile Metro’nun yazdığı `exp://` / QR’yı kullanın; Mac firewall Expo/Node için izin vermeli
 - Veya USB ile bağlayıp `npx expo run:ios --device` kullanın (Xcode gerekir)
 
 ---

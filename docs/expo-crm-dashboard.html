@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expo CRM — Dashboard Raporu</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #030712;
+    --accent: #8b5cf6;
+    --accent-to: #06b6d4;
+    --text: #f8fafc;
+    --muted: rgba(248,250,252,0.55);
+    --glass-bg: rgba(255,255,255,0.05);
+    --glass-border: rgba(255,255,255,0.12);
+    --green: #4ade80;
+    --orange: #fb923c;
+    --red: #f87171;
+    --amber: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 120% 80% at 10% 10%, rgba(139,92,246,0.20), transparent 50%),
+      radial-gradient(ellipse 100% 70% at 90% 90%, rgba(6,182,212,0.16), transparent 50%),
+      radial-gradient(ellipse 60% 50% at 50% 50%, rgba(30,41,59,0.2), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 32px;
+    border-bottom: 1px solid var(--glass-border);
+    backdrop-filter: blur(24px);
+    background: rgba(3,7,18,0.5);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 20px rgba(139,92,246,0.4);
+  }
+
+  .nav-pills { display: flex; gap: 4px; }
+  .nav-pill {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: rgba(248,250,252,0.6);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .nav-pill:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .nav-pill.active {
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(6,182,212,0.12));
+    border-color: rgba(255,255,255,0.14);
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .date-badge {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+  }
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 0 14px rgba(139,92,246,0.3);
+  }
+
+  /* ─── LAYOUT ─── */
+  .page { position: relative; z-index: 1; padding: 28px 32px 40px; max-width: 1400px; margin: 0 auto; }
+
+  .page-header {
+    margin-bottom: 28px;
+    opacity: 0; transform: translateY(16px);
+    animation: fadeUp 0.5s ease 0.1s forwards;
+  }
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, #f8fafc 0%, rgba(248,250,252,0.65) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .period-tabs { display: flex; gap: 4px; margin-top: 16px; }
+  .period-tab {
+    padding: 5px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    color: var(--muted); border: 1px solid transparent; transition: all 0.2s;
+  }
+  .period-tab.active {
+    color: var(--text); border-color: rgba(139,92,246,0.4);
+    background: rgba(139,92,246,0.12);
+  }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .kpi-card {
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(20px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+  .kpi-card:nth-child(1) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.3s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.4s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.5s; }
+
+  .kpi-card::before {
+    content: ''; position: absolute;
+    inset: 0; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
+    pointer-events: none;
+  }
+
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 12px; }
+  .kpi-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 34px; font-weight: 700; line-height: 1;
+    margin-bottom: 10px;
+  }
+  .kpi-value.violet { color: #a78bfa; }
+  .kpi-value.green  { color: #4ade80; }
+  .kpi-value.cyan   { color: #22d3ee; }
+  .kpi-value.orange { color: #fb923c; }
+
+  .kpi-trend {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 8px; border-radius: 20px;
+  }
+  .kpi-trend.up   { color: #4ade80; background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.2); }
+  .kpi-trend.down { color: #f87171; background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.2); }
+  .kpi-trend-label { font-size: 11px; color: var(--muted); margin-left: 6px; }
+
+  .kpi-sparkline { margin-top: 14px; }
+  .sparkline-bars { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+  .spark-bar {
+    flex: 1; border-radius: 3px 3px 0 0;
+    background: rgba(255,255,255,0.1);
+    transition: background 0.3s;
+    transform-origin: bottom;
+    transform: scaleY(0);
+    animation: barGrow 0.8s ease forwards;
+  }
+  .kpi-card:nth-child(1) .spark-bar { background: rgba(167,139,250,0.35); }
+  .kpi-card:nth-child(2) .spark-bar { background: rgba(74,222,128,0.35); }
+  .kpi-card:nth-child(3) .spark-bar { background: rgba(34,211,238,0.35); }
+  .kpi-card:nth-child(4) .spark-bar { background: rgba(251,146,60,0.35); }
+
+  .kpi-icon {
+    position: absolute; top: 18px; right: 18px;
+    font-size: 22px; opacity: 0.35;
+  }
+
+  /* ─── MAIN GRID ─── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 360px;
+    grid-template-rows: auto auto;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    opacity: 0; transform: translateY(20px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .card-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: rgba(139,92,246,0.15); color: #a78bfa;
+    border: 1px solid rgba(139,92,246,0.25);
+  }
+  .card-body { padding: 18px 20px; }
+
+  /* ─── PIPELINE FUNNEL ─── */
+  .pipeline-card { grid-column: 1; animation-delay: 0.4s; }
+
+  .pipeline-stages { display: flex; flex-direction: column; gap: 8px; }
+  .stage-row { display: flex; align-items: center; gap: 12px; }
+  .stage-name { font-size: 12px; color: var(--muted); width: 90px; flex-shrink: 0; }
+  .stage-bar-wrap { flex: 1; height: 10px; background: rgba(255,255,255,0.06); border-radius: 5px; overflow: hidden; }
+  .stage-bar {
+    height: 100%; border-radius: 5px;
+    transform: scaleX(0); transform-origin: left;
+    animation: barH 1s ease forwards;
+  }
+  .stage-bar.tanisma   { background: linear-gradient(90deg,#a78bfa,#8b5cf6); animation-delay:0.7s; }
+  .stage-bar.toplanti  { background: linear-gradient(90deg,#60a5fa,#3b82f6); animation-delay:0.8s; }
+  .stage-bar.teklif    { background: linear-gradient(90deg,#34d399,#10b981); animation-delay:0.9s; }
+  .stage-bar.sozlesme  { background: linear-gradient(90deg,#fbbf24,#f59e0b); animation-delay:1.0s; }
+  .stage-bar.kazanilan { background: linear-gradient(90deg,#4ade80,#22c55e); animation-delay:1.1s; }
+  .stage-bar.olumsuz   { background: linear-gradient(90deg,#f87171,#ef4444); animation-delay:1.1s; }
+  .stage-count { font-size: 13px; font-weight: 700; color: var(--text); width: 28px; text-align: right; }
+
+  .stage-total-label { font-size: 11px; color: var(--muted); margin-top: 14px; }
+  .conversion-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px; padding: 6px 12px; border-radius: 10px;
+    background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
+    font-size: 12px; color: #4ade80;
+  }
+
+  /* ─── BAR CHART ─── */
+  .chart-card { grid-column: 2; animation-delay: 0.5s; }
+  .bar-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 140px; gap: 6px; padding: 0 4px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+  .bar-col-value { font-size: 10px; color: var(--muted); }
+  .bar-col-bar {
+    width: 100%; border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, rgba(139,92,246,0.7), rgba(6,182,212,0.4));
+    transform: scaleY(0); transform-origin: bottom;
+    animation: barGrow 0.9s ease forwards;
+    min-height: 4px;
+  }
+  .bar-col-label { font-size: 10px; color: var(--muted); }
+  .chart-legend { display: flex; gap: 16px; margin-top: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* ─── CONVERSION RING ─── */
+  .ring-card { grid-column: 3; grid-row: 1 / 3; animation-delay: 0.6s; }
+  .ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 20px; }
+
+  .donut { position: relative; width: 160px; height: 160px; margin: 0 auto 20px; }
+  .donut svg { transform: rotate(-90deg); }
+  .donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .donut-pct {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px; font-weight: 700; color: var(--green); line-height: 1;
+  }
+  .donut-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .ring-stats { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 0 4px; }
+  .ring-stat-row { display: flex; align-items: center; justify-content: space-between; }
+  .ring-stat-left { display: flex; align-items: center; gap: 8px; }
+  .ring-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .ring-stat-name { font-size: 12px; color: var(--muted); }
+  .ring-stat-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .ring-stat-pct { font-size: 11px; color: var(--muted); }
+
+  .ring-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 6px 0; }
+
+  .ring-rate-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; padding: 0; }
+  .rate-mini {
+    border-radius: 10px; padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+  .rate-mini-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+  .rate-mini-val { font-size: 16px; font-weight: 700; }
+  .rate-mini-bar { height: 3px; border-radius: 2px; margin-top: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .rate-mini-fill { height: 100%; border-radius: 2px; transform: scaleX(0); transform-origin: left; animation: barH 1.2s ease 1.2s forwards; }
+
+  /* ─── RECENT FAIRS ─── */
+  .fairs-card { grid-column: 1 / 3; animation-delay: 0.7s; }
+  .fair-rows { display: flex; flex-direction: column; }
+  .fair-row {
+    display: grid; grid-template-columns: 2fr 1fr 80px 80px 100px 80px;
+    align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    opacity: 0; transform: translateX(-12px);
+    animation: slideIn 0.4s ease forwards;
+  }
+  .fair-row:last-child { border-bottom: none; }
+  .fair-row:nth-child(1) { animation-delay: 0.9s; }
+  .fair-row:nth-child(2) { animation-delay: 1.0s; }
+  .fair-row:nth-child(3) { animation-delay: 1.1s; }
+  .fair-row:nth-child(4) { animation-delay: 1.2s; }
+  .fair-row:nth-child(5) { animation-delay: 1.3s; }
+  .fair-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .fair-location { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .fair-date { font-size: 12px; color: var(--muted); }
+  .fair-num { font-size: 14px; font-weight: 700; text-align: center; }
+  .fair-status {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    text-align: center; font-weight: 600;
+  }
+  .fair-status.active  { background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+  .fair-status.past    { background: rgba(255,255,255,0.06); color: rgba(248,250,252,0.5); border: 1px solid rgba(255,255,255,0.1); }
+  .fair-status.planned { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.2); }
+  .fair-progress-wrap { display: flex; align-items: center; gap: 8px; }
+  .fair-prog-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .fair-prog-fill { height: 100%; border-radius: 3px; transform: scaleX(0); transform-origin: left; animation: barH 1s ease 1.4s forwards; }
+  .fair-prog-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .table-head {
+    display: grid; grid-template-columns: 2fr 1fr 80px 80px 100px 80px;
+    gap: 12px; padding: 0 0 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 4px;
+  }
+  .th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); font-weight: 600; }
+
+  /* ─── TOP CUSTOMERS ─── */
+  .customers-card { grid-column: 1; animation-delay: 0.8s; }
+  .customer-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    opacity: 0; animation: fadeUp 0.4s ease forwards;
+  }
+  .customer-item:last-child { border-bottom: none; }
+  .customer-item:nth-child(1) { animation-delay: 1.1s; }
+  .customer-item:nth-child(2) { animation-delay: 1.2s; }
+  .customer-item:nth-child(3) { animation-delay: 1.3s; }
+  .customer-item:nth-child(4) { animation-delay: 1.4s; }
+  .customer-item:nth-child(5) { animation-delay: 1.5s; }
+  .cust-rank { font-size: 11px; color: var(--muted); width: 18px; flex-shrink: 0; font-weight: 600; }
+  .cust-avatar {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .cust-info { flex: 1; min-width: 0; }
+  .cust-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cust-company { font-size: 11px; color: var(--muted); }
+  .cust-budget { font-size: 13px; font-weight: 700; color: var(--amber); text-align: right; }
+  .cust-opps { font-size: 11px; color: var(--muted); text-align: right; }
+
+  /* ─── PRODUCT INTEREST ─── */
+  .products-card { grid-column: 2; animation-delay: 0.85s; }
+  .product-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .prod-name { font-size: 12px; color: var(--text); flex: 1; }
+  .prod-bar-wrap { width: 100px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .prod-bar-fill { height: 100%; border-radius: 3px; transform: scaleX(0); transform-origin: left; animation: barH 1s ease forwards; }
+  .prod-count { font-size: 12px; color: var(--muted); width: 28px; text-align: right; }
+
+  /* ─── BOTTOM ROW ─── */
+  .bottom-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;
+  }
+
+  /* ─── ACTIVITY FEED ─── */
+  .activity-card { animation-delay: 0.9s; }
+  .activity-item {
+    display: flex; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    opacity: 0; animation: fadeUp 0.4s ease forwards;
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-item:nth-child(1) { animation-delay: 1.2s; }
+  .activity-item:nth-child(2) { animation-delay: 1.3s; }
+  .activity-item:nth-child(3) { animation-delay: 1.4s; }
+  .activity-item:nth-child(4) { animation-delay: 1.5s; }
+  .activity-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0; margin-top: 5px;
+  }
+  .activity-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .activity-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ─── ALERTS ─── */
+  .alerts-card { animation-delay: 0.95s; }
+  .alert-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    margin-bottom: 8px; border: 1px solid;
+    opacity: 0; animation: fadeUp 0.4s ease forwards;
+  }
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-item:nth-child(1) { animation-delay: 1.2s; }
+  .alert-item:nth-child(2) { animation-delay: 1.3s; }
+  .alert-item:nth-child(3) { animation-delay: 1.4s; }
+  .alert-item.warn { background: rgba(251,191,36,0.07); border-color: rgba(251,191,36,0.2); }
+  .alert-item.info { background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.2); }
+  .alert-item.danger { background: rgba(248,113,113,0.07); border-color: rgba(248,113,113,0.2); }
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
+  .alert-title { font-size: 12px; font-weight: 600; }
+  .alert-item.warn .alert-title { color: #fbbf24; }
+  .alert-item.info .alert-title { color: #a78bfa; }
+  .alert-item.danger .alert-title { color: #f87171; }
+  .alert-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ─── TEAM PERF ─── */
+  .team-card { animation-delay: 1.0s; }
+  .team-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    opacity: 0; animation: fadeUp 0.4s ease forwards;
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-row:nth-child(1) { animation-delay: 1.3s; }
+  .team-row:nth-child(2) { animation-delay: 1.4s; }
+  .team-row:nth-child(3) { animation-delay: 1.5s; }
+  .team-row:nth-child(4) { animation-delay: 1.6s; }
+  .team-avatar {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: white;
+  }
+  .team-name { font-size: 12px; font-weight: 500; flex: 1; }
+  .team-opp  { font-size: 12px; color: var(--muted); width: 28px; text-align: center; }
+  .team-rate-pill {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes barGrow {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  @keyframes barH {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  @keyframes countUp {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes dashAnim {
+    from { stroke-dashoffset: 440; }
+  }
+
+  .circle-anim { animation: dashAnim 1.6s ease 0.6s both; }
+
+  /* ─── DONUT PATHS ─── */
+  .donut-bg { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 16; }
+  .donut-fill { fill: none; stroke-width: 16; stroke-linecap: round; }
+  .donut-kazanilan { stroke: #4ade80; stroke-dasharray: 173 440; stroke-dashoffset: 0; animation: dashAnim 1.6s ease 0.6s both; }
+  .donut-olumsuz   { stroke: #f87171; stroke-dasharray: 96 440; stroke-dashoffset: -173; animation: dashAnim 1.6s ease 0.8s both; }
+  .donut-acik      { stroke: #a78bfa; stroke-dasharray: 171 440; stroke-dashoffset: -269; animation: dashAnim 1.6s ease 1.0s both; }
+
+  /* ─── COUNTER ANIM ─── */
+  .count-anim { animation: countUp 0.8s ease forwards; opacity: 0; }
+
+  .section-gap { margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-icon">✦</div>
+    Expo CRM
+  </div>
+  <nav class="nav-pills">
+    <div class="nav-pill active">Dashboard</div>
+    <div class="nav-pill">Fuarlar</div>
+    <div class="nav-pill">Müşteriler</div>
+    <div class="nav-pill">Raporlar</div>
+    <div class="nav-pill">AI Analiz</div>
+  </nav>
+  <div class="topbar-right">
+    <div class="date-badge">23 Mart 2026, Pazartesi</div>
+    <div class="user-avatar">SA</div>
+  </div>
+</header>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1 class="page-title">Genel Bakış</h1>
+    <p class="page-subtitle">Tüm fuar ve satış verilerinizin gerçek zamanlı özeti</p>
+    <div class="period-tabs">
+      <div class="period-tab">Son 7 Gün</div>
+      <div class="period-tab active">Son 30 Gün</div>
+      <div class="period-tab">Son 90 Gün</div>
+      <div class="period-tab">2025 Tümü</div>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid section-gap">
+    <div class="kpi-card">
+      <div class="kpi-icon">🏛</div>
+      <div class="kpi-label">Toplam Fuar</div>
+      <div class="kpi-value violet count-anim" style="animation-delay:0.3s">24</div>
+      <div>
+        <span class="kpi-trend up">↑ 3</span>
+        <span class="kpi-trend-label">geçen aya göre</span>
+      </div>
+      <div class="kpi-sparkline">
+        <div class="sparkline-bars">
+          <div class="spark-bar" style="height:40%;animation-delay:0.4s"></div>
+          <div class="spark-bar" style="height:55%;animation-delay:0.5s"></div>
+          <div class="spark-bar" style="height:45%;animation-delay:0.6s"></div>
+          <div class="spark-bar" style="height:65%;animation-delay:0.7s"></div>
+          <div class="spark-bar" style="height:70%;animation-delay:0.8s"></div>
+          <div class="spark-bar" style="height:60%;animation-delay:0.9s"></div>
+          <div class="spark-bar" style="height:90%;animation-delay:1.0s"></div>
+          <div class="spark-bar" style="height:100%;animation-delay:1.1s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">💼</div>
+      <div class="kpi-label">Toplam Fırsat</div>
+      <div class="kpi-value green count-anim" style="animation-delay:0.4s">347</div>
+      <div>
+        <span class="kpi-trend up">↑ 42</span>
+        <span class="kpi-trend-label">geçen aya göre</span>
+      </div>
+      <div class="kpi-sparkline">
+        <div class="sparkline-bars">
+          <div class="spark-bar" style="height:50%;animation-delay:0.5s"></div>
+          <div class="spark-bar" style="height:60%;animation-delay:0.6s"></div>
+          <div class="spark-bar" style="height:55%;animation-delay:0.7s"></div>
+          <div class="spark-bar" style="height:75%;animation-delay:0.8s"></div>
+          <div class="spark-bar" style="height:80%;animation-delay:0.9s"></div>
+          <div class="spark-bar" style="height:70%;animation-delay:1.0s"></div>
+          <div class="spark-bar" style="height:95%;animation-delay:1.1s"></div>
+          <div class="spark-bar" style="height:100%;animation-delay:1.2s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Pipeline Değeri</div>
+      <div class="kpi-value cyan count-anim" style="animation-delay:0.5s">₺4.2M</div>
+      <div>
+        <span class="kpi-trend up">↑ %18</span>
+        <span class="kpi-trend-label">geçen aya göre</span>
+      </div>
+      <div class="kpi-sparkline">
+        <div class="sparkline-bars">
+          <div class="spark-bar" style="height:35%;animation-delay:0.6s"></div>
+          <div class="spark-bar" style="height:45%;animation-delay:0.7s"></div>
+          <div class="spark-bar" style="height:55%;animation-delay:0.8s"></div>
+          <div class="spark-bar" style="height:50%;animation-delay:0.9s"></div>
+          <div class="spark-bar" style="height:70%;animation-delay:1.0s"></div>
+          <div class="spark-bar" style="height:85%;animation-delay:1.1s"></div>
+          <div class="spark-bar" style="height:90%;animation-delay:1.2s"></div>
+          <div class="spark-bar" style="height:100%;animation-delay:1.3s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">🎯</div>
+      <div class="kpi-label">Dönüşüm Oranı</div>
+      <div class="kpi-value orange count-anim" style="animation-delay:0.6s">%39.2</div>
+      <div>
+        <span class="kpi-trend down">↓ %2.1</span>
+        <span class="kpi-trend-label">geçen aya göre</span>
+      </div>
+      <div class="kpi-sparkline">
+        <div class="sparkline-bars">
+          <div class="spark-bar" style="height:70%;animation-delay:0.7s"></div>
+          <div class="spark-bar" style="height:80%;animation-delay:0.8s"></div>
+          <div class="spark-bar" style="height:90%;animation-delay:0.9s"></div>
+          <div class="spark-bar" style="height:85%;animation-delay:1.0s"></div>
+          <div class="spark-bar" style="height:75%;animation-delay:1.1s"></div>
+          <div class="spark-bar" style="height:70%;animation-delay:1.2s"></div>
+          <div class="spark-bar" style="height:65%;animation-delay:1.3s"></div>
+          <div class="spark-bar" style="height:60%;animation-delay:1.4s"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid section-gap">
+
+    <!-- PIPELINE FUNNEL -->
+    <div class="card pipeline-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Pipeline Aşamaları</div>
+          <div class="card-subtitle">347 aktif fırsat dağılımı</div>
+        </div>
+        <span class="card-badge">Son 30 Gün</span>
+      </div>
+      <div class="card-body">
+        <div class="pipeline-stages">
+          <div class="stage-row">
+            <div class="stage-name">Tanışma</div>
+            <div class="stage-bar-wrap"><div class="stage-bar tanisma" style="width:100%"></div></div>
+            <div class="stage-count">128</div>
+          </div>
+          <div class="stage-row">
+            <div class="stage-name">Toplantı</div>
+            <div class="stage-bar-wrap"><div class="stage-bar toplanti" style="width:72%"></div></div>
+            <div class="stage-count">92</div>
+          </div>
+          <div class="stage-row">
+            <div class="stage-name">Teklif</div>
+            <div class="stage-bar-wrap"><div class="stage-bar teklif" style="width:48%"></div></div>
+            <div class="stage-count">61</div>
+          </div>
+          <div class="stage-row">
+            <div class="stage-name">Sözleşme</div>
+            <div class="stage-bar-wrap"><div class="stage-bar sozlesme" style="width:28%"></div></div>
+            <div class="stage-count">30</div>
+          </div>
+          <div class="stage-row">
+            <div class="stage-name">Kazanıldı</div>
+            <div class="stage-bar-wrap"><div class="stage-bar kazanilan" style="width:22%"></div></div>
+            <div class="stage-count" style="color:#4ade80">28</div>
+          </div>
+          <div class="stage-row">
+            <div class="stage-name">Olumsuz</div>
+            <div class="stage-bar-wrap"><div class="stage-bar olumsuz" style="width:18%"></div></div>
+            <div class="stage-count" style="color:#f87171">8</div>
+          </div>
+        </div>
+        <div class="stage-total-label">Kazanma Oranı</div>
+        <div class="conversion-badge">
+          <span>✓</span>
+          <span>%78 teklif → sözleşme dönüşümü</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FUAR BAŞVURU BAR CHART -->
+    <div class="card chart-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Aylık Fırsat Hacmi</div>
+          <div class="card-subtitle">2025 yılı itibariyle</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="bar-chart">
+          <div class="bar-col">
+            <div class="bar-col-value">18</div>
+            <div class="bar-col-bar" style="height:30%;animation-delay:0.6s"></div>
+            <div class="bar-col-label">Oca</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">24</div>
+            <div class="bar-col-bar" style="height:40%;animation-delay:0.7s"></div>
+            <div class="bar-col-label">Şub</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">31</div>
+            <div class="bar-col-bar" style="height:52%;animation-delay:0.8s"></div>
+            <div class="bar-col-label">Mar</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">28</div>
+            <div class="bar-col-bar" style="height:46%;animation-delay:0.9s"></div>
+            <div class="bar-col-label">Nis</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">45</div>
+            <div class="bar-col-bar" style="height:74%;animation-delay:1.0s"></div>
+            <div class="bar-col-label">May</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">52</div>
+            <div class="bar-col-bar" style="height:86%;animation-delay:1.1s"></div>
+            <div class="bar-col-label">Haz</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">38</div>
+            <div class="bar-col-bar" style="height:63%;animation-delay:1.2s"></div>
+            <div class="bar-col-label">Tem</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">41</div>
+            <div class="bar-col-bar" style="height:68%;animation-delay:1.3s"></div>
+            <div class="bar-col-label">Ağu</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar-col-value">60</div>
+            <div class="bar-col-bar" style="height:100%;animation-delay:1.4s;background:linear-gradient(180deg,#8b5cf6,#06b6d4)"></div>
+            <div class="bar-col-label" style="color:#a78bfa">Eyl</div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(135deg,#8b5cf6,#06b6d4)"></div> Fırsat Sayısı</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4ade80;opacity:0.6"></div> Kazanılan</div>
+        </div>
+
+        <div style="margin-top:18px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <div style="border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 12px; background:rgba(255,255,255,0.02);">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">En Yüksek</div>
+            <div style="font-size:20px;font-weight:700;color:#a78bfa;font-family:'Playfair Display',serif">60</div>
+            <div style="font-size:11px;color:var(--muted)">Eylül 2025</div>
+          </div>
+          <div style="border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 12px; background:rgba(255,255,255,0.02);">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Ortalama</div>
+            <div style="font-size:20px;font-weight:700;color:#22d3ee;font-family:'Playfair Display',serif">38.5</div>
+            <div style="font-size:11px;color:var(--muted)">aylık fırsat</div>
+          </div>
+          <div style="border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 12px; background:rgba(255,255,255,0.02);">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Büyüme</div>
+            <div style="font-size:20px;font-weight:700;color:#4ade80;font-family:'Playfair Display',serif">↑%34</div>
+            <div style="font-size:11px;color:var(--muted)">yıl başına göre</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONVERSION DONUT (spans 2 rows) -->
+    <div class="card ring-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Durum Dağılımı</div>
+          <div class="card-subtitle">Toplam 347 fırsat</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="ring-wrap">
+          <div class="donut">
+            <svg viewBox="0 0 160 160" width="160" height="160">
+              <circle class="donut-bg" cx="80" cy="80" r="70" />
+              <circle class="donut-fill donut-kazanilan" cx="80" cy="80" r="70" />
+              <circle class="donut-fill donut-olumsuz" cx="80" cy="80" r="70" />
+              <circle class="donut-fill donut-acik" cx="80" cy="80" r="70" />
+            </svg>
+            <div class="donut-center">
+              <div class="donut-pct">%39</div>
+              <div class="donut-label">Kazanma</div>
+            </div>
+          </div>
+
+          <div class="ring-stats">
+            <div class="ring-stat-row">
+              <div class="ring-stat-left">
+                <div class="ring-dot" style="background:#4ade80"></div>
+                <div class="ring-stat-name">Kazanıldı</div>
+              </div>
+              <div>
+                <span class="ring-stat-val">136</span>
+                <span class="ring-stat-pct"> / %39</span>
+              </div>
+            </div>
+            <div class="ring-stat-row">
+              <div class="ring-stat-left">
+                <div class="ring-dot" style="background:#f87171"></div>
+                <div class="ring-stat-name">Olumsuz</div>
+              </div>
+              <div>
+                <span class="ring-stat-val">75</span>
+                <span class="ring-stat-pct"> / %22</span>
+              </div>
+            </div>
+            <div class="ring-stat-row">
+              <div class="ring-stat-left">
+                <div class="ring-dot" style="background:#a78bfa"></div>
+                <div class="ring-stat-name">Aktif</div>
+              </div>
+              <div>
+                <span class="ring-stat-val">136</span>
+                <span class="ring-stat-pct"> / %39</span>
+              </div>
+            </div>
+
+            <div class="ring-divider"></div>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px">Dönüşüm Tahmini</div>
+            <div class="ring-rate-cards">
+              <div class="rate-mini">
+                <div class="rate-mini-label">Çok Yüksek</div>
+                <div class="rate-mini-val" style="color:#4ade80">42</div>
+                <div class="rate-mini-bar"><div class="rate-mini-fill" style="background:#4ade80;width:82%"></div></div>
+              </div>
+              <div class="rate-mini">
+                <div class="rate-mini-label">Yüksek</div>
+                <div class="rate-mini-val" style="color:#86efac">68</div>
+                <div class="rate-mini-bar"><div class="rate-mini-fill" style="background:#86efac;width:60%"></div></div>
+              </div>
+              <div class="rate-mini">
+                <div class="rate-mini-label">Orta</div>
+                <div class="rate-mini-val" style="color:#ffb347">94</div>
+                <div class="rate-mini-bar"><div class="rate-mini-fill" style="background:#ffb347;width:45%"></div></div>
+              </div>
+              <div class="rate-mini">
+                <div class="rate-mini-label">Düşük</div>
+                <div class="rate-mini-val" style="color:#fb923c">71</div>
+                <div class="rate-mini-bar"><div class="rate-mini-fill" style="background:#fb923c;width:30%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT FAIRS TABLE -->
+    <div class="card fairs-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Fuarlar</div>
+          <div class="card-subtitle">Tüm fuar ve katılım verileri</div>
+        </div>
+        <span class="card-badge">24 Fuar</span>
+      </div>
+      <div class="card-body" style="padding-top:14px">
+        <div class="table-head">
+          <div class="th">Fuar Adı</div>
+          <div class="th">Tarih</div>
+          <div class="th" style="text-align:center">Fırsat</div>
+          <div class="th" style="text-align:center">Kazanılan</div>
+          <div class="th">Durum</div>
+          <div class="th">Hedef</div>
+        </div>
+        <div class="fair-rows">
+          <div class="fair-row">
+            <div><div class="fair-name">Hannover Messe 2025</div><div class="fair-location">📍 Hannover, Almanya</div></div>
+            <div class="fair-date">12–16 May 2025</div>
+            <div class="fair-num" style="color:#a78bfa">60</div>
+            <div class="fair-num" style="color:#4ade80">24</div>
+            <div><span class="fair-status past">Tamamlandı</span></div>
+            <div class="fair-progress-wrap">
+              <div class="fair-prog-bar"><div class="fair-prog-fill" style="background:linear-gradient(90deg,#4ade80,#22c55e);width:80%"></div></div>
+              <div class="fair-prog-label">%80</div>
+            </div>
+          </div>
+          <div class="fair-row">
+            <div><div class="fair-name">Achema 2025</div><div class="fair-location">📍 Frankfurt, Almanya</div></div>
+            <div class="fair-date">10–14 Haz 2025</div>
+            <div class="fair-num" style="color:#a78bfa">45</div>
+            <div class="fair-num" style="color:#4ade80">18</div>
+            <div><span class="fair-status past">Tamamlandı</span></div>
+            <div class="fair-progress-wrap">
+              <div class="fair-prog-bar"><div class="fair-prog-fill" style="background:linear-gradient(90deg,#4ade80,#22c55e);width:67%"></div></div>
+              <div class="fair-prog-label">%67</div>
+            </div>
+          </div>
+          <div class="fair-row">
+            <div><div class="fair-name">WIN Eurasia 2025</div><div class="fair-location">📍 İstanbul, Türkiye</div></div>
+            <div class="fair-date">18–21 Eyl 2025</div>
+            <div class="fair-num" style="color:#a78bfa">52</div>
+            <div class="fair-num" style="color:#22d3ee">—</div>
+            <div><span class="fair-status active">Devam Ediyor</span></div>
+            <div class="fair-progress-wrap">
+              <div class="fair-prog-bar"><div class="fair-prog-fill" style="background:linear-gradient(90deg,#22d3ee,#06b6d4);width:62%"></div></div>
+              <div class="fair-prog-label">%62</div>
+            </div>
+          </div>
+          <div class="fair-row">
+            <div><div class="fair-name">Adipec 2025</div><div class="fair-location">📍 Abu Dhabi, BAE</div></div>
+            <div class="fair-date">04–07 Kas 2025</div>
+            <div class="fair-num" style="color:var(--muted)">—</div>
+            <div class="fair-num" style="color:var(--muted)">—</div>
+            <div><span class="fair-status planned">Planlandı</span></div>
+            <div class="fair-progress-wrap">
+              <div class="fair-prog-bar"><div class="fair-prog-fill" style="background:linear-gradient(90deg,#a78bfa,#8b5cf6);width:0%"></div></div>
+              <div class="fair-prog-label">Yakında</div>
+            </div>
+          </div>
+          <div class="fair-row">
+            <div><div class="fair-name">Valve World 2025</div><div class="fair-location">📍 Düsseldorf, Almanya</div></div>
+            <div class="fair-date">03–05 Ara 2025</div>
+            <div class="fair-num" style="color:var(--muted)">—</div>
+            <div class="fair-num" style="color:var(--muted)">—</div>
+            <div><span class="fair-status planned">Planlandı</span></div>
+            <div class="fair-progress-wrap">
+              <div class="fair-prog-bar"><div class="fair-prog-fill" style="background:linear-gradient(90deg,#a78bfa,#8b5cf6);width:0%"></div></div>
+              <div class="fair-prog-label">Yakında</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-grid -->
+
+  <!-- BOTTOM ROW - TOP CUSTOMERS + PRODUCTS + ACTIVITY -->
+  <div class="bottom-grid section-gap">
+
+    <!-- TOP CUSTOMERS -->
+    <div class="card customers-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">En Değerli Müşteriler</div>
+          <div class="card-subtitle">Pipeline değerine göre</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="customer-item">
+            <div class="cust-rank">1</div>
+            <div class="cust-avatar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">GM</div>
+            <div class="cust-info">
+              <div class="cust-name">Görkem Makina</div>
+              <div class="cust-company">4 fırsat • Hannover, Achema</div>
+            </div>
+            <div>
+              <div class="cust-budget">₺480K</div>
+              <div class="cust-opps">3 aktif</div>
+            </div>
+          </div>
+          <div class="customer-item">
+            <div class="cust-rank">2</div>
+            <div class="cust-avatar" style="background:linear-gradient(135deg,#06b6d4,#0e7490)">AE</div>
+            <div class="cust-info">
+              <div class="cust-name">AkçaPetrol A.Ş.</div>
+              <div class="cust-company">6 fırsat • Adipec, WIN</div>
+            </div>
+            <div>
+              <div class="cust-budget">₺390K</div>
+              <div class="cust-opps">2 aktif</div>
+            </div>
+          </div>
+          <div class="customer-item">
+            <div class="cust-rank">3</div>
+            <div class="cust-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">BT</div>
+            <div class="cust-info">
+              <div class="cust-name">Borusan Tehnikhim</div>
+              <div class="cust-company">3 fırsat • Valve World</div>
+            </div>
+            <div>
+              <div class="cust-budget">₺270K</div>
+              <div class="cust-opps">1 aktif</div>
+            </div>
+          </div>
+          <div class="customer-item">
+            <div class="cust-rank">4</div>
+            <div class="cust-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">KS</div>
+            <div class="cust-info">
+              <div class="cust-name">Koç Sistemleri</div>
+              <div class="cust-company">2 fırsat • WIN Eurasia</div>
+            </div>
+            <div>
+              <div class="cust-budget">₺215K</div>
+              <div class="cust-opps">2 aktif</div>
+            </div>
+          </div>
+          <div class="customer-item">
+            <div class="cust-rank">5</div>
+            <div class="cust-avatar" style="background:linear-gradient(135deg,#ec4899,#be185d)">TP</div>
+            <div class="cust-info">
+              <div class="cust-name">TeknoPlast GmbH</div>
+              <div class="cust-company">5 fırsat • Hannover</div>
+            </div>
+            <div>
+              <div class="cust-budget">€185K</div>
+              <div class="cust-opps">1 aktif</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCT INTEREST -->
+    <div class="card products-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Ürün İlgi Analizi</div>
+          <div class="card-subtitle">Fırsat sayısına göre ürün sıralaması</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:6px">
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.1s forwards">
+            <div class="prod-name">Endüstriyel Pompalar</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#8b5cf6,#6d28d9);width:100%;animation-delay:1.2s"></div></div>
+            <div class="prod-count">94</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.2s forwards">
+            <div class="prod-name">Vana Sistemleri</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#06b6d4,#0e7490);width:78%;animation-delay:1.3s"></div></div>
+            <div class="prod-count">73</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.3s forwards">
+            <div class="prod-name">Kompresörler</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#10b981,#059669);width:63%;animation-delay:1.4s"></div></div>
+            <div class="prod-count">59</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.4s forwards">
+            <div class="prod-name">Kontrol Panelleri</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#f59e0b,#d97706);width:48%;animation-delay:1.5s"></div></div>
+            <div class="prod-count">45</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.5s forwards">
+            <div class="prod-name">Filtre Üniteleri</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#ec4899,#be185d);width:38%;animation-delay:1.6s"></div></div>
+            <div class="prod-count">36</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.6s forwards">
+            <div class="prod-name">Otomasyon Yazılımı</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#a78bfa,#7c3aed);width:30%;animation-delay:1.7s"></div></div>
+            <div class="prod-count">28</div>
+          </div>
+          <div class="product-item" style="opacity:0;animation:fadeUp 0.4s ease 1.7s forwards">
+            <div class="prod-name">Isı Eşanjörleri</div>
+            <div class="prod-bar-wrap"><div class="prod-bar-fill" style="background:linear-gradient(90deg,#34d399,#10b981);width:22%;animation-delay:1.8s"></div></div>
+            <div class="prod-count">21</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Toplam İlgi Kaydı</div>
+            <div style="font-size:22px;font-weight:700;font-family:'Playfair Display',serif;color:#a78bfa">356</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Çoklu Ürün Fırsatı</div>
+            <div style="font-size:22px;font-weight:700;font-family:'Playfair Display',serif;color:#22d3ee">%42</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">En İlgili Pazar</div>
+            <div style="font-size:14px;font-weight:700;color:#fbbf24">Almanya</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTS + ACTIVITY combined -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="card alerts-card" style="animation-delay:0.95s">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Aksiyon Gerektiren</div>
+            <div class="card-subtitle">Otomatik tespit</div>
+          </div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.2)">3 Uyarı</span>
+        </div>
+        <div class="card-body">
+          <div class="alert-item warn">
+            <div class="alert-icon">⏰</div>
+            <div>
+              <div class="alert-title">Sessizlik Uyarısı</div>
+              <div class="alert-desc">AkçaPetrol — 18 gündür temas yok. Teklif aşamasında.</div>
+            </div>
+          </div>
+          <div class="alert-item danger">
+            <div class="alert-icon">🎯</div>
+            <div>
+              <div class="alert-title">Hedef Geride</div>
+              <div class="alert-desc">Hannover Messe tonaj hedefinin %38 gerisinde kaldı.</div>
+            </div>
+          </div>
+          <div class="alert-item info">
+            <div class="alert-icon">📋</div>
+            <div>
+              <div class="alert-title">Yaklaşan Fuar</div>
+              <div class="alert-desc">Adipec 2025 — 42 gün kaldı. Hazırlık başlatılmalı.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card activity-card" style="flex:1;animation-delay:1.0s">
+        <div class="card-header">
+          <div class="card-title">Son Aktiviteler</div>
+        </div>
+        <div class="card-body">
+          <div class="activity-item">
+            <div class="activity-dot" style="background:#4ade80"></div>
+            <div>
+              <div class="activity-text">Görkem Makina — Teklif kabul edildi</div>
+              <div class="activity-time">2 saat önce • WIN Eurasia</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:#a78bfa"></div>
+            <div>
+              <div class="activity-text">Yeni müşteri eklendi: TeknoPlast GmbH</div>
+              <div class="activity-time">5 saat önce • Hannover Messe</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:#22d3ee"></div>
+            <div>
+              <div class="activity-text">Borusan Tehnikhim — Toplantı aşamasına geçti</div>
+              <div class="activity-time">Dün • WIN Eurasia</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:#fbbf24"></div>
+            <div>
+              <div class="activity-text">Adipec 2025 fuarı sisteme eklendi</div>
+              <div class="activity-time">2 gün önce • Planlama</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /bottom-grid -->
+
+</div><!-- /page -->
+
+<script>
+// Animate counter numbers
+document.querySelectorAll('.count-anim').forEach(el => {
+  const final = el.textContent;
+  const delay = parseFloat(el.style.animationDelay || '0') * 1000;
+  el.textContent = '0';
+  setTimeout(() => {
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  }, delay * 1000);
+});
+
+// Period tab switching
+document.querySelectorAll('.period-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Nav pill switching
+document.querySelectorAll('.nav-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
