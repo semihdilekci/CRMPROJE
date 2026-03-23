@@ -13,3 +13,4 @@ export * from './product';
 export * from './setting';
 export * from './team';
 export * from './chat';
+export * from './report';

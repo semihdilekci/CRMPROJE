@@ -4,3 +4,4 @@ export * from './products';
 export * from './conversion-rate';
 export * from './api-endpoints';
 export * from './pipeline';
+export * from './report-catalog';
