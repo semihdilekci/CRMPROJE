@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import type { OllamaModel } from '@crm/shared';
+import { getApiErrorMessage } from '@crm/shared';
 
 export function ChatPanel() {
   const router = useRouter();
@@ -59,12 +60,9 @@ export function ChatPanel() {
         exportId: result.exportId,
       });
     } catch (err: unknown) {
-      const status = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { status?: number } }).response?.status
-        : undefined;
-      const apiMessage =
+      const status =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          ? (err as { response?: { status?: number } }).response?.status
           : undefined;
 
       if (status === 401) {
@@ -77,10 +75,10 @@ export function ChatPanel() {
         return;
       }
 
-      const errorText =
-        apiMessage && typeof apiMessage === 'string'
-          ? apiMessage
-          : 'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.';
+      const errorText = getApiErrorMessage(
+        err,
+        'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+      );
       addMessage({ role: 'assistant', content: errorText });
     }
   };

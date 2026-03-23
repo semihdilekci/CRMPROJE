@@ -48,11 +48,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
           ? exceptionResponse
           : (exceptionResponse as Record<string, unknown>).message?.toString() || exception.message;
 
+      const joined = Array.isArray(message) ? message.join(', ') : message;
+      const sanitized =
+        typeof joined === 'string' &&
+        /^internal server error$/i.test(joined.trim())
+          ? 'Beklenmeyen bir hata oluştu. İstek sunucu tarafında işlenemedi; API loglarına bakın.'
+          : joined;
+
       const errorCode = HTTP_STATUS_TO_ERROR_CODE[status] || ErrorCode.INTERNAL_ERROR;
 
       const body: ApiErrorResponse = {
         success: false,
-        message: Array.isArray(message) ? message.join(', ') : message,
+        message: sanitized,
         error: errorCode,
       };
 

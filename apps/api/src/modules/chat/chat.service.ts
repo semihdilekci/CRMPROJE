@@ -15,6 +15,19 @@ import type { ChatQueryInput, ChatQueryResponse, ChartData, TableData } from '@c
 const EXPORT_DIR = path.join(process.cwd(), 'exports');
 const EXPORT_TTL_MS = 60 * 60 * 1000;
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+/** Gemini/proxy istek gövdesi sınırını aşmaması için bağlam JSON üst sınırı (karakter). */
+const MAX_SYSTEM_CONTEXT_JSON_CHARS = 700_000;
+/** AI bağlamında işlenecek en fazla fırsat (en yeni önce). */
+const MAX_OPPORTUNITIES_FOR_AI_CONTEXT = 1200;
+/** Fırsat başına AI’ya gönderilecek en fazla aşama kaydı (zaman çizelgesi). */
+const MAX_STAGE_LOGS_PER_OPPORTUNITY = 35;
+/** Müşteri bazlı kıyas soruları için bağlamda sunulan en fazla müşteri (tüm DB’den özet). */
+const TOP_CUSTOMERS_IN_CONTEXT = 25;
+/** Aşırı büyük model çıktısı nedeniyle 500 / proxy hatalarını önlemek için üst sınırlar. */
+const MAX_RESPONSE_TEXT_CHARS = 96_000;
+const MAX_CHARTS_IN_RESPONSE = 12;
+const MAX_TABLES_IN_RESPONSE = 8;
+const MAX_ROWS_PER_TABLE = 60;
 
 @Injectable()
 export class ChatService {
@@ -131,14 +144,13 @@ export class ChatService {
         charts: parsed.charts,
         tables: parsed.tables,
       };
-
-      if (wantsExport && parsed.tables?.length) {
-        const exportId = await this.createExcelExport(parsed.tables, userId);
-        result.exportId = exportId;
-        result.exportDescription = 'Analiz verisi Excel dosyası';
+      const clamped = this.clampChatResponse(result);
+      if (wantsExport && clamped.tables?.length) {
+        const exportId = await this.createExcelExport(clamped.tables, userId);
+        clamped.exportId = exportId;
+        clamped.exportDescription = 'Analiz verisi Excel dosyası';
       }
-
-      return result;
+      return clamped;
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;
@@ -196,7 +208,7 @@ export class ChatService {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents,
       generationConfig: {
-        maxOutputTokens: 8192,
+        maxOutputTokens: 12288,
         temperature: 0.7,
       },
       safetySettings: [
@@ -209,6 +221,10 @@ export class ChatService {
 
     this.logger.log(`Gemini isteği: model=${model}`);
 
+    const geminiTimeoutMs = 120_000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), geminiTimeoutMs);
+
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -216,8 +232,10 @@ export class ChatService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
+          signal: controller.signal,
         },
       );
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errText = await res.text();
@@ -257,20 +275,26 @@ export class ChatService {
         charts: parsed.charts,
         tables: parsed.tables,
       };
-
-      if (wantsExport && parsed.tables?.length) {
-        const exportId = await this.createExcelExport(parsed.tables, userId);
-        result.exportId = exportId;
-        result.exportDescription = 'Analiz verisi Excel dosyası';
+      const clamped = this.clampChatResponse(result);
+      if (wantsExport && clamped.tables?.length) {
+        const exportId = await this.createExcelExport(clamped.tables, userId);
+        clamped.exportId = exportId;
+        clamped.exportDescription = 'Analiz verisi Excel dosyası';
       }
-
-      return result;
+      return clamped;
     } catch (error) {
+      clearTimeout(timeoutId);
       if (error instanceof InternalServerErrorException) {
         throw error;
       }
       if (error instanceof BadRequestException) {
         throw error;
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.logger.error(`Gemini zaman aşımı (${geminiTimeoutMs}ms)`);
+        throw new InternalServerErrorException(
+          `Gemini yanıtı ${geminiTimeoutMs / 1000} saniye içinde gelmedi. Daha kısa bir soru deneyin veya bir süre sonra tekrarlayın.`,
+        );
       }
       const errStr = String(error);
       this.logger.error('Gemini hatası', errStr, error instanceof Error ? error.stack : undefined);
@@ -350,14 +374,13 @@ export class ChatService {
         charts: parsed.charts,
         tables: parsed.tables,
       };
-
-      if (wantsExport && parsed.tables?.length) {
-        const exportId = await this.createExcelExport(parsed.tables, userId);
-        result.exportId = exportId;
-        result.exportDescription = 'Analiz verisi Excel dosyası';
+      const clamped = this.clampChatResponse(result);
+      if (wantsExport && clamped.tables?.length) {
+        const exportId = await this.createExcelExport(clamped.tables, userId);
+        clamped.exportId = exportId;
+        clamped.exportDescription = 'Analiz verisi Excel dosyası';
       }
-
-      return result;
+      return clamped;
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;
@@ -401,6 +424,39 @@ export class ChatService {
     }
   }
 
+  /** İlk { ile eşleşen köşeli JSON nesnesini string içi süslü parantezleri saymadan keser. */
+  private sliceBalancedJsonObject(text: string, startIndex: number): string | null {
+    if (text[startIndex] !== '{') return null;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = startIndex; i < text.length; i++) {
+      const c = text[i]!;
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (c === '\\') {
+          escape = true;
+          continue;
+        }
+        if (c === '"') inString = false;
+        continue;
+      }
+      if (c === '"') {
+        inString = true;
+        continue;
+      }
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) return text.slice(startIndex, i + 1);
+      }
+    }
+    return null;
+  }
+
   private parseAiResponse(text: string): {
     text?: string;
     charts?: ChartData[];
@@ -408,23 +464,51 @@ export class ChatService {
   } {
     const trimmed = text.trim();
 
-    // 1) ```json ... ``` blok içinde JSON
+    const tryBranch = (
+      candidate: string,
+    ): { text?: string; charts?: ChartData[]; tables?: TableData[] } | null =>
+      this.tryParseStructuredJson(candidate);
+
+    // 1) Tüm yanıt tek ```json ... ``` bloğu
     const blockMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
     if (blockMatch) {
-      const parsed = this.tryParseStructuredJson(blockMatch[1]!.trim());
-      if (parsed) return parsed;
+      const ok = tryBranch(blockMatch[1]!.trim());
+      if (ok) return ok;
     }
 
-    // 2) Ham JSON (code block olmadan) — prompt'a rağmen bazen AI ek metin ekliyor
+    // 2) Metin içinde ilk ```json ... ``` bloğu (önce/sonra açıklama olabilir)
+    const looseFence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (looseFence?.[1]) {
+      const inner = looseFence[1].trim();
+      const ok = tryBranch(inner);
+      if (ok) return ok;
+    }
+
+    // 3) Şema anahtarıyla başlayan nesne + dengeli kesit (JSON sonrası ek metin güvenli)
     const rawMatch = text.match(/\{\s*"(?:text|charts|tables)"\s*:/);
     if (rawMatch && rawMatch.index !== undefined) {
-      const parsed = this.tryParseStructuredJson(text.slice(rawMatch.index));
-      if (parsed) return parsed;
+      const balanced = this.sliceBalancedJsonObject(text, rawMatch.index);
+      if (balanced) {
+        const ok = tryBranch(balanced);
+        if (ok) return ok;
+      }
+      const ok = tryBranch(text.slice(rawMatch.index));
+      if (ok) return ok;
     }
 
-    // 3) Tüm yanıt tek JSON
-    const parsed = this.tryParseStructuredJson(trimmed);
+    // 4) Tüm yanıt tek JSON
+    let parsed = tryBranch(trimmed);
     if (parsed) return parsed;
+
+    // 5) İlk { ile dengeli nesne (ham JSON + ekstra metin)
+    const firstBrace = trimmed.indexOf('{');
+    if (firstBrace !== -1) {
+      const balanced = this.sliceBalancedJsonObject(trimmed, firstBrace);
+      if (balanced) {
+        parsed = tryBranch(balanced);
+        if (parsed) return parsed;
+      }
+    }
 
     return { text };
   }
@@ -482,6 +566,118 @@ export class ChatService {
     return chart;
   }
 
+  private parseBudgetRawToNumber(raw: string | null | undefined): number {
+    if (!raw) return 0;
+    const num = parseFloat(String(raw).replace(/[^\d.,]/g, '').replace(',', '.'));
+    return Number.isNaN(num) ? 0 : num;
+  }
+
+  /** Model çıktısı çok büyüdüğünde HTTP 500 / serileştirme hatalarını önler. */
+  private clampChatResponse(result: ChatQueryResponse): ChatQueryResponse {
+    let text = result.text ?? '';
+    if (text.length > MAX_RESPONSE_TEXT_CHARS) {
+      text =
+        text.slice(0, MAX_RESPONSE_TEXT_CHARS) +
+        '\n\n[… yanıt uzunluk sınırı nedeniyle kesildi]';
+    }
+    const charts = result.charts?.slice(0, MAX_CHARTS_IN_RESPONSE);
+    const tables = result.tables
+      ?.slice(0, MAX_TABLES_IN_RESPONSE)
+      .map((t) => ({
+        columns: t.columns,
+        rows: t.rows.slice(0, MAX_ROWS_PER_TABLE),
+      }));
+    return {
+      ...result,
+      text,
+      charts,
+      tables,
+    };
+  }
+
+  /**
+   * Tüm veritabanından müşteri bazlı özet (müşteri sıralaması / kıyas soruları için).
+   * opportunities dizisi 1200 ile sınırlı olduğundan bu blok ayrı tutulur.
+   */
+  private async buildCustomerLeaderboard(
+    customerCounts: Array<{ customerId: string; _count: { id: number } }>,
+  ): Promise<
+    Array<{
+      rank: number;
+      customerId: string;
+      company: string;
+      name: string;
+      opportunityCount: number;
+      budgetTotalApprox: number;
+      byStage: Record<string, number>;
+      satisaDonustuCount: number;
+      olumsuzCount: number;
+      satisDonusumOraniYuzde: number;
+    }>
+  > {
+    const sorted = [...customerCounts].sort((a, b) => b._count.id - a._count.id);
+    const topIds = sorted.slice(0, TOP_CUSTOMERS_IN_CONTEXT).map((x) => x.customerId);
+    if (topIds.length === 0) return [];
+
+    const [customers, opps] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: { id: { in: topIds } },
+        select: { id: true, company: true, name: true },
+      }),
+      this.prisma.opportunity.findMany({
+        where: { customerId: { in: topIds } },
+        select: { customerId: true, currentStage: true, budgetRaw: true },
+      }),
+    ]);
+
+    const customerById = new Map(customers.map((c) => [c.id, c]));
+    const entries: Array<{
+      rank: number;
+      customerId: string;
+      company: string;
+      name: string;
+      opportunityCount: number;
+      budgetTotalApprox: number;
+      byStage: Record<string, number>;
+      satisaDonustuCount: number;
+      olumsuzCount: number;
+      satisDonusumOraniYuzde: number;
+    }> = [];
+
+    let rank = 1;
+    for (const cid of topIds) {
+      const c = customerById.get(cid);
+      if (!c) continue;
+      const rows = opps.filter((o) => o.customerId === cid);
+      const byStage: Record<string, number> = {};
+      let budgetTotalApprox = 0;
+      let satisaDonustuCount = 0;
+      let olumsuzCount = 0;
+      for (const o of rows) {
+        byStage[o.currentStage] = (byStage[o.currentStage] ?? 0) + 1;
+        budgetTotalApprox += this.parseBudgetRawToNumber(o.budgetRaw);
+        if (o.currentStage === 'satisa_donustu') satisaDonustuCount++;
+        if (o.currentStage === 'olumsuz') olumsuzCount++;
+      }
+      const n = rows.length;
+      const satisDonusumOraniYuzde =
+        n > 0 ? Math.round((satisaDonustuCount / n) * 10000) / 100 : 0;
+      entries.push({
+        rank: rank++,
+        customerId: cid,
+        company: c.company,
+        name: c.name,
+        opportunityCount: n,
+        budgetTotalApprox,
+        byStage,
+        satisaDonustuCount,
+        olumsuzCount,
+        satisDonusumOraniYuzde,
+      });
+    }
+    return entries;
+  }
+
   async getExport(exportId: string, _userId: string): Promise<{
     filePath: string;
     fileName: string;
@@ -502,52 +698,53 @@ export class ChatService {
   }
 
   private async gatherContextData() {
-    const [fairs, opportunities, stageLogsGroup, customers] = await Promise.all([
-      this.prisma.fair.findMany({
-        orderBy: { startDate: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          startDate: true,
-          endDate: true,
-          _count: { select: { opportunities: true } },
-        },
-      }),
-      this.prisma.opportunity.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          fair: { select: { id: true, name: true } },
-          customer: { select: { id: true, company: true, name: true } },
-          opportunityProducts: {
-            include: { product: { select: { name: true } } },
+    const [fairs, opportunities, stageLogsGroup, customerTotal, customerCounts] =
+      await Promise.all([
+        this.prisma.fair.findMany({
+          orderBy: { startDate: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+            _count: { select: { opportunities: true } },
           },
-          stageLogs: {
-            orderBy: { createdAt: 'asc' },
-            include: {
-              changedBy: {
-                select: {
-                  name: true,
-                  team: { select: { name: true } },
+        }),
+        this.prisma.opportunity.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: MAX_OPPORTUNITIES_FOR_AI_CONTEXT,
+          include: {
+            fair: { select: { id: true, name: true } },
+            customer: { select: { id: true, company: true, name: true } },
+            opportunityProducts: {
+              include: { product: { select: { name: true } } },
+            },
+            stageLogs: {
+              orderBy: { createdAt: 'asc' },
+              take: MAX_STAGE_LOGS_PER_OPPORTUNITY,
+              include: {
+                changedBy: {
+                  select: {
+                    name: true,
+                    team: { select: { name: true } },
+                  },
                 },
               },
             },
           },
-        },
-      }),
-      this.prisma.opportunityStageLog.groupBy({
-        by: ['stage'],
-        _count: { id: true },
-      }),
-      this.prisma.customer.findMany({
-        include: {
-          opportunities: {
-            include: {
-              opportunityProducts: { include: { product: true } },
-            },
-          },
-        },
-      }),
-    ]);
+        }),
+        this.prisma.opportunityStageLog.groupBy({
+          by: ['stage'],
+          _count: { id: true },
+        }),
+        this.prisma.customer.count(),
+        this.prisma.opportunity.groupBy({
+          by: ['customerId'],
+          _count: { id: true },
+        }),
+      ]);
+
+    const customerLeaderboardTop = await this.buildCustomerLeaderboard(customerCounts);
 
     const fairList = fairs.map((f) => ({
       id: f.id,
@@ -569,12 +766,7 @@ export class ChatService {
       const products = new Set<string>();
 
       for (const opp of fairOpps) {
-        if (opp.budgetRaw) {
-          const num = parseFloat(
-            String(opp.budgetRaw).replace(/[^\d.,]/g, '').replace(',', '.'),
-          );
-          if (!isNaN(num)) budgetTotal += num;
-        }
+        budgetTotal += this.parseBudgetRawToNumber(opp.budgetRaw);
         byStage[opp.currentStage] = (byStage[opp.currentStage] ?? 0) + 1;
         for (const op of opp.opportunityProducts) {
           products.add(op.product.name);
@@ -598,16 +790,14 @@ export class ChatService {
     );
 
     const customerSummary = {
-      total: customers.length,
+      total: customerTotal,
       byProduct: {} as Record<string, number>,
     };
 
-    for (const c of customers) {
-      for (const o of c.opportunities) {
-        for (const op of o.opportunityProducts) {
-          customerSummary.byProduct[op.product.name] =
-            (customerSummary.byProduct[op.product.name] ?? 0) + 1;
-        }
+    for (const opp of opportunities) {
+      for (const op of opp.opportunityProducts) {
+        customerSummary.byProduct[op.product.name] =
+          (customerSummary.byProduct[op.product.name] ?? 0) + 1;
       }
     }
 
@@ -659,6 +849,11 @@ export class ChatService {
       opportunities: opportunitiesForAi,
       stageLogSummary,
       customerSummary,
+      customerLeaderboard: {
+        topByOpportunityCount: customerLeaderboardTop,
+        note:
+          'Tüm Opportunity kayıtları üzerinden hesaplanmıştır. Müşteri sıralaması ve kıyas (satışa dönüşüm, bütçe, pipeline) sorularında öncelikle bu diziyi kullan; opportunities dizisi yalnızca son kayıtların örneklemesidir.',
+      },
     };
   }
 
@@ -666,8 +861,20 @@ export class ChatService {
     contextData: Awaited<ReturnType<typeof this.gatherContextData>>,
     wantsExport: boolean,
   ): string {
-    const dataJson = JSON.stringify(contextData, null, 2);
+    let dataJson = JSON.stringify(contextData, null, 2);
+    if (dataJson.length > MAX_SYSTEM_CONTEXT_JSON_CHARS) {
+      this.logger.warn(
+        `AI analiz bağlamı çok büyük (${dataJson.length} karakter), ${MAX_SYSTEM_CONTEXT_JSON_CHARS} ile kısaltılıyor`,
+      );
+      dataJson =
+        dataJson.slice(0, MAX_SYSTEM_CONTEXT_JSON_CHARS) +
+        '\n\n[... veri boyut sınırı nedeniyle kesildi; özet ve sayımlar yine de güvenilirdir]';
+    }
     return `Sen bir Fuar CRM Veri Analisti olarak çalışıyorsun. Görevin, kullanıcının sorduğu soruyu yanıtlamak ve verilen JSON veriyi kullanarak profesyonel, sayısal ve eyleme geçirilebilir analiz sunmaktır.
+
+VERİ KAPSAMI: opportunities dizisi en fazla ${MAX_OPPORTUNITIES_FOR_AI_CONTEXT} güncel fırsat kaydı içerir; fuar bazlı toplam fırsat sayıları için fairs[].opportunityCount ve opportunitySummary kullan. Uzun geçmiş için stageLogs fırsat başına kısaltılmış olabilir.
+
+MÜŞTERİ SIRALAMASI / KIYAS: "En çok fırsat", "ilk N müşteri", "satışa dönüşüm oranı", "bütçe ve pipeline kıyas" gibi sorularda yanıtı customerLeaderboard.topByOpportunityCount üzerinden kur; bu alan tüm veritabanından türetilmiş özet içerir (rank, opportunityCount, budgetTotalApprox, byStage, satisDonusumOraniYuzde). Grafik ve tabloları mümkün olduğunca küçük tut (en fazla 5 müşteri satırı).
 
 KURALLAR:
 1. Sadece veride mevcut olan bilgileri kullan. Veride olmayan konularda tahmin veya varsayım yapma.

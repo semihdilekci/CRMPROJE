@@ -16,7 +16,7 @@ import { useChatQuery } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth-store';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { GradientView } from '@/components/ui/GradientView';
-import type { ChartData, TableData, OllamaModel } from '@crm/shared';
+import { getApiErrorMessage, type ChartData, type TableData, type OllamaModel } from '@crm/shared';
 
 function LoadingDots() {
   const [anims] = useState(() =>
@@ -164,11 +164,6 @@ export function ChatPanel() {
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { status?: number } }).response?.status
           : undefined;
-      const apiMessage =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data
-              ?.message
-          : undefined;
 
       if (status === 401) {
         setMessages((prev) => [
@@ -183,10 +178,10 @@ export function ChatPanel() {
         return;
       }
 
-      const errorText =
-        apiMessage && typeof apiMessage === 'string'
-          ? apiMessage
-          : 'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.';
+      const errorText = getApiErrorMessage(
+        err,
+        'Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+      );
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: errorText },
