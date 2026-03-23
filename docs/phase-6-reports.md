@@ -91,15 +91,15 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 3.1, 3.2, 3.3 — Pipeline ve StageLog verisini yoğun kullanan 3 rapor
 
-- [ ] **R4.1** `apps/api` — `GET /api/v1/reports/pipeline-overview` endpoint: aşama bazlı fırsat sayıları ve değerleri, funnel verisi, dönüşüm oranı dağılımı, treemap verisi
-- [ ] **R4.2** `apps/api` — `GET /api/v1/reports/pipeline-velocity` endpoint: StageLog tarihlerinden aşamalar arası ortalama/medyan geçiş süreleri, satış döngüsü süresi, en uzun bekleyen fırsat, fuar×aşama süre matrisi
-- [ ] **R4.3** `apps/api` — `GET /api/v1/reports/win-loss` endpoint: kazanma/kayıp oranları, lossReason dağılımı, aylık kazanma trendi, fuar ve conversionRate bazlı başarı oranları
-- [ ] **R4.4** `apps/web` — `usePipelineOverview`, `usePipelineVelocity`, `useWinLoss` hook'ları
-- [ ] **R4.5** `apps/web` — Pipeline Genel Bakış dashboard sayfası: KPI kartları + funnel bar + stacked bar + 2 pasta + treemap + veri tablosu
-- [ ] **R4.6** `apps/web` — Pipeline Hız Analizi dashboard sayfası: KPI kartları + bar grafik + çizgi grafik + scatter plot + heatmap + yavaş fırsatlar tablosu
-- [ ] **R4.7** `apps/web` — Kazanma/Kaybetme Analizi dashboard sayfası: KPI kartları + donut + bar grafikler + çizgi grafik + stacked bar + 2 veri tablosu
-- [ ] **R4.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R4.1** `apps/api` — `GET /api/v1/reports/pipeline-overview` endpoint: aşama bazlı fırsat sayıları ve değerleri, funnel verisi, dönüşüm oranı dağılımı, treemap verisi
+- [x] **R4.2** `apps/api` — `GET /api/v1/reports/pipeline-velocity` endpoint: StageLog tarihlerinden aşamalar arası ortalama/medyan geçiş süreleri, satış döngüsü süresi, en uzun bekleyen fırsat, fuar×aşama süre matrisi
+- [x] **R4.3** `apps/api` — `GET /api/v1/reports/win-loss` endpoint: kazanma/kayıp oranları, lossReason dağılımı, aylık kazanma trendi, fuar ve conversionRate bazlı başarı oranları
+- [x] **R4.4** `apps/web` — `usePipelineOverview`, `usePipelineVelocity`, `useWinLoss` hook'ları
+- [x] **R4.5** `apps/web` — Pipeline Genel Bakış dashboard sayfası: KPI kartları + funnel bar + stacked bar + 2 pasta + treemap + veri tablosu
+- [x] **R4.6** `apps/web` — Pipeline Hız Analizi dashboard sayfası: KPI kartları + bar grafik + çizgi grafik + scatter plot + heatmap + yavaş fırsatlar tablosu
+- [x] **R4.7** `apps/web` — Kazanma/Kaybetme Analizi dashboard sayfası: KPI kartları + donut + bar grafikler + çizgi grafik + stacked bar + 2 veri tablosu
+- [x] **R4.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
