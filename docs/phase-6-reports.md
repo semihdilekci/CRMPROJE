@@ -172,14 +172,14 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R2–R8
 **Kapsam:** Tüm raporlara PDF/CSV export, responsive iyileştirme, mobil rapor ekranı hazırlığı
 
-- [ ] **R9.1** `apps/web` — PDF export altyapısı (dashboard ekran görüntüsü → PDF)
-- [ ] **R9.2** `apps/web` — CSV export altyapısı (tablo verisini CSV dosyasına dönüştürme)
-- [ ] **R9.3** `apps/web` — Tüm dashboard sayfalarına export butonları entegre et
-- [ ] **R9.4** `apps/web` — Responsive düzen iyileştirmesi (tablet: 2 sütun, mobil: tek sütun)
-- [ ] **R9.5** `apps/web` — Boş veri durumları (empty state) ve yükleme durumları (skeleton) tüm raporlarda kontrol
-- [ ] **R9.6** `apps/mobile` — Mobil rapor katalog sayfası ve temel dashboard görünümü hazırlığı (Phase 6 mobil scope tanımı)
-- [ ] **R9.7** Smoke test: tüm export fonksiyonları + responsive kontrol
-  Durum: [ ]
+- [x] **R9.1** `apps/web` — PDF export altyapısı (dashboard ekran görüntüsü → PDF)
+- [x] **R9.2** `apps/web` — CSV export altyapısı (tablo verisini CSV dosyasına dönüştürme)
+- [x] **R9.3** `apps/web` — Tüm dashboard sayfalarına export butonları entegre et
+- [x] **R9.4** `apps/web` — Responsive düzen iyileştirmesi (tablet: 2 sütun, mobil: tek sütun)
+- [x] **R9.5** `apps/web` — Boş veri durumları (empty state) ve yükleme durumları (skeleton) tüm raporlarda kontrol
+- [x] **R9.6** `apps/mobile` — Mobil rapor katalog sayfası ve temel dashboard görünümü hazırlığı (Phase 6 mobil scope tanımı)
+- [x] **R9.7** Smoke test: tüm export fonksiyonları + responsive kontrol
+  Durum: [x]
 
 ---
 
