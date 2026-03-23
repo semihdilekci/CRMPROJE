@@ -58,14 +58,14 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** 1 rapor (Rapor 1.1) — Backend endpoint + Frontend dashboard
 
-- [ ] **R2.1** `apps/api` — `GET /api/v1/reports/executive-summary` endpoint: KPI hesaplamaları (aktif fuar, açık fırsat, pipeline değeri, kazanılan gelir, dönüşüm oranı, toplam müşteri)
-- [ ] **R2.2** `apps/api` — Aylık gelir trendi hesaplama (son 12 ay)
-- [ ] **R2.3** `apps/api` — Pipeline aşama dağılımı ve dönüşüm oranı dağılımı aggregation
-- [ ] **R2.4** `apps/api` — En aktif 5 fuar ve en değerli 5 müşteri leaderboard verileri
-- [ ] **R2.5** `apps/web` — `useExecutiveSummary` hook
-- [ ] **R2.6** `apps/web` — Executive Summary dashboard sayfası: 6 KPI kartı + çizgi grafik + bar grafik + pasta grafik + sparkline + 2 leaderboard + tablo
-- [ ] **R2.7** Smoke test: endpoint yanıtı + dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R2.1** `apps/api` — `GET /api/v1/reports/executive-summary` endpoint: KPI hesaplamaları (aktif fuar, açık fırsat, pipeline değeri, kazanılan gelir, dönüşüm oranı, toplam müşteri)
+- [x] **R2.2** `apps/api` — Aylık gelir trendi hesaplama (son 12 ay)
+- [x] **R2.3** `apps/api` — Pipeline aşama dağılımı ve dönüşüm oranı dağılımı aggregation
+- [x] **R2.4** `apps/api` — En aktif 5 fuar ve en değerli 5 müşteri leaderboard verileri
+- [x] **R2.5** `apps/web` — `useExecutiveSummary` hook
+- [x] **R2.6** `apps/web` — Executive Summary dashboard sayfası: 6 KPI kartı + çizgi grafik + bar grafik + pasta grafik + sparkline + 2 leaderboard + tablo
+- [x] **R2.7** Smoke test: endpoint yanıtı + dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
