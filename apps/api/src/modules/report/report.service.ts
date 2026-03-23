@@ -23,6 +23,8 @@ import {
   budgetToNumber,
   generateMonthLabels,
   safePercent,
+  daysBetween,
+  median,
 } from './report.helpers';
 
 const OPEN_STAGES = ['tanisma', 'toplanti', 'teklif', 'sozlesme'];
@@ -539,60 +541,297 @@ export class ReportService {
     return { selectedFairTargets, allFairTargets, avgTargetCompletion: Math.round(avgTargetCompletion * 100) / 100 };
   }
 
-  async getPipelineOverview(_params: {
+  async getPipelineOverview(params: {
     fairIds: string[];
     conversionRate?: string;
     startDate?: string;
     endDate?: string;
   }): Promise<PipelineOverviewResponse> {
+    const where: Record<string, unknown> = {};
+    if (params.fairIds.length) where.fairId = { in: params.fairIds };
+    if (params.conversionRate) where.conversionRate = params.conversionRate;
+    if (params.startDate || params.endDate) {
+      const dateFilter: Record<string, unknown> = {};
+      if (params.startDate) dateFilter.gte = new Date(params.startDate);
+      if (params.endDate) dateFilter.lte = new Date(params.endDate);
+      where.createdAt = dateFilter;
+    }
+
+    const opps = await this.prisma.opportunity.findMany({
+      where,
+      select: {
+        id: true, budgetRaw: true, budgetCurrency: true, conversionRate: true,
+        currentStage: true, createdAt: true, updatedAt: true,
+        customer: { select: { company: true } },
+        fair: { select: { name: true } },
+      },
+    });
+
+    const openOpps = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
+    const pipelineValue = openOpps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+
+    const funnel = ALL_STAGES.filter((s) => OPEN_STAGES.includes(s.key)).map((s) => ({
+      stage: s.key, label: s.label,
+      count: opps.filter((o) => o.currentStage === s.key).length,
+    }));
+
+    const stageValues = ALL_STAGES.map((s) => {
+      const stageOpps = opps.filter((o) => o.currentStage === s.key);
+      const rates = ['very_high', 'high', 'medium', 'low', 'very_low'];
+      return {
+        stage: s.key, label: s.label,
+        totalValue: stageOpps.reduce((sum, o) => sum + budgetToNumber(o.budgetRaw), 0),
+        segments: rates.map((r) => ({
+          rate: r,
+          value: stageOpps.filter((o) => o.conversionRate === r).reduce((sum, o) => sum + budgetToNumber(o.budgetRaw), 0),
+        })),
+      };
+    });
+
+    const stageDistributionPie = ALL_STAGES.filter((s) => OPEN_STAGES.includes(s.key)).map((s) => ({
+      stage: s.key, label: s.label,
+      count: opps.filter((o) => o.currentStage === s.key).length,
+    }));
+
+    const conversionRatePie = Object.entries(CONVERSION_RATE_LABELS).map(([rate, label]) => ({
+      rate, label, count: openOpps.filter((o) => o.conversionRate === rate).length,
+    }));
+
+    const fairMap = new Map<string, { fairName: string; stages: Map<string, number> }>();
+    for (const opp of opps) {
+      let entry = fairMap.get(opp.fair.name);
+      if (!entry) { entry = { fairName: opp.fair.name, stages: new Map() }; fairMap.set(opp.fair.name, entry); }
+      const val = entry.stages.get(opp.currentStage) ?? 0;
+      entry.stages.set(opp.currentStage, val + budgetToNumber(opp.budgetRaw));
+    }
+    const treemapData = [...fairMap.values()].map((f) => ({
+      fairName: f.fairName,
+      stages: [...f.stages.entries()].map(([stage, value]) => ({ stage, value })),
+    }));
+
+    const tableData = opps.map((o) => ({
+      id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
+      stage: o.currentStage, budget: budgetToNumber(o.budgetRaw),
+      currency: o.budgetCurrency ?? 'TRY', conversionRate: o.conversionRate ?? 'medium',
+      createdAt: o.createdAt.toISOString(), updatedAt: o.updatedAt.toISOString(),
+    }));
+
     return {
-      kpis: { openOpportunities: 0, pipelineValue: 0, avgDealValue: 0, proposalStageCount: 0 },
-      funnel: [],
-      stageValues: [],
-      stageDistributionPie: [],
-      conversionRatePie: [],
-      treemapData: [],
-      tableData: [],
+      kpis: {
+        openOpportunities: openOpps.length,
+        pipelineValue,
+        avgDealValue: openOpps.length > 0 ? pipelineValue / openOpps.length : 0,
+        proposalStageCount: opps.filter((o) => o.currentStage === 'teklif').length,
+      },
+      funnel, stageValues, stageDistributionPie, conversionRatePie, treemapData, tableData,
     };
   }
 
-  async getPipelineVelocity(_params: {
+  async getPipelineVelocity(params: {
     fairIds: string[];
     startDate?: string;
     endDate?: string;
     finalStatus?: string;
   }): Promise<PipelineVelocityResponse> {
+    const where: Record<string, unknown> = {};
+    if (params.fairIds.length) where.fairId = { in: params.fairIds };
+    if (params.finalStatus && params.finalStatus !== 'all') where.currentStage = params.finalStatus === 'won' ? 'satisa_donustu' : params.finalStatus === 'lost' ? 'olumsuz' : undefined;
+    if (params.startDate || params.endDate) {
+      const df: Record<string, unknown> = {};
+      if (params.startDate) df.gte = new Date(params.startDate);
+      if (params.endDate) df.lte = new Date(params.endDate);
+      where.createdAt = df;
+    }
+
+    const opps = await this.prisma.opportunity.findMany({
+      where,
+      select: {
+        id: true, budgetRaw: true, currentStage: true, createdAt: true, updatedAt: true,
+        customer: { select: { company: true } },
+        fair: { select: { name: true } },
+        stageLogs: { select: { stage: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    const cycleDays: number[] = [];
+    const stageTimesMap = new Map<string, number[]>();
+    const fairStageTimes = new Map<string, Map<string, number[]>>();
+
+    for (const opp of opps) {
+      if (opp.stageLogs.length < 2) continue;
+      const logs = opp.stageLogs;
+      const totalDays = daysBetween(logs[0]!.createdAt, logs[logs.length - 1]!.createdAt);
+      if (TERMINAL_STAGES.includes(opp.currentStage)) cycleDays.push(totalDays);
+
+      for (let i = 0; i < logs.length - 1; i++) {
+        const days = daysBetween(logs[i]!.createdAt, logs[i + 1]!.createdAt);
+        const stage = logs[i]!.stage;
+        if (!stageTimesMap.has(stage)) stageTimesMap.set(stage, []);
+        stageTimesMap.get(stage)!.push(days);
+
+        const fairName = opp.fair.name;
+        if (!fairStageTimes.has(fairName)) fairStageTimes.set(fairName, new Map());
+        const fm = fairStageTimes.get(fairName)!;
+        if (!fm.has(stage)) fm.set(stage, []);
+        fm.get(stage)!.push(days);
+      }
+    }
+
+    const stageAvgDays = ALL_STAGES.filter((s) => OPEN_STAGES.includes(s.key)).map((s) => {
+      const times = stageTimesMap.get(s.key) ?? [];
+      return { stage: s.key, label: s.label, avgDays: times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0 };
+    });
+
+    const monthLabels = generateMonthLabels(12);
+    const terminalOpps = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage) && o.stageLogs.length >= 2);
+    const monthlyCycleTrend = monthLabels.map((m) => {
+      const monthOpps = terminalOpps.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
+      const days = monthOpps.map((o) => daysBetween(o.stageLogs[0]!.createdAt, o.stageLogs[o.stageLogs.length - 1]!.createdAt));
+      return { month: m.label, avgDays: days.length > 0 ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : 0 };
+    });
+
+    const scatterData = terminalOpps.map((o) => ({
+      id: o.id,
+      value: budgetToNumber(o.budgetRaw),
+      cycleDays: daysBetween(o.stageLogs[0]!.createdAt, o.stageLogs[o.stageLogs.length - 1]!.createdAt),
+      won: o.currentStage === 'satisa_donustu',
+    }));
+
+    const fairStageHeatmap = [...fairStageTimes.entries()].map(([fairName, stageMap]) => ({
+      fairName,
+      stages: Object.fromEntries([...stageMap.entries()].map(([stage, times]) => [stage, Math.round(times.reduce((a, b) => a + b, 0) / times.length)])),
+    }));
+
+    const now = new Date();
+    const slowOpps = opps
+      .filter((o) => OPEN_STAGES.includes(o.currentStage))
+      .map((o) => {
+        const lastLog = o.stageLogs[o.stageLogs.length - 1];
+        const daysSince = lastLog ? daysBetween(lastLog.createdAt, now) : daysBetween(o.createdAt, now);
+        return {
+          id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
+          stage: o.currentStage, daysSinceLastChange: daysSince, value: budgetToNumber(o.budgetRaw),
+        };
+      })
+      .filter((o) => o.daysSinceLastChange >= 30)
+      .sort((a, b) => b.daysSinceLastChange - a.daysSinceLastChange);
+
+    let longestWaiting: PipelineVelocityResponse['kpis']['longestWaiting'] = { opportunityId: '', customerCompany: '', days: 0 };
+    if (slowOpps.length > 0) {
+      const longest = slowOpps[0]!;
+      longestWaiting = { opportunityId: longest.id, customerCompany: longest.customerCompany, days: longest.daysSinceLastChange };
+    }
+
     return {
       kpis: {
-        avgCycleDays: 0,
-        medianCycleDays: 0,
-        longestWaiting: { opportunityId: '', customerCompany: '', days: 0 },
+        avgCycleDays: cycleDays.length > 0 ? Math.round(cycleDays.reduce((a, b) => a + b, 0) / cycleDays.length) : 0,
+        medianCycleDays: median(cycleDays),
+        longestWaiting,
       },
-      stageAvgDays: [],
-      monthlyCycleTrend: [],
-      scatterData: [],
-      fairStageHeatmap: [],
-      slowOpportunities: [],
+      stageAvgDays, monthlyCycleTrend, scatterData, fairStageHeatmap, slowOpportunities: slowOpps,
     };
   }
 
-  async getWinLoss(_params: {
+  async getWinLoss(params: {
     fairIds: string[];
     startDate?: string;
     endDate?: string;
     lossReasons: string[];
     conversionRate?: string;
   }): Promise<WinLossResponse> {
+    const where: Record<string, unknown> = { currentStage: { in: ['satisa_donustu', 'olumsuz'] } };
+    if (params.fairIds.length) where.fairId = { in: params.fairIds };
+    if (params.conversionRate) where.conversionRate = params.conversionRate;
+    if (params.lossReasons?.length) where.lossReason = { in: params.lossReasons };
+    if (params.startDate || params.endDate) {
+      const df: Record<string, unknown> = {};
+      if (params.startDate) df.gte = new Date(params.startDate);
+      if (params.endDate) df.lte = new Date(params.endDate);
+      where.updatedAt = df;
+    }
+
+    const opps = await this.prisma.opportunity.findMany({
+      where,
+      select: {
+        id: true, budgetRaw: true, budgetCurrency: true, currentStage: true,
+        conversionRate: true, lossReason: true, updatedAt: true, createdAt: true,
+        products: true,
+        customer: { select: { company: true } },
+        fair: { select: { name: true } },
+        stageLogs: { select: { stage: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    const won = opps.filter((o) => o.currentStage === 'satisa_donustu');
+    const lost = opps.filter((o) => o.currentStage === 'olumsuz');
+    const lostValue = lost.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const winRate = safePercent(won.length, won.length + lost.length);
+
+    const reasonMap = new Map<string, number>();
+    const reasonValueMap = new Map<string, number>();
+    for (const o of lost) {
+      const reason = o.lossReason || 'Belirtilmemiş';
+      reasonMap.set(reason, (reasonMap.get(reason) ?? 0) + 1);
+      reasonValueMap.set(reason, (reasonValueMap.get(reason) ?? 0) + budgetToNumber(o.budgetRaw));
+    }
+    const lossReasons = [...reasonMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([reason, count]) => ({
+        reason, label: reason, count, percent: safePercent(count, lost.length),
+      }));
+    const lostValueByReason = [...reasonValueMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([reason, value]) => ({ reason, label: reason, value }));
+
+    const monthLabels = generateMonthLabels(12);
+    const allTerminal = await this.prisma.opportunity.findMany({
+      where: { currentStage: { in: ['satisa_donustu', 'olumsuz'] }, updatedAt: { gte: monthLabels[0]!.start } },
+      select: { currentStage: true, updatedAt: true },
+    });
+    const monthlyWinRateTrend = monthLabels.map((m) => {
+      const monthOpps = allTerminal.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
+      const monthWon = monthOpps.filter((o) => o.currentStage === 'satisa_donustu').length;
+      return { month: m.label, winRate: safePercent(monthWon, monthOpps.length) };
+    });
+
+    const fairWinLossMap = new Map<string, { won: number; lost: number; open: number }>();
+    for (const o of opps) {
+      const entry = fairWinLossMap.get(o.fair.name) ?? { won: 0, lost: 0, open: 0 };
+      if (o.currentStage === 'satisa_donustu') entry.won++;
+      else if (o.currentStage === 'olumsuz') entry.lost++;
+      else entry.open++;
+      fairWinLossMap.set(o.fair.name, entry);
+    }
+    const fairWinLoss = [...fairWinLossMap.entries()].map(([fairName, v]) => ({ fairName, ...v }));
+
+    const conversionRateSuccess = Object.entries(CONVERSION_RATE_LABELS).map(([rate, label]) => {
+      const rateOpps = opps.filter((o) => o.conversionRate === rate);
+      const rateWon = rateOpps.filter((o) => o.currentStage === 'satisa_donustu').length;
+      return { rate, label, winRate: safePercent(rateWon, rateOpps.length) };
+    });
+
+    const lostOpportunities = lost.slice(0, 20).map((o) => ({
+      id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
+      value: budgetToNumber(o.budgetRaw), lossReason: o.lossReason ?? 'Belirtilmemiş',
+      lastStage: o.stageLogs.length > 1 ? o.stageLogs[o.stageLogs.length - 2]?.stage ?? 'tanisma' : 'tanisma',
+      date: o.updatedAt.toISOString(),
+    }));
+
+    const wonOpportunities = won.slice(0, 20).map((o) => {
+      const cycleDays = o.stageLogs.length >= 2
+        ? daysBetween(o.stageLogs[0]!.createdAt, o.stageLogs[o.stageLogs.length - 1]!.createdAt)
+        : daysBetween(o.createdAt, o.updatedAt);
+      return {
+        id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
+        value: budgetToNumber(o.budgetRaw), products: o.products, cycleDays,
+      };
+    });
+
     return {
-      kpis: { winRate: 0, wonCount: 0, lostCount: 0, lostValue: 0 },
-      winLossDonut: { won: 0, lost: 0 },
-      lossReasons: [],
-      monthlyWinRateTrend: [],
-      fairWinLoss: [],
-      conversionRateSuccess: [],
-      lostValueByReason: [],
-      lostOpportunities: [],
-      wonOpportunities: [],
+      kpis: { winRate, wonCount: won.length, lostCount: lost.length, lostValue },
+      winLossDonut: { won: won.length, lost: lost.length },
+      lossReasons, monthlyWinRateTrend, fairWinLoss, conversionRateSuccess,
+      lostValueByReason, lostOpportunities, wonOpportunities,
     };
   }
 
