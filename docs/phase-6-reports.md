@@ -74,15 +74,15 @@ Feature numaralandırması: R1, R2, ... (Reports Phase)
 **Bağımlılık:** R1
 **Kapsam:** Rapor 2.1, 2.2, 2.3 — Ortak fuar verisini paylaşan 3 rapor
 
-- [ ] **R3.1** `apps/api` — `GET /api/v1/reports/fair-performance` endpoint: fuar bazlı metrikler (fırsat sayıları, pipeline değeri, dönüşüm oranı, tonaj), filtreler (tarih aralığı, durum, oluşturan)
-- [ ] **R3.2** `apps/api` — `GET /api/v1/reports/fair-comparison` endpoint: seçili fuarların detaylı karşılaştırma verileri, fuar×aşama ve fuar×ürün matrisleri
-- [ ] **R3.3** `apps/api` — `GET /api/v1/reports/fair-targets` endpoint: hedef vs. gerçekleşme verileri (bütçe, tonaj, lead)
-- [ ] **R3.4** `apps/web` — `useFairPerformance`, `useFairComparison`, `useFairTargets` hook'ları
-- [ ] **R3.5** `apps/web` — Fuar Genel Performans dashboard sayfası: KPI kartları + bar grafikler + scatter plot + veri tablosu
-- [ ] **R3.6** `apps/web` — Fuar Karşılaştırma dashboard sayfası: grouped bar grafikler + 2 heatmap + karşılaştırma tablosu
-- [ ] **R3.7** `apps/web` — Fuar Hedef Takibi dashboard sayfası: 3 gauge + progress bar grubu + grouped bar + veri tablosu
-- [ ] **R3.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
-  Durum: [ ]
+- [x] **R3.1** `apps/api` — `GET /api/v1/reports/fair-performance` endpoint: fuar bazlı metrikler (fırsat sayıları, pipeline değeri, dönüşüm oranı, tonaj), filtreler (tarih aralığı, durum, oluşturan)
+- [x] **R3.2** `apps/api` — `GET /api/v1/reports/fair-comparison` endpoint: seçili fuarların detaylı karşılaştırma verileri, fuar×aşama ve fuar×ürün matrisleri
+- [x] **R3.3** `apps/api` — `GET /api/v1/reports/fair-targets` endpoint: hedef vs. gerçekleşme verileri (bütçe, tonaj, lead)
+- [x] **R3.4** `apps/web` — `useFairPerformance`, `useFairComparison`, `useFairTargets` hook'ları
+- [x] **R3.5** `apps/web` — Fuar Genel Performans dashboard sayfası: KPI kartları + bar grafikler + scatter plot + veri tablosu
+- [x] **R3.6** `apps/web` — Fuar Karşılaştırma dashboard sayfası: grouped bar grafikler + 2 heatmap + karşılaştırma tablosu
+- [x] **R3.7** `apps/web` — Fuar Hedef Takibi dashboard sayfası: 3 gauge + progress bar grubu + grouped bar + veri tablosu
+- [x] **R3.8** Smoke test: 3 endpoint yanıtı + 3 dashboard görsel kontrol
+  Durum: [x]
 
 ---
 
