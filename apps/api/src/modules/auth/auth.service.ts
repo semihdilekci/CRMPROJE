@@ -1,7 +1,14 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
+import { randomUUID } from 'crypto';
+import type { Prisma } from '@prisma/client';
 import {
   LoginDto,
   RegisterDto,
@@ -23,6 +30,8 @@ const USER_SELECT = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+type DbClient = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class AuthService {
@@ -56,8 +65,7 @@ export class AuthService {
       select: USER_SELECT,
     });
 
-    const tokens = await this.generateTokens(user.id, user.role);
-    await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+    const tokens = await this.generateTokensForNewSession(user.id, user.role);
 
     this.logger.log(`User registered: ${user.email}`);
 
@@ -84,8 +92,7 @@ export class AuthService {
     const mfaEnabled = (await this.settingsService.get('MFA_SMS_ENABLED')) === 'true';
 
     if (!mfaEnabled) {
-      const tokens = await this.generateTokens(user.id, user.role);
-      await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+      const tokens = await this.generateTokensForNewSession(user.id, user.role);
       this.logger.log(`User logged in: ${user.email}`);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- password excluded from response
       const { password: _pw, ...userWithoutPassword } = user;
@@ -142,66 +149,102 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.generateTokens(user.id, user.role);
-    await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+    const tokens = await this.generateTokensForNewSession(user.id, user.role);
     this.logger.log(`User logged in (MFA verified): ${user.email}`);
     return { user: this.toUserResponse(user), tokens };
   }
 
   async refresh(refreshToken: string): Promise<AuthTokenPair> {
-    let payload: { sub: string };
+    let payload: { sub: string; rtid?: string };
 
     try {
-      payload = this.jwtService.verify<{ sub: string }>(refreshToken, {
+      payload = this.jwtService.verify<{ sub: string; rtid?: string }>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, role: true, hashedRefreshToken: true },
+    if (!payload.rtid) {
+      throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
+    }
+
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { id: payload.rtid },
     });
 
-    if (!user || !user.hashedRefreshToken) {
+    if (!record || record.userId !== payload.sub) {
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
-    const tokenValid = await argon2.verify(user.hashedRefreshToken, refreshToken);
+    if (record.replacedAt) {
+      await this.revokeFamilyTokens(record.familyId);
+      this.logger.warn(
+        `Refresh token reuse detected (rotated token replay), family revoked: ${record.familyId}`
+      );
+      throw new UnauthorizedException(
+        'Oturum güvenlik nedeniyle sonlandırıldı. Lütfen tekrar giriş yapın.'
+      );
+    }
+
+    if (record.expiresAt < new Date()) {
+      throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
+    }
+
+    const tokenValid = await argon2.verify(record.tokenHash, refreshToken);
 
     if (!tokenValid) {
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
-    const tokens = await this.generateTokens(user.id, user.role);
-    await this.updateRefreshTokenHash(user.id, tokens.refreshToken);
+    const user = await this.prisma.user.findUnique({
+      where: { id: record.userId },
+      select: { id: true, role: true },
+    });
 
-    return tokens;
+    if (!user) {
+      throw new UnauthorizedException('Erişim reddedildi');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const rotated = await tx.refreshToken.updateMany({
+        where: { id: record.id, replacedAt: null },
+        data: { replacedAt: new Date() },
+      });
+
+      if (rotated.count === 0) {
+        throw new UnauthorizedException('Erişim reddedildi');
+      }
+
+      return this.persistRefreshTokenPair(user.id, user.role, record.familyId, tx);
+    });
   }
 
   async logout(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { hashedRefreshToken: null },
-    });
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
 
     this.logger.log(`User logged out: ${userId}`);
   }
 
-  private async generateTempToken(userId: string): Promise<string> {
-    return this.jwtService.signAsync(
-      { sub: userId, mfa: true },
-      {
-        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: '5m',
-      }
-    );
+  private async revokeFamilyTokens(familyId: string): Promise<void> {
+    await this.prisma.refreshToken.deleteMany({ where: { familyId } });
   }
 
-  private async generateTokens(userId: string, role: string): Promise<AuthTokenPair> {
+  private async generateTokensForNewSession(userId: string, role: string): Promise<AuthTokenPair> {
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    const familyId = randomUUID();
+    return this.persistRefreshTokenPair(userId, role, familyId, this.prisma);
+  }
+
+  private async persistRefreshTokenPair(
+    userId: string,
+    role: string,
+    familyId: string,
+    db: DbClient
+  ): Promise<AuthTokenPair> {
+    const id = randomUUID();
     const accessPayload = { sub: userId, role };
-    const refreshPayload = { sub: userId };
+    const refreshPayload = { sub: userId, rtid: id };
 
     const accessExpiration = this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRATION');
     const refreshExpiration = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRATION');
@@ -219,15 +262,36 @@ export class AuthService {
       }),
     ]);
 
+    const decoded = this.jwtService.decode(refreshToken) as { exp?: number } | null;
+    const expSec = decoded?.exp;
+    if (expSec == null) {
+      throw new UnauthorizedException('Refresh token oluşturulamadı');
+    }
+    const expiresAt = new Date(expSec * 1000);
+
+    const tokenHash = await argon2.hash(refreshToken);
+
+    await db.refreshToken.create({
+      data: {
+        id,
+        userId,
+        familyId,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
     return { accessToken, refreshToken };
   }
 
-  private async updateRefreshTokenHash(userId: string, refreshToken: string): Promise<void> {
-    const hash = await argon2.hash(refreshToken);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { hashedRefreshToken: hash },
-    });
+  private async generateTempToken(userId: string): Promise<string> {
+    return this.jwtService.signAsync(
+      { sub: userId, mfa: true },
+      {
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: '5m',
+      }
+    );
   }
 
   private toUserResponse(user: {

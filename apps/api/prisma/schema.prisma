@@ -8,22 +8,39 @@ datasource db {
 }
 
 model User {
-  id                 String   @id @default(cuid())
-  email              String   @unique
-  password           String
-  role               String   @default("user")
-  name               String
-  phone              String?
-  hashedRefreshToken String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  name      String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   team   Team?  @relation(fields: [teamId], references: [id], onDelete: Restrict)
   teamId String?
 
+  refreshTokens     RefreshToken[]
   fairs             Fair[]
   stageLogs         OpportunityStageLog[] @relation("StageLogChangedBy")
   opportunityNotes  OpportunityNote[]     @relation("NoteCreatedBy")
+}
+
+/// Refresh token rotation: her yenilemede yeni satır; replacedAt ile tek kullanımlık; reuse tespitinde familyId iptali.
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  familyId   String
+  tokenHash  String    @db.Text
+  expiresAt  DateTime
+  replacedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
 }
 
 model Team {
