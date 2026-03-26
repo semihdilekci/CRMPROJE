@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ApiSuccessResponse, User } from '@crm/shared';
 import api from '@/lib/api';
-import { setAccessToken } from '@/lib/access-token';
+import { getAccessToken, setAccessToken } from '@/lib/access-token';
 import { decodeJwtPayload } from '@/lib/decode-jwt-payload';
 
 export type LoginResult =
@@ -19,7 +19,7 @@ interface AuthState {
   hydrate: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const { user, tokens } = payload as { user: User; tokens: { accessToken: string } };
     setAccessToken(tokens.accessToken);
-    set({ user, isAuthenticated: true });
+    set({ user, isAuthenticated: true, isLoading: false });
     return { requiresMfa: false };
   },
 
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }>('/auth/verify-mfa', { tempToken, code });
     const { user, tokens } = data.data;
     setAccessToken(tokens.accessToken);
-    set({ user, isAuthenticated: true });
+    set({ user, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
@@ -65,6 +65,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   hydrate: async () => {
+    /** SPA’de az önce giriş yapıldıysa access zaten bellekte; refresh çağrısı çerez/proxy gecikmesinde başarısız olup oturumu silmesin. */
+    const existingToken = getAccessToken();
+    const existingUser = get().user;
+    if (existingToken && existingUser && get().isAuthenticated) {
+      set({ isLoading: false });
+      return;
+    }
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -89,6 +97,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       set({ user: userRes.data, isAuthenticated: true, isLoading: false });
     } catch {
+      const tokenAfter = getAccessToken();
+      const userAfter = get().user;
+      if (tokenAfter && userAfter) {
+        set({ isAuthenticated: true, isLoading: false });
+        return;
+      }
       setAccessToken(null);
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
