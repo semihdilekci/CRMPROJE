@@ -14,6 +14,10 @@ model User {
   role      String   @default("user")
   name      String
   phone     String?
+  /// Ardışık başarısız parola denemesi (Faz 7 hesap kilidi)
+  failedLoginCount Int       @default(0)
+  /// Kilitleme bitiş zamanı; null = kilit yok
+  lockedUntil      DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
