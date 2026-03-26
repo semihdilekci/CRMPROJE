@@ -18,7 +18,8 @@
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         }
-      }
+      },
+      "bundleIdentifier": "com.semihd.fuarcrmmobile"
     },
     "android": {
       "usesCleartextTraffic": true,
@@ -28,7 +29,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.semihd.fuarcrmmobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
