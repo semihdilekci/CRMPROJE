@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthCookieHelper } from './auth-cookie.helper';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmsModule } from '@modules/sms/sms.module';
 import { SettingsModule } from '@modules/settings/settings.module';
@@ -15,7 +16,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
     SettingsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, AuthCookieHelper, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -5,11 +5,10 @@ import * as argon2 from 'argon2';
 import {
   LoginDto,
   RegisterDto,
-  AuthTokens,
-  LoginResponse,
+  AuthTokenPair,
+  LoginSuccess,
   MfaRequiredResponse,
   User,
-  JwtPayload,
 } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
@@ -37,7 +36,7 @@ export class AuthService {
     private readonly smsService: SmsService
   ) {}
 
-  async register(dto: RegisterDto): Promise<LoginResponse> {
+  async register(dto: RegisterDto): Promise<LoginSuccess> {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -65,7 +64,7 @@ export class AuthService {
     return { user: this.toUserResponse(user), tokens };
   }
 
-  async login(dto: LoginDto): Promise<LoginResponse | MfaRequiredResponse> {
+  async login(dto: LoginDto): Promise<LoginSuccess | MfaRequiredResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       select: { ...USER_SELECT, password: true },
@@ -106,7 +105,7 @@ export class AuthService {
     return { tempToken, requiresMfa: true };
   }
 
-  async verifyMfa(tempToken: string, code: string): Promise<LoginResponse> {
+  async verifyMfa(tempToken: string, code: string): Promise<LoginSuccess> {
     let payload: { sub: string; mfa: boolean };
 
     try {
@@ -149,11 +148,11 @@ export class AuthService {
     return { user: this.toUserResponse(user), tokens };
   }
 
-  async refresh(refreshToken: string): Promise<AuthTokens> {
-    let payload: JwtPayload;
+  async refresh(refreshToken: string): Promise<AuthTokenPair> {
+    let payload: { sub: string };
 
     try {
-      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+      payload = this.jwtService.verify<{ sub: string }>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
@@ -200,7 +199,7 @@ export class AuthService {
     );
   }
 
-  private async generateTokens(userId: string, role: string): Promise<AuthTokens> {
+  private async generateTokens(userId: string, role: string): Promise<AuthTokenPair> {
     const accessPayload = { sub: userId, role };
     const refreshPayload = { sub: userId };
 

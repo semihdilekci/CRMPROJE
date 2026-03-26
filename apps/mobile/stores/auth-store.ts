@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '@crm/shared';
+import { AUTH_CLIENT_MOBILE } from '@crm/shared';
 import api from '@/lib/api';
 import * as storage from '@/lib/storage';
 
@@ -33,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         requiresMfa?: boolean;
         tempToken?: string;
       };
-    }>('/auth/login', { email, password });
+    }>('/auth/login', { email, password, client: AUTH_CLIENT_MOBILE });
     const payload = data.data;
 
     if (payload.requiresMfa && payload.tempToken) {
@@ -55,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { data } = await api.post<{
       success: boolean;
       data: { user: User; tokens: { accessToken: string; refreshToken: string } };
-    }>('/auth/verify-mfa', { tempToken, code });
+    }>('/auth/verify-mfa', { tempToken, code, client: AUTH_CLIENT_MOBILE });
     const { user, tokens } = data.data;
     await storage.setAccessToken(tokens.accessToken);
     await storage.setRefreshToken(tokens.refreshToken);

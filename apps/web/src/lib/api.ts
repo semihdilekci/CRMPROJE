@@ -37,16 +37,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
+        const { data } = await api.post<{ success: boolean; data: { accessToken: string } }>(
+          '/auth/refresh',
+          {}
+        );
 
-        const { data } = await axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
-
-        const newAccessToken = data.data.accessToken as string;
-        const newRefreshToken = data.data.refreshToken as string;
-
+        const newAccessToken = data.data.accessToken;
         localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);

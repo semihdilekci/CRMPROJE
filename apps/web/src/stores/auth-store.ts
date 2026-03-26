@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     const { data } = await api.post<{
       success: boolean;
-      data: { user?: User; tokens?: { accessToken: string; refreshToken: string }; requiresMfa?: boolean; tempToken?: string };
+      data: { user?: User; tokens?: { accessToken: string }; requiresMfa?: boolean; tempToken?: string };
     }>('/auth/login', { email, password });
     const payload = data.data;
 
@@ -33,9 +33,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { requiresMfa: true, tempToken: payload.tempToken };
     }
 
-    const { user, tokens } = payload as { user: User; tokens: { accessToken: string; refreshToken: string } };
+    const { user, tokens } = payload as { user: User; tokens: { accessToken: string } };
     localStorage.setItem('accessToken', tokens.accessToken);
-    localStorage.setItem('refreshToken', tokens.refreshToken);
     localStorage.setItem('user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
     return { requiresMfa: false };
@@ -44,11 +43,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   verifyMfa: async (tempToken, code) => {
     const { data } = await api.post<{
       success: boolean;
-      data: { user: User; tokens: { accessToken: string; refreshToken: string } };
+      data: { user: User; tokens: { accessToken: string } };
     }>('/auth/verify-mfa', { tempToken, code });
     const { user, tokens } = data.data;
     localStorage.setItem('accessToken', tokens.accessToken);
-    localStorage.setItem('refreshToken', tokens.refreshToken);
     localStorage.setItem('user', JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
