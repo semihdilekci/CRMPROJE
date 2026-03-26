@@ -17,6 +17,7 @@ function getErrorMessage(err: unknown): string {
   const message = axiosErr?.response?.data?.message;
 
   if (status === 429) return 'Çok fazla deneme. Lütfen birkaç dakika bekleyin.';
+  if (status === 403 && message) return message;
   if (status === 401 && message) return message;
   if (message) return message;
   if (axiosErr?.code === 'ERR_NETWORK')

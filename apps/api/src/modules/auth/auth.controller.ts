@@ -11,6 +11,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import {
+  resolveLoginThrottleLimit,
+  resolveLoginThrottleTtl,
+  resolveMfaThrottleLimit,
+  resolveMfaThrottleTtl,
+  resolveRegisterThrottleLimit,
+  resolveRegisterThrottleTtl,
+} from './auth-throttle.factory';
 import type { Request, Response } from 'express';
 import {
   ApiSuccessResponse,
@@ -42,7 +50,12 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: resolveRegisterThrottleLimit,
+      ttl: resolveRegisterThrottleTtl,
+    },
+  })
   @UsePipes(new ZodValidationPipe(registerSchema))
   async register(
     @Body() dto: RegisterDto,
@@ -62,7 +75,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: resolveLoginThrottleLimit,
+      ttl: resolveLoginThrottleTtl,
+    },
+  })
   @UsePipes(new ZodValidationPipe(loginSchema))
   async login(
     @Body() dto: LoginDto,
@@ -91,7 +109,12 @@ export class AuthController {
 
   @Post('verify-mfa')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @Throttle({
+    default: {
+      limit: resolveMfaThrottleLimit,
+      ttl: resolveMfaThrottleTtl,
+    },
+  })
   @UsePipes(new ZodValidationPipe(verifyMfaSchema))
   async verifyMfa(
     @Body() dto: VerifyMfaDto,

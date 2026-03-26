@@ -32,7 +32,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - [ ] **OLLAMA_BASE_URL**, **OLLAMA_MODEL** (AI analiz — Ollama) — opsiyonel; varsayılan model `qwen2.5-coder:7b`; Ollama seçildiğinde local'de `ollama serve` çalışıyor olmalı.
 - [ ] **GEMINI_API_KEY** (AI analiz — Gemini) — aistudio.google.com'dan alınır; Gemini seçildiğinde zorunlu.
 - [ ] **TWILIO_ACCOUNT_SID**, **TWILIO_AUTH_TOKEN**, **TWILIO_VERIFY_SERVICE_SID** (MFA SMS) — Twilio Console'dan alınır. Boş bırakılırsa DEV'de OTP terminale basılır; PROD'da gerçek SMS için zorunlu.
-- [ ] **MFA ve rate limit** — Yönetim › Sistem Ayarları sayfasından MFA_SMS_ENABLED, RATE_LIMIT_* değerleri yönetilebilir.
+- [ ] **MFA ve rate limit / hesap kilidi** — Yönetim › Sistem Ayarları: MFA_SMS_ENABLED, RATE_LIMIT_*, ACCOUNT_LOCKOUT_* (eşik ve süre; prod’da isteğe bağlı env override: `ACCOUNT_LOCKOUT_THRESHOLD`, `ACCOUNT_LOCKOUT_MINUTES`).
 
 **AI Chat — Local model (Ollama) kullanıldığında:**
 - Token maliyeti yok; tam veri kapsamı (full) kullanılabilir.
@@ -72,6 +72,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **API base URL (web):** `apps/web/src/lib/api.ts` — `BACKEND_URL` sadece fallback (DEV); prod’da `NEXT_PUBLIC_API_URL` kullanılmalı.
 - **CORS:** `apps/api/src/main.ts` + `apps/api/src/common/cors-origins.ts` — production’da `CORS_ORIGIN` zorunlu; development’ta whitelist veya varsayılanlar. `cookie-parser` kaydı aynı dosyada (httpOnly refresh hazırlığı). Faz 7: `docs/phase-7-security-hardening.md`.
 - **Auth httpOnly refresh (sec7-02):** `apps/api/src/modules/auth/auth-cookie.helper.ts`, `auth.controller.ts` — web’de refresh `crm_refresh` httpOnly çerez; yanıtta yalnızca `accessToken`. Mobil `POST /auth/login` ve `verify-mfa` gövdesinde `client: "mobile"` (sabit `AUTH_CLIENT_MOBILE` @ `@crm/shared`) ile refresh hem body’de kalır (Secure Store) hem çerez set edilmez.
+- **Rate limit (Sistem Ayarları) + hesap kilidi (sec7-06):** `apps/api/src/modules/auth/auth-throttle.factory.ts` (`@Throttle` limit/ttl → `RATE_LIMIT_*`); `auth.service.ts` (`failedLoginCount`, `lockedUntil`, env/ayar: `ACCOUNT_LOCKOUT_*`). Global `ThrottlerModule` + `ThrottlerGuard` `app.module.ts`.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez.
 - **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist.
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
 import { PrismaService } from '@prisma/prisma.service';
@@ -22,9 +22,10 @@ describe('AuthService', () => {
       deleteMany: jest.Mock;
       create: jest.Mock;
     };
-    user: { findUnique: jest.Mock; create: jest.Mock };
+    user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
+  let settingsGet: jest.Mock;
   let jwtService: { verify: jest.Mock; signAsync: jest.Mock; decode: jest.Mock };
 
   const mockConfig = (key: string) => {
@@ -48,6 +49,7 @@ describe('AuthService', () => {
       user: {
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
       },
       $transaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
     };
@@ -63,10 +65,24 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwtService },
-        { provide: ConfigService, useValue: { getOrThrow: mockConfig } },
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: mockConfig,
+            get: jest.fn().mockReturnValue(undefined),
+          },
+        },
         {
           provide: SettingsService,
-          useValue: { get: jest.fn().mockResolvedValue('false') },
+          useFactory: () => {
+            settingsGet = jest.fn().mockImplementation(async (key: string) => {
+              if (key === 'MFA_SMS_ENABLED') return 'false';
+              if (key === 'ACCOUNT_LOCKOUT_THRESHOLD') return '5';
+              if (key === 'ACCOUNT_LOCKOUT_MINUTES') return '15';
+              return null;
+            });
+            return { get: settingsGet };
+          },
         },
         { provide: SmsService, useValue: { sendOtp: jest.fn(), verifyOtp: jest.fn() } },
       ],
@@ -129,6 +145,64 @@ describe('AuthService', () => {
       await expect(service.refresh('valid-jwt')).rejects.toThrow(UnauthorizedException);
       expect(prisma.refreshToken.deleteMany).not.toHaveBeenCalledWith({
         where: { familyId: 'fam-1' },
+      });
+    });
+  });
+
+  describe('login — hesap kilidi', () => {
+    const baseUser = {
+      id: 'user-1',
+      email: 'u@test.com',
+      password: 'argon-hash',
+      name: 'Test',
+      role: 'user',
+      phone: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      failedLoginCount: 0,
+      lockedUntil: null as Date | null,
+    };
+
+    beforeEach(() => {
+      jwtService.signAsync.mockResolvedValue('jwt-token');
+      prisma.refreshToken.deleteMany.mockResolvedValue({ count: 0 });
+      prisma.refreshToken.create.mockResolvedValue({});
+      prisma.user.update.mockResolvedValue({});
+    });
+
+    it('lockedUntil gelecekteyse ForbiddenException', async () => {
+      const until = new Date(Date.now() + 15 * 60_000);
+      prisma.user.findUnique.mockResolvedValue({
+        ...baseUser,
+        failedLoginCount: 5,
+        lockedUntil: until,
+      });
+
+      await expect(
+        service.login({ email: 'u@test.com', password: 'secret12', client: 'web' })
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('yanlış parolada eşik aşılırsa kilitlenir ve Unauthorized', async () => {
+      (argon2.verify as jest.Mock).mockResolvedValue(false);
+      prisma.user.findUnique.mockResolvedValue({
+        ...baseUser,
+        failedLoginCount: 4,
+        lockedUntil: null,
+      });
+
+      await expect(
+        service.login({ email: 'u@test.com', password: 'wrongpass', client: 'web' })
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: expect.objectContaining({
+          failedLoginCount: 5,
+          lockedUntil: expect.any(Date),
+        }),
       });
     });
   });

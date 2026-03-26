@@ -29,6 +29,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const status = error.response?.status as number | undefined;
+    if (status === 429 && typeof window !== 'undefined') {
+      const data = error.response?.data as { message?: string } | undefined;
+      const fallback = 'Çok fazla istek gönderildi. Lütfen birkaç dakika bekleyin.';
+      if (data && typeof data === 'object' && !data.message) {
+        error.response.data = { ...data, message: fallback };
+      }
+    }
+
     const originalRequest = error.config;
     const isAuthEndpoint =
       originalRequest?.url?.includes('/auth/login') ||

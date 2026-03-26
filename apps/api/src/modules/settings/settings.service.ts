@@ -63,6 +63,16 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
     description: 'Kayıt rate limit penceresi (dakika)',
   },
   {
+    key: 'ACCOUNT_LOCKOUT_THRESHOLD',
+    value: '5',
+    description: 'Ardışık başarısız parola sonrası hesap kilidi (eşik; env ile override)',
+  },
+  {
+    key: 'ACCOUNT_LOCKOUT_MINUTES',
+    value: '15',
+    description: 'Hesap kilidi süresi (dakika; env ile override)',
+  },
+  {
     key: 'TEKLIF_TEMPLATE_URL',
     value: 'assets/teklif-templates/default-teklif-template.docx',
     description: 'Teklif template dosya yolu (varsayılan: assets/teklif-templates/)',

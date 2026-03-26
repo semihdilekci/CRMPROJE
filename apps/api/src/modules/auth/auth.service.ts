@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -75,19 +76,60 @@ export class AuthService {
   async login(dto: LoginDto): Promise<LoginSuccess | MfaRequiredResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      select: { ...USER_SELECT, password: true },
+      select: {
+        ...USER_SELECT,
+        password: true,
+        failedLoginCount: true,
+        lockedUntil: true,
+      },
     });
 
     if (!user) {
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
 
+    const now = new Date();
+    let failedCount = user.failedLoginCount;
+    let lockedUntil = user.lockedUntil;
+
+    if (lockedUntil && lockedUntil <= now) {
+      failedCount = 0;
+      lockedUntil = null;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: 0, lockedUntil: null },
+      });
+    }
+
+    if (lockedUntil && lockedUntil > now) {
+      const minutesLeft = Math.max(1, Math.ceil((lockedUntil.getTime() - now.getTime()) / 60_000));
+      throw new ForbiddenException(
+        `Hesabınız geçici olarak kilitlendi. ${minutesLeft} dakika sonra tekrar deneyin.`
+      );
+    }
+
     const passwordValid = await argon2.verify(user.password, dto.password);
 
     if (!passwordValid) {
+      const threshold = await this.getAccountLockoutThreshold();
+      const lockMinutes = await this.getAccountLockoutMinutes();
+      const newFailed = failedCount + 1;
+      const shouldLock = newFailed >= threshold;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginCount: newFailed,
+          lockedUntil: shouldLock ? new Date(now.getTime() + lockMinutes * 60_000) : null,
+        },
+      });
       this.logger.warn(`Failed login attempt for: ${dto.email}`);
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginCount: 0, lockedUntil: null },
+    });
 
     const mfaEnabled = (await this.settingsService.get('MFA_SMS_ENABLED')) === 'true';
 
@@ -150,6 +192,10 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokensForNewSession(user.id, user.role);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginCount: 0, lockedUntil: null },
+    });
     this.logger.log(`User logged in (MFA verified): ${user.email}`);
     return { user: this.toUserResponse(user), tokens };
   }
@@ -292,6 +338,32 @@ export class AuthService {
         expiresIn: '5m',
       }
     );
+  }
+
+  private async getAccountLockoutThreshold(): Promise<number> {
+    const fromEnv = this.configService.get<string>('ACCOUNT_LOCKOUT_THRESHOLD');
+    if (fromEnv !== undefined && String(fromEnv).trim() !== '') {
+      const n = parseInt(String(fromEnv).trim(), 10);
+      if (Number.isFinite(n) && n > 0) {
+        return n;
+      }
+    }
+    const s = await this.settingsService.get('ACCOUNT_LOCKOUT_THRESHOLD');
+    const parsed = parseInt(s ?? '5', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+  }
+
+  private async getAccountLockoutMinutes(): Promise<number> {
+    const fromEnv = this.configService.get<string>('ACCOUNT_LOCKOUT_MINUTES');
+    if (fromEnv !== undefined && String(fromEnv).trim() !== '') {
+      const n = parseInt(String(fromEnv).trim(), 10);
+      if (Number.isFinite(n) && n > 0) {
+        return n;
+      }
+    }
+    const s = await this.settingsService.get('ACCOUNT_LOCKOUT_MINUTES');
+    const parsed = parseInt(s ?? '15', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 15;
   }
 
   private toUserResponse(user: {
