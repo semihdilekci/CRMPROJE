@@ -1,6 +1,7 @@
 'use client';
 
 import axios from 'axios';
+import { getAccessToken, setAccessToken } from '@/lib/access-token';
 
 /** Tarayıcıda proxy kullan (CORS önlenir). Sunucu tarafında env veya localhost. */
 const getBaseURL = () => {
@@ -17,7 +18,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -43,13 +44,12 @@ api.interceptors.response.use(
         );
 
         const newAccessToken = data.data.accessToken;
-        localStorage.setItem('accessToken', newAccessToken);
+        setAccessToken(newAccessToken);
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        setAccessToken(null);
         window.location.href = '/login';
         return Promise.reject(error);
       }

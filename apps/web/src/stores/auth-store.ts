@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import type { User } from '@crm/shared';
+import type { ApiSuccessResponse, User } from '@crm/shared';
 import api from '@/lib/api';
+import { setAccessToken } from '@/lib/access-token';
+import { decodeJwtPayload } from '@/lib/decode-jwt-payload';
 
 export type LoginResult =
   | { requiresMfa: false }
@@ -14,7 +16,7 @@ interface AuthState {
   verifyMfa: (tempToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
-  hydrate: () => void;
+  hydrate: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -34,8 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     const { user, tokens } = payload as { user: User; tokens: { accessToken: string } };
-    localStorage.setItem('accessToken', tokens.accessToken);
-    localStorage.setItem('user', JSON.stringify(user));
+    setAccessToken(tokens.accessToken);
     set({ user, isAuthenticated: true });
     return { requiresMfa: false };
   },
@@ -46,8 +47,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       data: { user: User; tokens: { accessToken: string } };
     }>('/auth/verify-mfa', { tempToken, code });
     const { user, tokens } = data.data;
-    localStorage.setItem('accessToken', tokens.accessToken);
-    localStorage.setItem('user', JSON.stringify(user));
+    setAccessToken(tokens.accessToken);
     set({ user, isAuthenticated: true });
   },
 
@@ -55,38 +55,42 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       await api.post('/auth/logout');
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      setAccessToken(null);
       set({ user: null, isAuthenticated: false });
     }
   },
 
   setUser: (user) => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
     set({ user, isAuthenticated: !!user });
   },
 
-  hydrate: () => {
-    const token = localStorage.getItem('accessToken');
-    const storedUser = localStorage.getItem('user');
-
-    if (token && storedUser) {
-      try {
-        const user = JSON.parse(storedUser) as User;
-        set({ user, isAuthenticated: true, isLoading: false });
-      } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        set({ user: null, isAuthenticated: false, isLoading: false });
+  hydrate: async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    }
+    set({ isLoading: true });
+    try {
+      const { data } = await api.post<ApiSuccessResponse<{ accessToken: string }>>('/auth/refresh', {});
+      if (!data.success || !data.data?.accessToken) {
+        throw new Error('refresh failed');
       }
-    } else {
-      set({ isLoading: false, isAuthenticated: false });
+      const accessToken = data.data.accessToken;
+      setAccessToken(accessToken);
+      const payload = decodeJwtPayload<{ sub?: string }>(accessToken);
+      const sub = payload?.sub;
+      if (!sub) {
+        throw new Error('no sub');
+      }
+      const { data: userRes } = await api.get<ApiSuccessResponse<User>>(`/users/${sub}`);
+      if (!userRes.success || !userRes.data) {
+        throw new Error('user fetch failed');
+      }
+      set({ user: userRes.data, isAuthenticated: true, isLoading: false });
+    } catch {
+      setAccessToken(null);
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));

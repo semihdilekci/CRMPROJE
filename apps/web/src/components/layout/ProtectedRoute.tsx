@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    hydrate();
+    void hydrate();
   }, [hydrate]);
 
   useEffect(() => {
