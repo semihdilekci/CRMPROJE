@@ -77,6 +77,8 @@ cp apps/web/.env.example apps/web/.env.local
 
 NEXT_PUBLIC_API_URL="http://localhost:3001/api/v1"
 
+**Web ve httpOnly refresh (Faz 7):** Tarayıcıda `apps/web` istekleri varsayılan olarak **aynı origin** üzerinden gider (`next.config` içindeki geliştirme rewrite’ı: `/api/v1` → API). Bu düzende **httpOnly** refresh çerezi (`crm_refresh`) ile oturum yenileme tutarlı çalışır. `NEXT_PUBLIC_API_URL` ile istemciyi **doğrudan farklı porta** (örn. `http://localhost:3001/api/v1`) yönlendirirseniz istekler **çapraz origin** olur; `SameSite` / çerez gönderimi ve CORS’u ayrıca doğrulamanız gerekir. Üretimde hedef mimari: **Senaryo A** (tek host + `/api/v1` path) — bkz. `docs/deployment-and-env-strategy.md`, `docs/phase-7-security-hardening.md`.
+
 Mobil (apps/mobile/.env — Expo):
 cp apps/mobile/.env.example apps/mobile/.env
 

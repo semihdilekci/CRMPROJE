@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
@@ -34,7 +35,7 @@ export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly exportCache = new Map<
     string,
-    { filePath: string; createdAt: number }
+    { filePath: string; createdAt: number; userId: string }
   >();
 
   constructor(
@@ -678,13 +679,16 @@ export class ChatService {
     return entries;
   }
 
-  async getExport(exportId: string, _userId: string): Promise<{
+  async getExport(exportId: string, userId: string): Promise<{
     filePath: string;
     fileName: string;
   }> {
     const cached = this.exportCache.get(exportId);
     if (!cached) {
       throw new BadRequestException('Export bulunamadı veya süresi dolmuş');
+    }
+    if (cached.userId !== userId) {
+      throw new ForbiddenException('Bu dosyaya erişim yetkiniz bulunmamaktadır');
     }
     if (Date.now() - cached.createdAt > EXPORT_TTL_MS) {
       this.exportCache.delete(exportId);
@@ -944,6 +948,7 @@ EXCEL: Kullanıcı excel/xlsx/indir/export istediğinde response'a exportId ekle
     this.exportCache.set(exportId, {
       filePath,
       createdAt: Date.now(),
+      userId,
     });
 
     setTimeout(() => {
