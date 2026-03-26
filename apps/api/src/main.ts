@@ -2,9 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
+import { getCorsOrigins } from '@common/cors-origins';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -14,13 +16,17 @@ async function bootstrap(): Promise<void> {
         : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+
+  const corsOrigins = getCorsOrigins();
+  app.use(cookieParser());
 
   app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000']
-        : true,
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
