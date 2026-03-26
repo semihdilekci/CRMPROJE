@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setAuthErrorHandler } from '@/lib/api';
+import { initMobileSslPinning, subscribeSslPinningErrors } from '@/lib/ssl-pinning';
 import { useAuthStore } from '@/stores/auth-store';
 
 // Design system: mor glow (sol üst) + turkuaz glow (sağ alt) + koyu taban
@@ -19,10 +20,27 @@ const backgroundGradient = [
 ] as const;
 
 export default function RootLayout() {
+  const [sslReady, setSslReady] = useState(false);
+
   useEffect(() => {
     setAuthErrorHandler(() => {
       useAuthStore.getState().forceLogout();
     });
+  }, []);
+
+  useEffect(() => {
+    let subscription: { remove: () => void } | undefined;
+    void (async () => {
+      try {
+        await initMobileSslPinning();
+      } finally {
+        subscription = await subscribeSslPinningErrors();
+        setSslReady(true);
+      }
+    })();
+    return () => {
+      subscription?.remove();
+    };
   }, []);
 
   const [queryClient] = useState(
@@ -37,6 +55,10 @@ export default function RootLayout() {
         },
       })
   );
+
+  if (!sslReady) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

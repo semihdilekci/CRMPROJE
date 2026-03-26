@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export --platform ios",
-    "lint": "echo 'Lint placeholder'"
+    "lint": "echo 'Lint placeholder'",
+    "test": "jest"
   },
   "dependencies": {
     "@crm/shared": "*",
@@ -40,14 +41,18 @@
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
+    "react-native-ssl-public-key-pinning": "^1.2.6",
     "react-native-svg": "^15.15.3",
     "tailwindcss": "^3.4.19",
     "zod": "^3.25.76",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
     "babel-plugin-module-resolver": "^5.0.2",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.0",
     "typescript": "~5.9.2"
   },
   "private": true

@@ -246,7 +246,7 @@ P1-C (Telefon maskesi + biyometrik göster)       ← API alan maskesi gerekirse
 
 ## 12. Mobil P1 — uygulama notları
 
-- **SSL pinning:** API host için public key / sertifika pin; `react-native-ssl-public-key-pinning`, `expo` uyumlu sarmalayıcı veya ekosistemdeki güncel paket tercihi (implementasyon sırasında tek seçim yapılır).  
+- **SSL pinning:** API host için public key / sertifika pin; uygulamada **`react-native-ssl-public-key-pinning`** (`apps/mobile/lib/ssl-pinning.ts`). Env: `EXPO_PUBLIC_ENABLE_SSL_PINNING`, `EXPO_PUBLIC_SSL_PUBLIC_KEY_HASHES` (virgülle ayrılmış, **en az 2** hash — iOS); `apps/mobile/.env.example`.  
 - **Sertifika yenileme (üretim):** TLS yenilenmeden önce **yedek pin** veya yeni sertifikaya uygun pin hazırlığı; **mağaza üzerinden uygulama güncellemesi** ile yeni pin dağıtımı — **operasyonel hedef: sertifika değişiminden sonra 14 gün içinde** güncel pin’i içeren sürümün yayında olması (admin panelden parametrik yapılandırma **yok**; süreç + sorumluluk `docs/deployment-and-env-strategy.md` ile uyumlu).  
 - **Jailbreak/root:** Tespitte **uygulama sonlandırılır** (kullanıcı uygulamayı yeniden açamaz veya blok ekranı — implementasyon detayı sec7-08).  
 - **Telefon + biyometrik:** `expo-local-authentication`; maskeli gösterim süresi (ör. 30 sn sonra tekrar gizle) **opsiyonel** netleştirme.

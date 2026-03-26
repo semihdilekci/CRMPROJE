@@ -11,6 +11,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 | **Web → API adresi** | `NEXT_PUBLIC_API_URL` yoksa `http://localhost:3001/api/v1` kullanılır | **Faz 7 kararı — Senaryo A:** Tek host + path. `NEXT_PUBLIC_API_URL` canlıda API base URL (örn. `https://uygulama.com/api/v1` — web ile **aynı origin**). Ayrı `api.` alt alanı kullanılmıyor. |
 | **API dinleme adresi (HOST)** | DEV: `HOST` yoksa `0.0.0.0` — LAN’dan mobil test için | Container / sunucuda genelde `0.0.0.0` veya platform dokümantasyonu |
 | **Mobil → API** | Fiziksel cihaz: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:3001/api/v1`; Android emülatör: `10.0.2.2`; iOS Simülatör: `127.0.0.1` (localhost/IPv6 kaçağı) | `EXPO_PUBLIC_API_URL` canlı API HTTPS base URL |
+| **Mobil SSL pinning (Faz 7 sec7-07)** | Kapalı: `EXPO_PUBLIC_ENABLE_SSL_PINNING` tanımlı değil veya `false`; HTTP ile uyumlu | Üretim mağaza sürümü: `EXPO_PUBLIC_ENABLE_SSL_PINNING=true` + `EXPO_PUBLIC_SSL_PUBLIC_KEY_HASHES` (virgülle **en az 2** base64 SPKI hash) + `EXPO_PUBLIC_API_URL` **HTTPS**; sertifika yenileme sonrası pin güncellemesi için **14 gün** içinde yeni sürüm hedefi (`docs/phase-7-security-hardening.md` §12) |
 | **API CORS** | DEV: `CORS_ORIGIN` varsa bu liste; yoksa localhost web + Expo varsayılanları (`apps/api/src/common/cors-origins.ts`). LAN / fiziksel cihaz: `.env` içine ilgili origin’leri ekleyin (örn. `http://192.168.x.x:8081`). | PROD: **Yalnızca** `CORS_ORIGIN` (zorunlu); **wildcard yok**; `credentials: true` ile **tam origin** listesi |
 | **Çerez / oturum (Faz 7)** | DEV: `Secure` çerez localhost’ta genelde kapalı; `SameSite` test edilir | PROD: **HTTPS zorunlu**; refresh token **httpOnly**; **Senaryo A** ile **SameSite=Strict** ve path tabanlı çerez uyumu (bkz. `docs/phase-7-security-hardening.md` §2.1); web **access token** çerezde değil, **bellekte** |
 | **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
@@ -47,6 +48,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 ### Mobile (Expo — Phase 4)
 
 - [ ] **EXPO_PUBLIC_API_URL** app.json veya .env ile set edildi. DEV: `http://<bilgisayar-ip>:3001/api/v1`; PROD: canlı API base URL.
+- [ ] **SSL pinning (üretim):** `EXPO_PUBLIC_ENABLE_SSL_PINNING=true`, `EXPO_PUBLIC_SSL_PUBLIC_KEY_HASHES` (en az iki pin), HTTPS API URL; native **development build** (Expo Go yeterli değil). Detay: `apps/mobile/.env.example`, `apps/mobile/lib/ssl-pinning.ts`.
 - [ ] CORS: Native app HTTP isteklerinde origin göndermez. Expo dev web için `http://localhost:8081` CORS_ORIGIN'e eklenebilir.
 
 ### Altyapı
@@ -77,6 +79,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist.
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
 - **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
+- **Mobil SSL pinning (sec7-07):** `apps/mobile/lib/ssl-pinning.ts`, `apps/mobile/lib/ssl-pinning-config.ts` — `react-native-ssl-public-key-pinning`; `EXPO_PUBLIC_ENABLE_SSL_PINNING`, `EXPO_PUBLIC_SSL_PUBLIC_KEY_HASHES`.
 - **API HOST:** `apps/api/src/main.ts` — `HOST` (varsayılan `0.0.0.0`) ile LAN erişimi.
 - **Expo fiziksel cihaz:** `apps/mobile` — `npm run start:lan` (Metro LAN); `EXPO_PUBLIC_API_URL` Mac’in telefonun görebildiği IP’si + `/api/v1` (aynı Wi‑Fi veya hotspot). `docs/environment-setup.md`.
 
