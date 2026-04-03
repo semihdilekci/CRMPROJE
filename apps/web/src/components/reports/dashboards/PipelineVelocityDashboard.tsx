@@ -23,6 +23,20 @@ const FILTERS: FilterConfig[] = [
   { key: 'endDate', label: 'Bitiş', type: 'date' },
 ];
 
+const formatCurrency = (val: unknown) => {
+  const n = Number(val);
+  if (Number.isNaN(n)) return '—';
+  if (n >= 1_000_000) return `₺${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `₺${(n / 1_000).toFixed(0)}K`;
+  return `₺${n.toLocaleString('tr-TR')}`;
+};
+
+const velocityScatterFormatter = (val: unknown, name: string) => {
+  if (name === 'value') return formatCurrency(val);
+  if (name === 'cycleDays') return `${Number(val).toLocaleString('tr-TR')} gün`;
+  return String(val ?? '');
+};
+
 const SLOW_TABLE_COLUMNS: ReportTableColumn[] = [
   { key: 'customerCompany', label: 'Müşteri', sortable: true },
   { key: 'fairName', label: 'Fuar', sortable: true },
@@ -117,9 +131,12 @@ export function PipelineVelocityDashboard() {
         <AnalyticsCard title="Fırsat Değeri vs Döngü Süresi" subtitle="Büyük fırsatlar daha mı uzun sürüyor?" delay={0.7}>
           <ReportScatterChart
             series={scatterSeries}
-            xKey="value" yKey="cycleDays"
-            xLabel="Bütçe Değeri" yLabel="Gün"
+            xKey="value"
+            yKey="cycleDays"
+            xLabel="Bütçe Değeri"
+            yLabel="Gün"
             height={280}
+            formatter={velocityScatterFormatter}
           />
         </AnalyticsCard>
         <AnalyticsCard title="Fuar × Aşama Ort. Süre" subtitle="Gün (heatmap)" delay={0.8}>

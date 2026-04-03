@@ -9,6 +9,15 @@ import { CHART_COLORS } from '@/components/reports/charts/chart-theme';
 import type { FilterConfig } from '@/components/reports/ReportFilterBar';
 import type { KpiItem, ReportTableColumn } from '@crm/shared';
 
+const PIPELINE_STAGE_LABEL_FALLBACK: Record<string, string> = {
+  tanisma: 'Tanışma',
+  toplanti: 'Toplantı',
+  teklif: 'Teklif',
+  sozlesme: 'Sözleşme',
+  satisa_donustu: 'Satışa Dönüştü',
+  olumsuz: 'Olumsuz',
+};
+
 const FILTERS: FilterConfig[] = [
   {
     key: 'conversionRate', label: 'Dönüşüm Oranı', type: 'select',
@@ -57,7 +66,14 @@ export function PipelineOverviewDashboard() {
     : [];
 
   const funnelData = useMemo(
-    () => (data?.funnel ?? []).map((f) => ({ name: f.label, Adet: f.count })),
+    () =>
+      (data?.funnel ?? []).map((f) => ({
+        name:
+          f.label && String(f.label).trim() !== ''
+            ? f.label
+            : PIPELINE_STAGE_LABEL_FALLBACK[f.stage] ?? f.stage,
+        Adet: f.count,
+      })),
     [data],
   );
 

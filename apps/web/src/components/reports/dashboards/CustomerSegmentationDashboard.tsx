@@ -29,6 +29,11 @@ const formatCurrency = (val: unknown) => {
   return `₺${n.toLocaleString('tr-TR')}`;
 };
 
+const segmentScatterFormatter = (val: unknown, name: string) => {
+  if (name === 'totalValue') return formatCurrency(val);
+  return Number(val).toLocaleString('tr-TR');
+};
+
 export function CustomerSegmentationDashboard() {
   const { data, isLoading } = useCustomerSegmentation();
 
@@ -124,7 +129,7 @@ export function CustomerSegmentationDashboard() {
             yLabel="Toplam Değer"
             height={300}
             showLegend={false}
-            formatter={formatCurrency}
+            formatter={segmentScatterFormatter}
           />
         </AnalyticsCard>
 

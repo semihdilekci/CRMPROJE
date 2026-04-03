@@ -19,8 +19,10 @@ import type {
   IndividualPerformanceResponse,
   ActivityAnalysisResponse,
 } from '@crm/shared';
+import { STAGE_WEIGHTS } from '@crm/shared';
+import { SettingsService } from '@modules/settings/settings.service';
 import {
-  budgetToNumber,
+  budgetToTRY,
   generateMonthLabels,
   safePercent,
   daysBetween,
@@ -95,13 +97,17 @@ function resolvePeriodDates(params: {
 
 @Injectable()
 export class ReportService {
-  constructor(readonly prisma: PrismaService) {}
+  constructor(
+    readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   async getExecutiveSummary(params: {
     startDate?: string;
     endDate?: string;
     period?: string;
   }): Promise<ExecutiveSummaryResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const { start, end, prevStart, prevEnd } = resolvePeriodDates(params);
     const now = new Date();
     const dateFilter = start && end ? { createdAt: { gte: start, lte: end } } : {};
@@ -132,6 +138,7 @@ export class ReportService {
               where: { createdAt: { gte: prevStart, lte: prevEnd } },
               select: {
                 budgetRaw: true,
+                budgetCurrency: true,
                 currentStage: true,
                 conversionRate: true,
               },
@@ -143,8 +150,8 @@ export class ReportService {
     const wonOpps = opportunities.filter((o) => o.currentStage === 'satisa_donustu');
     const closedOpps = opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
 
-    const pipelineValue = openOpps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
-    const wonRevenue = wonOpps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const pipelineValue = openOpps.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
+    const wonRevenue = wonOpps.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
     const conversionRate = safePercent(wonOpps.length, closedOpps.length);
 
     let previousPeriod: ExecutiveSummaryResponse['kpis']['previousPeriod'];
@@ -163,8 +170,8 @@ export class ReportService {
       previousPeriod = {
         activeFairs: prevActiveFairs,
         openOpportunities: prevOpen.length,
-        pipelineValue: prevOpen.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
-        wonRevenue: prevWon.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        pipelineValue: prevOpen.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
+        wonRevenue: prevWon.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
         conversionRate: safePercent(prevWon.length, prevClosed.length),
         totalCustomers: prevTotalCustomers,
       };
@@ -177,13 +184,13 @@ export class ReportService {
         currentStage: 'satisa_donustu',
         updatedAt: { gte: monthLabels[0]!.start },
       },
-      select: { budgetRaw: true, updatedAt: true },
+      select: { budgetRaw: true, budgetCurrency: true, updatedAt: true },
     });
     const monthlyRevenueTrend = monthLabels.map((m) => {
       const monthWon = allWonOpps.filter(
         (o) => o.updatedAt >= m.start && o.updatedAt <= m.end,
       );
-      return { month: m.label, value: monthWon.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) };
+      return { month: m.label, value: monthWon.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0) };
     });
 
     // Pipeline stage distribution
@@ -193,7 +200,7 @@ export class ReportService {
         stage: s.key,
         label: s.label,
         count: stageOpps.length,
-        value: stageOpps.reduce((sum, o) => sum + budgetToNumber(o.budgetRaw), 0),
+        value: stageOpps.reduce((sum, o) => sum + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
       };
     });
 
@@ -247,7 +254,7 @@ export class ReportService {
         totalValue: 0,
         count: 0,
       };
-      entry.totalValue += budgetToNumber(opp.budgetRaw);
+      entry.totalValue += budgetToTRY(opp.budgetRaw, opp.budgetCurrency, rates);
       entry.count++;
       custMap.set(opp.customerId, entry);
     }
@@ -280,8 +287,8 @@ export class ReportService {
       id: o.id,
       customerCompany: o.customer.company,
       fairName: o.fair.name,
-      value: budgetToNumber(o.budgetRaw),
-      currency: o.budgetCurrency ?? 'TRY',
+      value: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates),
+      currency: 'TRY',
       date: o.updatedAt.toISOString(),
     }));
 
@@ -311,6 +318,7 @@ export class ReportService {
     status?: string;
     createdById?: string;
   }): Promise<FairPerformanceResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const now = new Date();
     const where: Record<string, unknown> = {};
 
@@ -331,6 +339,7 @@ export class ReportService {
           select: {
             id: true,
             budgetRaw: true,
+            budgetCurrency: true,
             currentStage: true,
             conversionRate: true,
           },
@@ -356,9 +365,10 @@ export class ReportService {
       const lost = opps.filter((o) => o.currentStage === 'olumsuz');
       const open = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
       const closed = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
-      const wonRev = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
-      const pipelineVal = open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
-      const rate = safePercent(won.length, closed.length);
+      const wonRev = won.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
+      const pipelineVal = open.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
+      // Fuar dönüşümü: kazanılan / toplam fırsat (açık kayıtlar oranı düşürür; sadece kapalıya bölününce tek kazanım %100 üretirdi)
+      const rate = safePercent(won.length, opps.length);
 
       totalOpportunities += opps.length;
       totalWonRevenue += wonRev;
@@ -394,7 +404,7 @@ export class ReportService {
         totalFairs: fairs.length,
         totalOpportunities,
         totalWonRevenue,
-        avgConversionRate: safePercent(totalWon, totalClosed),
+        avgConversionRate: safePercent(totalWon, totalOpportunities),
       },
       fairOpportunityCounts,
       fairPipelineValues,
@@ -407,6 +417,7 @@ export class ReportService {
   async getFairComparison(fairIds: string[]): Promise<FairComparisonResponse> {
     if (fairIds.length === 0) return { fairs: [], stageMatrix: [], productMatrix: [] };
 
+    const rates = await this.settingsService.getExchangeRates();
     const fairs = await this.prisma.fair.findMany({
       where: { id: { in: fairIds } },
       include: {
@@ -414,6 +425,7 @@ export class ReportService {
           select: {
             id: true,
             budgetRaw: true,
+            budgetCurrency: true,
             currentStage: true,
             conversionRate: true,
             opportunityProducts: {
@@ -437,8 +449,8 @@ export class ReportService {
       const lost = opps.filter((o) => o.currentStage === 'olumsuz');
       const open = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
       const closed = opps.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
-      const wonRev = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
-      const pipelineVal = open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const wonRev = won.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
+      const pipelineVal = open.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
 
       let totalTonnage = 0;
       let wonTonnage = 0;
@@ -461,7 +473,7 @@ export class ReportService {
         totalTonnage, wonTonnage,
         conversionRate: safePercent(won.length, closed.length),
         avgDealValue: opps.length > 0
-          ? opps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) / opps.length
+          ? opps.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0) / opps.length
           : 0,
       });
 
@@ -473,6 +485,7 @@ export class ReportService {
   }
 
   async getFairTargets(fairIds: string[], status?: string): Promise<FairTargetsResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const now = new Date();
     const where: Record<string, unknown> = {};
     if (fairIds.length > 0) where.id = { in: fairIds };
@@ -490,6 +503,7 @@ export class ReportService {
           select: {
             id: true,
             budgetRaw: true,
+            budgetCurrency: true,
             currentStage: true,
             opportunityProducts: { select: { quantity: true } },
           },
@@ -502,14 +516,15 @@ export class ReportService {
 
     for (const fair of fairs) {
       const won = fair.opportunities.filter((o) => o.currentStage === 'satisa_donustu');
-      const budgetActual = won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+      const budgetActual = won.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
       const tonnageActual = won.reduce(
         (s, o) => s + o.opportunityProducts.reduce((ts, p) => ts + (p.quantity ?? 0), 0),
         0,
       );
       const leadActual = fair.opportunities.length;
 
-      const budgetTarget = budgetToNumber(fair.targetBudget);
+      // Hedef bütçe para birimi alanı yok; TRY olarak saklandığı varsayılır
+      const budgetTarget = budgetToTRY(fair.targetBudget, 'TRY', rates);
       const tonnageTarget = fair.targetTonnage ?? 0;
       const leadTarget = fair.targetLeadCount ?? 0;
 
@@ -548,6 +563,7 @@ export class ReportService {
     startDate?: string;
     endDate?: string;
   }): Promise<PipelineOverviewResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const where: Record<string, unknown> = {};
     if (params.fairIds.length) where.fairId = { in: params.fairIds };
     if (params.conversionRate) where.conversionRate = params.conversionRate;
@@ -569,7 +585,7 @@ export class ReportService {
     });
 
     const openOpps = opps.filter((o) => OPEN_STAGES.includes(o.currentStage));
-    const pipelineValue = openOpps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const pipelineValue = openOpps.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
 
     const funnel = ALL_STAGES.filter((s) => OPEN_STAGES.includes(s.key)).map((s) => ({
       stage: s.key, label: s.label,
@@ -578,13 +594,15 @@ export class ReportService {
 
     const stageValues = ALL_STAGES.map((s) => {
       const stageOpps = opps.filter((o) => o.currentStage === s.key);
-      const rates = ['very_high', 'high', 'medium', 'low', 'very_low'];
+      const conversionRateKeys = ['very_high', 'high', 'medium', 'low', 'very_low'];
       return {
         stage: s.key, label: s.label,
-        totalValue: stageOpps.reduce((sum, o) => sum + budgetToNumber(o.budgetRaw), 0),
-        segments: rates.map((r) => ({
+        totalValue: stageOpps.reduce((sum, o) => sum + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
+        segments: conversionRateKeys.map((r) => ({
           rate: r,
-          value: stageOpps.filter((o) => o.conversionRate === r).reduce((sum, o) => sum + budgetToNumber(o.budgetRaw), 0),
+          value: stageOpps
+            .filter((o) => o.conversionRate === r)
+            .reduce((sum, o) => sum + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
         })),
       };
     });
@@ -603,7 +621,7 @@ export class ReportService {
       let entry = fairMap.get(opp.fair.name);
       if (!entry) { entry = { fairName: opp.fair.name, stages: new Map() }; fairMap.set(opp.fair.name, entry); }
       const val = entry.stages.get(opp.currentStage) ?? 0;
-      entry.stages.set(opp.currentStage, val + budgetToNumber(opp.budgetRaw));
+      entry.stages.set(opp.currentStage, val + budgetToTRY(opp.budgetRaw, opp.budgetCurrency, rates));
     }
     const treemapData = [...fairMap.values()].map((f) => ({
       fairName: f.fairName,
@@ -612,8 +630,8 @@ export class ReportService {
 
     const tableData = opps.map((o) => ({
       id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
-      stage: o.currentStage, budget: budgetToNumber(o.budgetRaw),
-      currency: o.budgetCurrency ?? 'TRY', conversionRate: o.conversionRate ?? 'medium',
+      stage: o.currentStage, budget: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates),
+      currency: 'TRY', conversionRate: o.conversionRate ?? 'medium',
       createdAt: o.createdAt.toISOString(), updatedAt: o.updatedAt.toISOString(),
     }));
 
@@ -634,6 +652,7 @@ export class ReportService {
     endDate?: string;
     finalStatus?: string;
   }): Promise<PipelineVelocityResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const where: Record<string, unknown> = {};
     if (params.fairIds.length) where.fairId = { in: params.fairIds };
     if (params.finalStatus && params.finalStatus !== 'all') where.currentStage = params.finalStatus === 'won' ? 'satisa_donustu' : params.finalStatus === 'lost' ? 'olumsuz' : undefined;
@@ -647,7 +666,7 @@ export class ReportService {
     const opps = await this.prisma.opportunity.findMany({
       where,
       select: {
-        id: true, budgetRaw: true, currentStage: true, createdAt: true, updatedAt: true,
+        id: true, budgetRaw: true, budgetCurrency: true, currentStage: true, createdAt: true, updatedAt: true,
         customer: { select: { company: true } },
         fair: { select: { name: true } },
         stageLogs: { select: { stage: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
@@ -693,7 +712,7 @@ export class ReportService {
 
     const scatterData = terminalOpps.map((o) => ({
       id: o.id,
-      value: budgetToNumber(o.budgetRaw),
+      value: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates),
       cycleDays: daysBetween(o.stageLogs[0]!.createdAt, o.stageLogs[o.stageLogs.length - 1]!.createdAt),
       won: o.currentStage === 'satisa_donustu',
     }));
@@ -711,7 +730,7 @@ export class ReportService {
         const daysSince = lastLog ? daysBetween(lastLog.createdAt, now) : daysBetween(o.createdAt, now);
         return {
           id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
-          stage: o.currentStage, daysSinceLastChange: daysSince, value: budgetToNumber(o.budgetRaw),
+          stage: o.currentStage, daysSinceLastChange: daysSince, value: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates),
         };
       })
       .filter((o) => o.daysSinceLastChange >= 30)
@@ -740,6 +759,7 @@ export class ReportService {
     lossReasons: string[];
     conversionRate?: string;
   }): Promise<WinLossResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const where: Record<string, unknown> = { currentStage: { in: ['satisa_donustu', 'olumsuz'] } };
     if (params.fairIds.length) where.fairId = { in: params.fairIds };
     if (params.conversionRate) where.conversionRate = params.conversionRate;
@@ -765,7 +785,7 @@ export class ReportService {
 
     const won = opps.filter((o) => o.currentStage === 'satisa_donustu');
     const lost = opps.filter((o) => o.currentStage === 'olumsuz');
-    const lostValue = lost.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const lostValue = lost.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
     const winRate = safePercent(won.length, won.length + lost.length);
 
     const reasonMap = new Map<string, number>();
@@ -773,7 +793,7 @@ export class ReportService {
     for (const o of lost) {
       const reason = o.lossReason || 'Belirtilmemiş';
       reasonMap.set(reason, (reasonMap.get(reason) ?? 0) + 1);
-      reasonValueMap.set(reason, (reasonValueMap.get(reason) ?? 0) + budgetToNumber(o.budgetRaw));
+      reasonValueMap.set(reason, (reasonValueMap.get(reason) ?? 0) + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates));
     }
     const lossReasons = [...reasonMap.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -813,7 +833,7 @@ export class ReportService {
 
     const lostOpportunities = lost.slice(0, 20).map((o) => ({
       id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
-      value: budgetToNumber(o.budgetRaw), lossReason: o.lossReason ?? 'Belirtilmemiş',
+      value: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), lossReason: o.lossReason ?? 'Belirtilmemiş',
       lastStage: o.stageLogs.length > 1 ? o.stageLogs[o.stageLogs.length - 2]?.stage ?? 'tanisma' : 'tanisma',
       date: o.updatedAt.toISOString(),
     }));
@@ -824,7 +844,7 @@ export class ReportService {
         : daysBetween(o.createdAt, o.updatedAt);
       return {
         id: o.id, customerCompany: o.customer.company, fairName: o.fair.name,
-        value: budgetToNumber(o.budgetRaw), products: o.products, cycleDays,
+        value: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), products: o.products, cycleDays,
       };
     });
 
@@ -839,6 +859,7 @@ export class ReportService {
   async getRevenue(params: {
     startDate?: string; endDate?: string; fairIds: string[]; currency?: string; products: string[];
   }): Promise<RevenueResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const where: Record<string, unknown> = { currentStage: 'satisa_donustu' };
     if (params.fairIds.length) where.fairId = { in: params.fairIds };
     if (params.currency) where.budgetCurrency = params.currency;
@@ -857,15 +878,18 @@ export class ReportService {
         opportunityProducts: { select: { quantity: true, product: { select: { name: true } } } },
       },
     });
-    const totalRevenue = opps.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0);
+    const totalRevenue = opps.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0);
     const avgDealValue = opps.length > 0 ? totalRevenue / opps.length : 0;
     let largestDeal = { customerCompany: '', value: 0 };
-    for (const o of opps) { const v = budgetToNumber(o.budgetRaw); if (v > largestDeal.value) largestDeal = { customerCompany: o.customer.company, value: v }; }
+    for (const o of opps) {
+      const v = budgetToTRY(o.budgetRaw, o.budgetCurrency, rates);
+      if (v > largestDeal.value) largestDeal = { customerCompany: o.customer.company, value: v };
+    }
 
     const ml = generateMonthLabels(12);
     const monthlyRevenueTrend = ml.map((m) => {
       const mo = opps.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
-      return { month: m.label, value: mo.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) };
+      return { month: m.label, value: mo.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0) };
     });
     const monthlyAvgRevenue = monthlyRevenueTrend.reduce((s, m) => s + m.value, 0) / Math.max(ml.length, 1);
 
@@ -874,7 +898,7 @@ export class ReportService {
     const currMap = new Map<string, number>();
     const custMap = new Map<string, number>();
     for (const o of opps) {
-      const v = budgetToNumber(o.budgetRaw);
+      const v = budgetToTRY(o.budgetRaw, o.budgetCurrency, rates);
       fairRevMap.set(o.fair.name, (fairRevMap.get(o.fair.name) ?? 0) + v);
       custMap.set(o.customer.company, (custMap.get(o.customer.company) ?? 0) + v);
       currMap.set(o.budgetCurrency ?? 'TRY', (currMap.get(o.budgetCurrency ?? 'TRY') ?? 0) + v);
@@ -883,12 +907,18 @@ export class ReportService {
 
     const avgDealValueTrend = ml.map((m) => {
       const mo = opps.filter((o) => o.updatedAt >= m.start && o.updatedAt <= m.end);
-      return { month: m.label, avgValue: mo.length > 0 ? mo.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0) / mo.length : 0 };
+      return {
+        month: m.label,
+        avgValue:
+          mo.length > 0
+            ? mo.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0) / mo.length
+            : 0,
+      };
     });
 
     const tableData = opps.map((o) => ({
       customerCompany: o.customer.company, fairName: o.fair.name,
-      budget: budgetToNumber(o.budgetRaw), currency: o.budgetCurrency ?? 'TRY',
+      budget: budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), currency: 'TRY',
       products: o.products, tonnage: o.opportunityProducts.reduce((s, p) => s + (p.quantity ?? 0), 0),
       closedAt: o.updatedAt.toISOString(),
     }));
@@ -907,11 +937,19 @@ export class ReportService {
   async getForecast(params: {
     fairIds: string[]; startDate?: string; endDate?: string;
   }): Promise<ForecastResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const where: Record<string, unknown> = { currentStage: { in: OPEN_STAGES } };
     if (params.fairIds.length) where.fairId = { in: params.fairIds };
     const opps = await this.prisma.opportunity.findMany({
       where,
-      select: { budgetRaw: true, currentStage: true, conversionRate: true, customer: { select: { company: true } }, fair: { select: { name: true } } },
+      select: {
+        budgetRaw: true,
+        budgetCurrency: true,
+        currentStage: true,
+        conversionRate: true,
+        customer: { select: { company: true } },
+        fair: { select: { name: true } },
+      },
     });
     let rawPipelineValue = 0; let weightedPipelineValue = 0;
     const stageMap = new Map<string, { raw: number; weighted: number }>();
@@ -919,8 +957,14 @@ export class ReportService {
     const tbl: ForecastResponse['tableData'] = [];
 
     for (const o of opps) {
-      const budget = budgetToNumber(o.budgetRaw);
-      const wv = calculateWeightedValue(o.budgetRaw, o.currentStage, o.conversionRate);
+      const budget = budgetToTRY(o.budgetRaw, o.budgetCurrency, rates);
+      const wv = calculateWeightedValue(
+        o.budgetRaw,
+        o.budgetCurrency,
+        o.currentStage,
+        o.conversionRate,
+        rates,
+      );
       rawPipelineValue += budget;
       weightedPipelineValue += wv;
       const se = stageMap.get(o.currentStage) ?? { raw: 0, weighted: 0 };
@@ -931,7 +975,7 @@ export class ReportService {
       tbl.push({
         customerCompany: o.customer.company, fairName: o.fair.name,
         stage: o.currentStage, budget, conversionRate: cr,
-        stageWeight: (await import('@crm/shared')).STAGE_WEIGHTS[o.currentStage] ?? 0,
+        stageWeight: STAGE_WEIGHTS[o.currentStage] ?? 0,
         weightedValue: wv,
       });
     }
@@ -954,13 +998,27 @@ export class ReportService {
   async getCustomerOverview(params: {
     fairIds: string[]; startDate?: string; endDate?: string; conversionRate?: string;
   }): Promise<CustomerOverviewResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const oppWhere: Record<string, unknown> = {};
     if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
     if (params.conversionRate) oppWhere.conversionRate = params.conversionRate;
     if (params.startDate || params.endDate) { const df: Record<string, unknown> = {}; if (params.startDate) df.gte = new Date(params.startDate); if (params.endDate) df.lte = new Date(params.endDate); oppWhere.createdAt = df; }
 
     const customers = await this.prisma.customer.findMany({
-      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, conversionRate: true, createdAt: true, updatedAt: true } } },
+      include: {
+        opportunities: {
+          where: oppWhere,
+          select: {
+            id: true,
+            budgetRaw: true,
+            budgetCurrency: true,
+            currentStage: true,
+            conversionRate: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
     const active = customers.filter((c) => c.opportunities.length > 0);
     const totalOpps = active.reduce((s, c) => s + c.opportunities.length, 0);
@@ -979,7 +1037,7 @@ export class ReportService {
       { status: 'Pasif', count: customers.filter((c) => c.opportunities.length === 0).length },
     ];
     const portfolioTreemap = active.slice(0, 30).map((c) => ({
-      company: c.company, totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      company: c.company, totalValue: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
       avgConversionRate: c.opportunities[0]?.conversionRate ?? 'medium',
     }));
     const tableData = active.map((c) => {
@@ -990,7 +1048,7 @@ export class ReportService {
       return {
         company: c.company, name: c.name, opportunityCount: c.opportunities.length,
         won: won.length, lost: lost.length, open: open.length,
-        totalBudget: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        totalBudget: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
         firstContact: c.createdAt.toISOString(), lastContact: c.updatedAt.toISOString(),
         conversionRate: safePercent(won.length, closed.length),
       };
@@ -1009,22 +1067,42 @@ export class ReportService {
   async getCustomerSegmentation(params: {
     fairIds: string[]; criterion?: string;
   }): Promise<CustomerSegmentationResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const oppWhere: Record<string, unknown> = {};
     if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
     const customers = await this.prisma.customer.findMany({
-      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, conversionRate: true, fairId: true, fair: { select: { name: true } } } } },
+      include: {
+        opportunities: {
+          where: oppWhere,
+          select: {
+            id: true,
+            budgetRaw: true,
+            budgetCurrency: true,
+            currentStage: true,
+            conversionRate: true,
+            fairId: true,
+            fair: { select: { name: true } },
+          },
+        },
+      },
     });
     const active = customers.filter((c) => c.opportunities.length > 0);
     const scatterData = active.map((c) => ({
       company: c.company, opportunityCount: c.opportunities.length,
-      totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      totalValue: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
       avgConversionRate: c.opportunities[0]?.conversionRate ?? 'medium',
     }));
     const topByValue = active.map((c) => ({
       company: c.company,
-      wonValue: c.opportunities.filter((o) => o.currentStage === 'satisa_donustu').reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
-      openValue: c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage)).reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
-      lostValue: c.opportunities.filter((o) => o.currentStage === 'olumsuz').reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      wonValue: c.opportunities
+        .filter((o) => o.currentStage === 'satisa_donustu')
+        .reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
+      openValue: c.opportunities
+        .filter((o) => OPEN_STAGES.includes(o.currentStage))
+        .reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
+      lostValue: c.opportunities
+        .filter((o) => o.currentStage === 'olumsuz')
+        .reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
     })).sort((a, b) => (b.wonValue + b.openValue) - (a.wonValue + a.openValue)).slice(0, 10);
 
     const convSegments = Object.entries(CONVERSION_RATE_LABELS).map(([, label]) => ({
@@ -1046,7 +1124,7 @@ export class ReportService {
       const closed = c.opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage)).length;
       return {
         company: c.company, segment: CONVERSION_RATE_LABELS[c.opportunities[0]?.conversionRate ?? 'medium'] ?? 'Orta',
-        totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        totalValue: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
         opportunityCount: c.opportunities.length, winRate: safePercent(won, closed), avgCycleDays: 0,
       };
     });
@@ -1056,10 +1134,25 @@ export class ReportService {
   async getCustomerLifecycle(params: {
     startDate?: string; endDate?: string; status?: string; fairIds: string[];
   }): Promise<CustomerLifecycleResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const oppWhere: Record<string, unknown> = {};
     if (params.fairIds.length) oppWhere.fairId = { in: params.fairIds };
     const customers = await this.prisma.customer.findMany({
-      include: { opportunities: { where: oppWhere, select: { id: true, budgetRaw: true, currentStage: true, createdAt: true, updatedAt: true, fairId: true }, orderBy: { createdAt: 'desc' } } },
+      include: {
+        opportunities: {
+          where: oppWhere,
+          select: {
+            id: true,
+            budgetRaw: true,
+            budgetCurrency: true,
+            currentStage: true,
+            createdAt: true,
+            updatedAt: true,
+            fairId: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
     const now = new Date();
     const active = customers.filter((c) => c.opportunities.length > 0);
@@ -1081,7 +1174,8 @@ export class ReportService {
     const loyalCustomers = active
       .map((c) => ({
         company: c.company, fairCount: new Set(c.opportunities.map((o) => o.fairId)).size,
-        opportunityCount: c.opportunities.length, totalValue: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        opportunityCount: c.opportunities.length,
+        totalValue: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
       }))
       .sort((a, b) => b.fairCount - a.fairCount).slice(0, 10);
 
@@ -1089,7 +1183,7 @@ export class ReportService {
       company: c.company, name: c.name,
       daysSinceLastActivity: daysBetween(c.opportunities[0]?.updatedAt ?? c.updatedAt, now),
       openOpportunities: c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage)).length,
-      value: c.opportunities.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+      value: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
     }));
 
     return {
@@ -1191,6 +1285,7 @@ export class ReportService {
   async getTeamPerformance(params: {
     startDate?: string; endDate?: string; teamIds: string[]; fairIds: string[];
   }): Promise<TeamPerformanceResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const teamWhere: Record<string, unknown> = { active: true };
     if (params.teamIds.length) teamWhere.id = { in: params.teamIds };
     const teams = await this.prisma.team.findMany({
@@ -1199,7 +1294,11 @@ export class ReportService {
         users: {
           select: {
             id: true, name: true,
-            fairs: { select: { opportunities: { select: { budgetRaw: true, currentStage: true } } } },
+            fairs: {
+              select: {
+                opportunities: { select: { budgetRaw: true, budgetCurrency: true, currentStage: true } },
+              },
+            },
           },
         },
       },
@@ -1221,8 +1320,8 @@ export class ReportService {
       data.push({
         teamName: team.name, memberCount: team.users.length,
         totalOpportunities: allOpps.length, won: won.length, lost: lost.length, open: open.length,
-        winRate, pipelineValue: open.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
-        wonRevenue: won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0), avgCycleDays: 0,
+        winRate, pipelineValue: open.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
+        wonRevenue: won.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0), avgCycleDays: 0,
       });
     }
 
@@ -1241,6 +1340,7 @@ export class ReportService {
   async getIndividualPerformance(params: {
     startDate?: string; endDate?: string; teamIds: string[]; fairIds: string[]; sortBy?: string;
   }): Promise<IndividualPerformanceResponse> {
+    const rates = await this.settingsService.getExchangeRates();
     const userWhere: Record<string, unknown> = {};
     if (params.teamIds.length) userWhere.teamId = { in: params.teamIds };
     const users = await this.prisma.user.findMany({
@@ -1248,7 +1348,11 @@ export class ReportService {
       select: {
         id: true, name: true,
         team: { select: { name: true } },
-        fairs: { select: { opportunities: { select: { budgetRaw: true, currentStage: true, updatedAt: true } } } },
+        fairs: {
+          select: {
+            opportunities: { select: { budgetRaw: true, budgetCurrency: true, currentStage: true, updatedAt: true } },
+          },
+        },
       },
     });
 
@@ -1262,7 +1366,7 @@ export class ReportService {
         userId: user.id, name: user.name, teamName: user.team?.name ?? '',
         opportunityCount: opps.length, won: won.length,
         winRate: safePercent(won.length, closed.length),
-        revenue: won.reduce((s, o) => s + budgetToNumber(o.budgetRaw), 0),
+        revenue: won.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
       });
     }
     leaderboard.sort((a, b) => b.revenue - a.revenue);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 export interface FilterOption {
   value: string;
@@ -20,16 +20,28 @@ interface ReportFilterBarProps {
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
   onReset?: () => void;
+  /** Üst bileşenlerdeki ek filtreler (ör. çoklu fuar) — “Filtreleri temizle” görünürlüğü için */
+  hasExtraActiveFilters?: boolean;
+  /** Aynı kutu içinde, diğer filtrelerden önce (ör. çoklu fuar seçimi) */
+  prepend?: ReactNode;
 }
 
-export function ReportFilterBar({ filters, values, onChange, onReset }: ReportFilterBarProps) {
+export function ReportFilterBar({
+  filters,
+  values,
+  onChange,
+  onReset,
+  hasExtraActiveFilters = false,
+  prepend,
+}: ReportFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
   const visibleFilters = expanded ? filters : filters.slice(0, 4);
   const hasMore = filters.length > 4;
-  const hasActiveFilters = Object.values(values).some(Boolean);
+  const hasActiveFilters = Object.values(values).some(Boolean) || hasExtraActiveFilters;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3 backdrop-blur-lg">
+    <div className="relative z-[100] flex flex-wrap items-end gap-3 overflow-visible rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3 backdrop-blur-lg">
+      {prepend}
       {visibleFilters.map((filter) => {
         if (filter.type === 'date' || filter.type === 'date-range') {
           return (

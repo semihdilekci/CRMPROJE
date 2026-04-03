@@ -50,11 +50,23 @@ export function ReportBarChart({
             </>
           ) : (
             <>
-              <XAxis dataKey={xKey} tick={AXIS_STYLE} stroke="transparent" />
-              <YAxis tick={AXIS_STYLE} stroke="transparent" />
+              {/* layout=horizontal: kategori X, değer Y (dikey kolon). type="category" olmazsa tooltip/eksen indeks (0,1,5) gösterir. */}
+              <XAxis
+                dataKey={xKey}
+                type="category"
+                tick={AXIS_STYLE}
+                stroke="transparent"
+                interval={0}
+                angle={-32}
+                textAnchor="end"
+                height={56}
+              />
+              <YAxis type="number" tick={AXIS_STYLE} stroke="transparent" />
             </>
           )}
-          <Tooltip content={<ChartTooltip formatter={formatter} />} />
+          <Tooltip
+            content={<ChartTooltip formatter={formatter} categoryLabelKey={xKey} />}
+          />
           {showLegend && (
             <Legend
               wrapperStyle={{ paddingTop: 8, fontSize: 11 }}

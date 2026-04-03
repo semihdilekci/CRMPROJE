@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useFairPerformance } from '@/hooks/use-fair-reports';
+import { useFairs } from '@/hooks/use-fairs';
 import { ReportDashboardLayout, KpiCard, ReportFilterBar, ReportTable } from '@/components/reports';
 import { ReportBarChart, ReportScatterChart } from '@/components/reports/charts';
 import { AnalyticsCard } from '@/components/reports/AnalyticsCard';
+import { FairPerformanceFairFilter } from '@/components/reports/FairPerformanceFairFilter';
+import type { FairPerformanceFairSelection } from '@/components/reports/FairPerformanceFairFilter';
 import { CHART_COLORS } from '@/components/reports/charts/chart-theme';
 import type { FilterConfig } from '@/components/reports/ReportFilterBar';
-import type { KpiItem, ReportTableColumn } from '@crm/shared';
+import type { FairPerformanceResponse, KpiItem, ReportTableColumn } from '@crm/shared';
 
 const FILTERS: FilterConfig[] = [
   {
@@ -44,58 +47,126 @@ const formatCurrency = (val: unknown) => {
   return `₺${n.toLocaleString('tr-TR')}`;
 };
 
+const fairScatterFormatter = (val: unknown, name: string) => {
+  if (name === 'wonRevenue') return formatCurrency(val);
+  return Number(val).toLocaleString('tr-TR');
+};
+
+/** Y ekseni: kazanılan gelir (TRY) → "2,45 M" (milyon, tr-TR) */
+const formatWonRevenueAxisMillions = (v: number) => {
+  if (!Number.isFinite(v)) return '';
+  const m = v / 1_000_000;
+  return `${m.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} M`;
+};
+
+function safePercent(numerator: number, denominator: number): number {
+  if (denominator === 0) return 0;
+  return Math.round((numerator / denominator) * 10000) / 100;
+}
+
+function aggregateKpisFromTable(rows: FairPerformanceResponse['tableData']) {
+  if (rows.length === 0) {
+    return {
+      totalFairs: 0,
+      totalOpportunities: 0,
+      totalWonRevenue: 0,
+      avgConversionRate: 0,
+    };
+  }
+  const totalOpportunities = rows.reduce((s, r) => s + r.opportunityCount, 0);
+  const totalWonRevenue = rows.reduce((s, r) => s + r.wonRevenue, 0);
+  const totalWon = rows.reduce((s, r) => s + r.won, 0);
+  return {
+    totalFairs: rows.length,
+    totalOpportunities,
+    totalWonRevenue,
+    avgConversionRate: safePercent(totalWon, totalOpportunities),
+  };
+}
+
+function filterByFairIds<T extends { fairId: string }>(rows: T[], ids: Set<string>): T[] {
+  return rows.filter((r) => ids.has(r.fairId));
+}
+
 export function FairPerformanceDashboard() {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [fairSelection, setFairSelection] = useState<FairPerformanceFairSelection>(null);
+
+  const { data: fairsList, isLoading: fairsLoading } = useFairs();
   const { data, isLoading } = useFairPerformance(filterValues);
+
+  const visibleFairIds = useMemo(() => {
+    const list = fairsList ?? [];
+    if (list.length === 0) return new Set<string>();
+    if (fairSelection === null) return new Set(list.map((f) => f.id));
+    return new Set(fairSelection);
+  }, [fairsList, fairSelection]);
+
+  const filteredTableData = useMemo(
+    () => filterByFairIds(data?.tableData ?? [], visibleFairIds),
+    [data?.tableData, visibleFairIds],
+  );
+
+  const displayKpis = useMemo(
+    () => (data ? aggregateKpisFromTable(filteredTableData) : null),
+    [data, filteredTableData],
+  );
 
   const handleFilterChange = (key: string, value: string) =>
     setFilterValues((prev) => ({ ...prev, [key]: value }));
-  const handleReset = () => setFilterValues({});
+  const handleReset = useCallback(() => {
+    setFilterValues({});
+    setFairSelection(null);
+  }, []);
 
-  const kpis: KpiItem[] = data
+  const fairFilterExtraActive = fairSelection !== null;
+
+  const kpis: KpiItem[] = displayKpis
     ? [
-        { label: 'Toplam Fuar', value: data.kpis.totalFairs, format: 'number', color: 'violet', icon: '🏛' },
-        { label: 'Toplam Fırsat', value: data.kpis.totalOpportunities, format: 'number', color: 'cyan', icon: '🔄' },
-        { label: 'Kazanılan Gelir', value: data.kpis.totalWonRevenue, format: 'currency', color: 'green', icon: '💰' },
-        { label: 'Ort. Dönüşüm', value: data.kpis.avgConversionRate, format: 'percent', color: 'amber', icon: '📈' },
+        { label: 'Toplam Fuar', value: displayKpis.totalFairs, format: 'number', color: 'violet', icon: '🏛' },
+        { label: 'Toplam Fırsat', value: displayKpis.totalOpportunities, format: 'number', color: 'cyan', icon: '🔄' },
+        { label: 'Kazanılan Gelir', value: displayKpis.totalWonRevenue, format: 'currency', color: 'green', icon: '💰' },
+        { label: 'Ort. Dönüşüm', value: displayKpis.avgConversionRate, format: 'percent', color: 'amber', icon: '📈' },
       ]
     : [];
 
   const oppCountData = useMemo(
     () =>
-      (data?.fairOpportunityCounts ?? []).map((f) => ({
+      filterByFairIds(data?.fairOpportunityCounts ?? [], visibleFairIds).map((f) => ({
         name: f.fairName,
         Kazanılan: f.won,
         Kaybedilen: f.lost,
         Açık: f.open,
       })),
-    [data],
+    [data?.fairOpportunityCounts, visibleFairIds],
   );
 
   const pipelineData = useMemo(
     () =>
-      (data?.fairPipelineValues ?? []).map((f) => ({
+      filterByFairIds(data?.fairPipelineValues ?? [], visibleFairIds).map((f) => ({
         name: f.fairName,
         Pipeline: f.pipelineValue,
         Gelir: f.wonRevenue,
       })),
-    [data],
+    [data?.fairPipelineValues, visibleFairIds],
   );
 
   const conversionData = useMemo(
     () =>
-      (data?.fairConversionRates ?? []).map((f) => ({
-        name: f.fairName,
-        Oran: f.rate,
-      })),
-    [data],
+      filterByFairIds(data?.fairConversionRates ?? [], visibleFairIds)
+        .sort((a, b) => b.rate - a.rate)
+        .map((f) => ({
+          name: f.fairName,
+          Oran: f.rate,
+        })),
+    [data?.fairConversionRates, visibleFairIds],
   );
 
   const scatterSeries = useMemo(
     () => [
       {
         name: 'Fuarlar',
-        data: (data?.scatterData ?? []).map((f) => ({
+        data: filterByFairIds(data?.scatterData ?? [], visibleFairIds).map((f) => ({
           name: f.fairName,
           opportunityCount: f.opportunityCount,
           wonRevenue: f.wonRevenue,
@@ -104,7 +175,7 @@ export function FairPerformanceDashboard() {
         color: CHART_COLORS.neutral,
       },
     ],
-    [data],
+    [data?.scatterData, visibleFairIds],
   );
 
   return (
@@ -115,14 +186,23 @@ export function FairPerformanceDashboard() {
       isEmpty={!isLoading && !data}
       filterBar={
         <ReportFilterBar
+          prepend={
+            <FairPerformanceFairFilter
+              fairs={fairsList}
+              isLoading={fairsLoading}
+              value={fairSelection}
+              onChange={setFairSelection}
+            />
+          }
           filters={FILTERS}
           values={filterValues}
           onChange={handleFilterChange}
           onReset={handleReset}
+          hasExtraActiveFilters={fairFilterExtraActive}
         />
       }
       csvExportConfig={{
-        rows: data?.tableData ?? [],
+        rows: filteredTableData,
         columns: TABLE_COLUMNS.map((c) => ({
           key: c.key,
           label: c.label,
@@ -168,7 +248,7 @@ export function FairPerformanceDashboard() {
           <ReportBarChart
             data={conversionData}
             bars={[{ dataKey: 'Oran', name: 'Dönüşüm %', color: '#fbbf24' }]}
-            layout="vertical"
+            layout="horizontal"
             height={300}
             showLegend={false}
             formatter={(val) => `%${Number(val).toFixed(1)}`}
@@ -183,21 +263,25 @@ export function FairPerformanceDashboard() {
             zKey="totalOpportunities"
             xLabel="Fırsat Sayısı"
             yLabel="Kazanılan Gelir"
+            xAxisCornerLabel="Toplam Fırsat"
+            yTickFormatter={formatWonRevenueAxisMillions}
+            tooltipCategoryKey="name"
+            tooltipPayloadDataKeys={['opportunityCount', 'wonRevenue']}
             height={300}
             showLegend={false}
-            formatter={formatCurrency}
+            formatter={fairScatterFormatter}
           />
         </AnalyticsCard>
       </div>
 
       <AnalyticsCard
         title="Fuar Detay Tablosu"
-        badge={data ? `${data.tableData.length} fuar` : undefined}
+        badge={data ? `${filteredTableData.length} fuar` : undefined}
         delay={0.9}
       >
         <ReportTable
           columns={TABLE_COLUMNS}
-          rows={data?.tableData ?? []}
+          rows={filteredTableData}
           defaultSortBy="wonRevenue"
           defaultSortOrder="desc"
         />

@@ -37,15 +37,33 @@ export function budgetToNumber(raw: string | null | undefined): number {
 }
 
 /**
- * Ağırlıklı pipeline değeri hesaplar.
- * Formül: bütçe × aşama ağırlığı × dönüşüm oranı çarpanı
+ * Bütçe tutarını sistem kurlarına göre TRY cinsine çevirir.
+ * `rates`: SettingsService.getExchangeRates() çıktısı — TRY=1, USD/EUR/GBP = 1 birimin kaç TL olduğu.
+ */
+export function budgetToTRY(
+  raw: string | null | undefined,
+  currency: string | null | undefined,
+  rates: Record<string, number>,
+): number {
+  const amount = parseBudgetToNumber(raw);
+  const code = (currency && String(currency).trim() !== '' ? String(currency) : 'TRY').toUpperCase();
+  const rate = rates[code];
+  const effectiveRate = rate !== undefined && Number.isFinite(rate) && rate > 0 ? rate : 1;
+  return amount * effectiveRate;
+}
+
+/**
+ * Ağırlıklı pipeline değeri hesaplar (TRY cinsinden).
+ * Formül: bütçe_TRY × aşama ağırlığı × dönüşüm oranı çarpanı
  */
 export function calculateWeightedValue(
   budgetRaw: string | null | undefined,
+  budgetCurrency: string | null | undefined,
   stage: string,
   conversionRate: string | null | undefined,
+  rates: Record<string, number>,
 ): number {
-  const budget = budgetToNumber(budgetRaw);
+  const budget = budgetToTRY(budgetRaw, budgetCurrency, rates);
   const stageWeight = STAGE_WEIGHTS[stage] ?? 0;
   const rateMultiplier = CONVERSION_RATE_MULTIPLIERS[conversionRate ?? 'medium'] ?? 0.5;
   return budget * stageWeight * rateMultiplier;
@@ -95,10 +113,16 @@ export function median(values: number[]): number {
 }
 
 /**
- * Opportunity dizisinin toplam bütçe değerini hesaplar.
+ * Opportunity dizisinin toplam bütçe değerini TRY cinsinden hesaplar.
  */
-export function sumBudgets(opportunities: Array<{ budgetRaw?: string | null }>): number {
-  return opportunities.reduce((sum, opp) => sum + budgetToNumber(opp.budgetRaw), 0);
+export function sumBudgetsTry(
+  opportunities: Array<{ budgetRaw?: string | null; budgetCurrency?: string | null }>,
+  rates: Record<string, number>,
+): number {
+  return opportunities.reduce(
+    (sum, opp) => sum + budgetToTRY(opp.budgetRaw, opp.budgetCurrency, rates),
+    0,
+  );
 }
 
 /**

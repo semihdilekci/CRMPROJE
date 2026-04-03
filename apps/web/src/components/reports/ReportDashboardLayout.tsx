@@ -158,6 +158,7 @@ export function ReportDashboardLayout({
       {/* Filters */}
       {filterBar && (
         <div
+          className="relative z-[100] overflow-visible"
           style={{
             opacity: 0,
             animation: 'fadeUp 0.4s ease 0.15s forwards',

@@ -37,7 +37,7 @@ export function ReportLineChart({
           <CartesianGrid {...GRID_STYLE} />
           <XAxis dataKey={xKey} tick={AXIS_STYLE} stroke="transparent" />
           <YAxis tick={AXIS_STYLE} stroke="transparent" />
-          <Tooltip content={<ChartTooltip formatter={formatter} />} />
+          <Tooltip content={<ChartTooltip formatter={formatter} categoryLabelKey={xKey} />} />
           {showLegend && lines.length > 1 && (
             <Legend
               wrapperStyle={{ paddingTop: 8, fontSize: 11 }}

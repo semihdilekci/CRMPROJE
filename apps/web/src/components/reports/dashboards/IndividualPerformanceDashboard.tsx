@@ -134,6 +134,7 @@ export function IndividualPerformanceDashboard() {
             zKey="revenue"
             xLabel="Fırsat sayısı"
             yLabel="Kazanma oranı (%)"
+            zLabel="Kazanılan Gelir"
             height={320}
             showLegend={false}
             formatter={scatterFormatter}

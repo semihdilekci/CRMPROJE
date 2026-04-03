@@ -27,6 +27,16 @@ const FILTERS: FilterConfig[] = [
   { key: 'endDate', label: 'Bitiş', type: 'date' },
 ];
 
+/** API veya veri tutarsızlığında eksen etiketi için yedek (pipeline aşama dağılımı) */
+const PIPELINE_STAGE_LABEL_FALLBACK: Record<string, string> = {
+  tanisma: 'Tanışma',
+  toplanti: 'Toplantı',
+  teklif: 'Teklif',
+  sozlesme: 'Sözleşme',
+  satisa_donustu: 'Satışa Dönüştü',
+  olumsuz: 'Olumsuz',
+};
+
 const WON_TABLE_COLUMNS: ReportTableColumn[] = [
   { key: 'customerCompany', label: 'Müşteri', sortable: true },
   { key: 'fairName', label: 'Fuar', sortable: true },
@@ -135,11 +145,17 @@ export function ExecutiveSummaryDashboard() {
 
   const stageBarData = useMemo(
     () =>
-      (data?.pipelineStageDistribution ?? []).map((s) => ({
-        name: s.label,
-        Adet: s.count,
-        Değer: s.value,
-      })),
+      (data?.pipelineStageDistribution ?? []).map((s) => {
+        const label =
+          s.label && String(s.label).trim() !== ''
+            ? s.label
+            : PIPELINE_STAGE_LABEL_FALLBACK[s.stage] ?? s.stage ?? 'Bilinmeyen';
+        return {
+          name: label,
+          Adet: s.count,
+          Değer: s.value,
+        };
+      }),
     [data],
   );
 
@@ -253,7 +269,7 @@ export function ExecutiveSummaryDashboard() {
           <ReportBarChart
             data={stageBarData}
             bars={[{ dataKey: 'Adet', name: 'Fırsat Sayısı', color: CHART_COLORS.neutral }]}
-            layout="vertical"
+            layout="horizontal"
             height={280}
             showLegend={false}
           />

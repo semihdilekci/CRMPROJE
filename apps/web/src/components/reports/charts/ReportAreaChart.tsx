@@ -52,7 +52,7 @@ export function ReportAreaChart({
           <CartesianGrid {...GRID_STYLE} />
           <XAxis dataKey={xKey} tick={AXIS_STYLE} stroke="transparent" />
           <YAxis tick={AXIS_STYLE} stroke="transparent" />
-          <Tooltip content={<ChartTooltip formatter={formatter} />} />
+          <Tooltip content={<ChartTooltip formatter={formatter} categoryLabelKey={xKey} />} />
           {showLegend && areas.length > 1 && (
             <Legend
               wrapperStyle={{ paddingTop: 8, fontSize: 11 }}
