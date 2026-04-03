@@ -230,7 +230,7 @@ P1-C (Telefon maskesi + biyometrik göster)       ← API alan maskesi gerekirse
 **P1**
 
 - [ ] Mobil **SSL pinning** aktif (prod build).  
-- [ ] **Jailbreak/root** tespitinde **uygulama kapatılıyor** (blok).  
+- [x] **Jailbreak/root** tespitinde **uygulama kapatılıyor** (blok). — `evaluateDeviceSecurity` + `JailbreakBlockScreen`; 10 birim test geçti.  
 - [ ] Telefon **maskeli**; tam gösterim **biyometrik/cihaz kilidi** ile.
 
 ---
@@ -248,7 +248,7 @@ P1-C (Telefon maskesi + biyometrik göster)       ← API alan maskesi gerekirse
 
 - **SSL pinning:** API host için public key / sertifika pin; `react-native-ssl-public-key-pinning`, `expo` uyumlu sarmalayıcı veya ekosistemdeki güncel paket tercihi (implementasyon sırasında tek seçim yapılır).  
 - **Sertifika yenileme (üretim):** TLS yenilenmeden önce **yedek pin** veya yeni sertifikaya uygun pin hazırlığı; **mağaza üzerinden uygulama güncellemesi** ile yeni pin dağıtımı — **operasyonel hedef: sertifika değişiminden sonra 14 gün içinde** güncel pin’i içeren sürümün yayında olması (admin panelden parametrik yapılandırma **yok**; süreç + sorumluluk `docs/deployment-and-env-strategy.md` ile uyumlu).  
-- **Jailbreak/root:** Tespitte **uygulama sonlandırılır** (kullanıcı uygulamayı yeniden açamaz veya blok ekranı — implementasyon detayı sec7-08).  
+- **Jailbreak/root:** Tespitte **uygulama sonlandırılır** (blok ekranı — `JailbreakBlockScreen`). Uygulama; `evaluateDeviceSecurity()` → `Device.isRootedExperimentalAsync()` ile fiziksel cihazda root/jailbreak kontrolü yapar; simülatör ve web ortamında geçer. Hata durumunda güvenli taraf: blok. Env: yok (her zaman aktif). Kod: `apps/mobile/lib/jailbreak-detection.ts`, `apps/mobile/components/security/JailbreakBlockScreen.tsx`.  
 - **Telefon + biyometrik:** `expo-local-authentication`; maskeli gösterim süresi (ör. 30 sn sonra tekrar gizle) **opsiyonel** netleştirme.
 
 ---

@@ -54,6 +54,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - [ ] **Faz 7 — BFF yok:** Güvenlik, **API sertleştirmesi** + **httpOnly refresh** + **sıkı CORS/CSP** ile sağlanır; detaylar `docs/phase-7-security-hardening.md`.
 - [ ] **Senaryo A (kesin):** Tek host — `https://<site>/` web, `https://<site>/api/v1` API; reverse proxy routing doğrulandı; çerez `SameSite`, `Secure` ve `CORS_ORIGIN` birlikte test edildi.
 - [ ] **Mobil SSL pinning:** Üretim sertifikası yenileme sonrası **14 gün** içinde yeni pin’i içeren mağaza sürümü hedefi — operasyonel süreç `docs/phase-7-security-hardening.md` §12; admin panelden parametrik yapılandırma yok.
+- [x] **Mobil jailbreak/root bloğu:** `evaluateDeviceSecurity()` her açılışta çalışır; fiziksel cihazda root/jailbreak → `JailbreakBlockScreen` gösterilir, uygulama kullanılamaz. Simülatör ve web ortamında geçer. Env gerekmez; her zaman aktif. Kod: `apps/mobile/lib/jailbreak-detection.ts`, `apps/mobile/components/security/JailbreakBlockScreen.tsx`.
 - [ ] HTTPS kullanılıyor; gerekirse reverse proxy (nginx, vb.) ayarları yapıldı.
 
 **Opsiyonel env (Faz 7 uygulamasına göre):**

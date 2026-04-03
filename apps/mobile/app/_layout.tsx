@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setAuthErrorHandler } from '@/lib/api';
+import { evaluateDeviceSecurity } from '@/lib/jailbreak-detection';
+import { JailbreakBlockScreen } from '@/components/security/JailbreakBlockScreen';
 import { useAuthStore } from '@/stores/auth-store';
 
 // Design system: mor glow (sol üst) + turkuaz glow (sağ alt) + koyu taban
@@ -19,10 +21,24 @@ const backgroundGradient = [
 ] as const;
 
 export default function RootLayout() {
+  const [ready, setReady] = useState(false);
+  const [deviceCompromised, setDeviceCompromised] = useState(false);
+
   useEffect(() => {
     setAuthErrorHandler(() => {
       useAuthStore.getState().forceLogout();
     });
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      const security = await evaluateDeviceSecurity();
+      if (security.compromised) {
+        setDeviceCompromised(true);
+        return;
+      }
+      setReady(true);
+    })();
   }, []);
 
   const [queryClient] = useState(
@@ -37,6 +53,14 @@ export default function RootLayout() {
         },
       })
   );
+
+  if (deviceCompromised) {
+    return <JailbreakBlockScreen />;
+  }
+
+  if (!ready) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
