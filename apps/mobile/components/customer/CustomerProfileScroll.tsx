@@ -8,6 +8,7 @@ import {
   Linking,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { CustomerProfileResponse } from '@crm/shared';
@@ -16,6 +17,9 @@ import { GradientView } from '@/components/ui/GradientView';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/auth-store';
 import { getAssetBaseUrl } from '@/lib/api';
+import { maskPhone } from '@/lib/phone-mask';
+import { usePhoneReveal } from '@/hooks/use-phone-reveal';
+import { theme } from '@/constants/theme';
 import {
   useUpdateOpportunityNoteForProfile,
   useDeleteOpportunityNoteForProfile,
@@ -98,6 +102,7 @@ export function CustomerProfileScroll({
   const user = useAuthStore((s) => s.user);
   const updateNote = useUpdateOpportunityNoteForProfile(customerId);
   const deleteNote = useDeleteOpportunityNoteForProfile(customerId);
+  const { isRevealed, isAuthenticating, requestReveal } = usePhoneReveal();
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
@@ -187,9 +192,44 @@ export function CustomerProfileScroll({
             <Text className="text-white text-xl font-semibold">{profile.customer.company}</Text>
             <Text className="text-white/50 text-[15px] mt-1">{profile.customer.name}</Text>
             {profile.customer.phone ? (
-              <Pressable onPress={() => Linking.openURL(`tel:${profile.customer.phone}`)}>
-                <Text className="text-white/80 text-sm mt-2">📞 {profile.customer.phone}</Text>
-              </Pressable>
+              <View className="flex-row items-center gap-2 mt-2">
+                {isRevealed ? (
+                  <Pressable onPress={() => Linking.openURL(`tel:${profile.customer.phone}`)}>
+                    <Text className="text-white/80 text-sm font-mono">
+                      📞 {profile.customer.phone}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text className="text-white/50 text-sm font-mono">
+                    📞 {maskPhone(profile.customer.phone)}
+                  </Text>
+                )}
+                <Pressable
+                  onPress={requestReveal}
+                  disabled={isAuthenticating || isRevealed}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: isRevealed
+                      ? 'rgba(255,255,255,0.1)'
+                      : 'rgba(139,92,246,0.4)',
+                    borderRadius: 8,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    opacity: isRevealed ? 0.4 : 1,
+                  }}
+                >
+                  {isAuthenticating ? (
+                    <ActivityIndicator size="small" color={theme.colors.accent} />
+                  ) : (
+                    <Text style={{ color: theme.colors.accent, fontSize: 11 }}>
+                      {isRevealed ? '✓ Açık' : '🔓 Göster'}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
             ) : null}
             {profile.customer.email ? (
               <Pressable onPress={() => Linking.openURL(`mailto:${profile.customer.email}`)}>

@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { CustomerListItem } from '@crm/shared';
 import { formatDate } from '@crm/shared';
 import { GradientView } from '@/components/ui/GradientView';
+import { maskPhone } from '@/lib/phone-mask';
 
 const CARD_TINTS = [
   ['rgba(139,92,246,0.22)', 'rgba(6,182,212,0.12)'],
@@ -43,6 +44,11 @@ export function CustomerListCard({ customer, onPress }: CustomerListCardProps) {
             {customer.company}
           </Text>
           <Text className="text-white/70 text-[14px] mt-1">{customer.name}</Text>
+          {customer.phone ? (
+            <Text className="text-white/45 text-[12px] mt-0.5 font-mono">
+              📞 {maskPhone(customer.phone)}
+            </Text>
+          ) : null}
           <View className="mt-3">
             <LinearGradient
               colors={['rgba(249,115,22,0.25)', 'rgba(236,72,153,0.18)']}

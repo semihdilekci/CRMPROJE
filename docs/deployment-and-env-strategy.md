@@ -54,6 +54,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - [ ] **Faz 7 — BFF yok:** Güvenlik, **API sertleştirmesi** + **httpOnly refresh** + **sıkı CORS/CSP** ile sağlanır; detaylar `docs/phase-7-security-hardening.md`.
 - [ ] **Senaryo A (kesin):** Tek host — `https://<site>/` web, `https://<site>/api/v1` API; reverse proxy routing doğrulandı; çerez `SameSite`, `Secure` ve `CORS_ORIGIN` birlikte test edildi.
 - [ ] **Mobil SSL pinning:** Üretim sertifikası yenileme sonrası **14 gün** içinde yeni pin’i içeren mağaza sürümü hedefi — operasyonel süreç `docs/phase-7-security-hardening.md` §12; admin panelden parametrik yapılandırma yok.
+- [x] **Mobil telefon maskesi + biyometrik:** Liste kartında telefon maskeli (`maskPhone`); profil ekranında "Göster" butonu `expo-local-authentication` ile kimlik doğrulama başlatır; 30 sn sonra otomatik kapanır. Env gerekmez. Kod: `apps/mobile/lib/phone-mask.ts`, `apps/mobile/lib/biometric.ts`, `apps/mobile/hooks/use-phone-reveal.ts`.
 - [ ] HTTPS kullanılıyor; gerekirse reverse proxy (nginx, vb.) ayarları yapıldı.
 
 **Opsiyonel env (Faz 7 uygulamasına göre):**
