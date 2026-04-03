@@ -59,34 +59,25 @@
   --spacing-xs: 8px;
 }
 
-/* Glassmorphism gradient — mor glow (sol üst) + turkuaz glow (sağ alt) + koyu taban */
+/* AmbientArcBlobs — radial merkez renkleri (hareketli blob katmanı) */
+:root {
+  --ambient-blob-violet: rgba(139, 92, 246, 0.52);
+  --ambient-blob-cyan: rgba(6, 182, 212, 0.42);
+  --ambient-blob-slate: rgba(51, 65, 85, 0.5);
+}
+
+/* Glassmorphism — koyu taban (renkli glow’lar AmbientArcBlobs ile) */
 @layer base {
   html,
   body {
-    background:
-      radial-gradient(
-        ellipse 120% 80% at 10% 10%,
-        rgba(139, 92, 246, 0.18),
-        transparent 45%
-      ),
-      radial-gradient(
-        ellipse 100% 70% at 90% 90%,
-        rgba(6, 182, 212, 0.15),
-        transparent 45%
-      ),
-      radial-gradient(
-        ellipse 80% 60% at 50% 50%,
-        rgba(30, 41, 59, 0.25),
-        transparent 60%
-      ),
-      linear-gradient(
-        135deg,
-        #030712 0%,
-        #0f0a1a 25%,
-        #0a0f1a 50%,
-        #0f172a 75%,
-        #030712 100%
-      );
+    background: linear-gradient(
+      135deg,
+      #030712 0%,
+      #0f0a1a 25%,
+      #0a0f1a 50%,
+      #0f172a 75%,
+      #030712 100%
+    );
     background-attachment: fixed;
   }
 

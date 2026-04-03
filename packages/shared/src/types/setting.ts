@@ -1,3 +1,5 @@
+import type { AmbientBlobConfig } from '../schemas/ambient-blob.schema';
+
 export interface SystemSetting {
   key: string;
   value: string;
@@ -9,6 +11,7 @@ export interface SystemSetting {
 export interface DisplayConfig {
   defaultCurrency: string;
   conversionRateLabels: Record<string, string>;
+  ambientBlobs: AmbientBlobConfig;
 }
 
 export interface AuditLogEntry {

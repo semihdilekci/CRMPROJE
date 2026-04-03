@@ -1,3 +1,4 @@
+export * from './ambient-blob.schema';
 export * from './auth';
 export * from './user';
 export * from './fair';

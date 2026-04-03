@@ -2,7 +2,12 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 import type { SystemSetting, DisplayConfig } from '@crm/shared';
-import { CONVERSION_RATES } from '@crm/shared';
+import {
+  CONVERSION_RATES,
+  AMBIENT_BLOB_CONFIG_KEY,
+  defaultAmbientBlobConfigJson,
+  parseAmbientBlobConfigJson,
+} from '@crm/shared';
 
 const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
   { key: 'DEFAULT_CURRENCY', value: 'TRY', description: 'Varsayılan para birimi' },
@@ -92,6 +97,11 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
     value: '43',
     description: '1 GBP = X TRY (teklif toplam hesaplama)',
   },
+  {
+    key: AMBIENT_BLOB_CONFIG_KEY,
+    value: defaultAmbientBlobConfigJson(),
+    description: 'Web arka plan blob ayarları (JSON: blobCount, speed, size, pulseAmount)',
+  },
 ];
 
 @Injectable()
@@ -167,7 +177,9 @@ export class SettingsService implements OnModuleInit {
       const value = await this.get(`CONVERSION_RATE_LABEL_${rate}`);
       conversionRateLabels[rate] = value ?? rate;
     }
-    return { defaultCurrency, conversionRateLabels };
+    const ambientRaw = await this.get(AMBIENT_BLOB_CONFIG_KEY);
+    const ambientBlobs = parseAmbientBlobConfigJson(ambientRaw);
+    return { defaultCurrency, conversionRateLabels, ambientBlobs };
   }
 
   async set(

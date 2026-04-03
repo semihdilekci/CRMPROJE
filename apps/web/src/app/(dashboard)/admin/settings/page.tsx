@@ -6,6 +6,7 @@ import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { Button } from '@/components/ui/Button';
 import { useSettings, useResetTeklifTemplate } from '@/hooks/use-settings';
 import { SettingFormModal } from '@/components/settings/SettingFormModal';
+import { AmbientBackgroundSettingsCard } from '@/components/settings/AmbientBackgroundSettingsCard';
 import type { SystemSetting } from '@crm/shared';
 import api from '@/lib/api';
 
@@ -151,6 +152,8 @@ export default function AdminSettingsPage() {
             <p className="text-white/60">Henüz ayar yok. Varsayılan ayarlar ilk erişimde oluşturulur.</p>
           </div>
         )}
+
+        <AmbientBackgroundSettingsCard />
       </ContentWrapper>
 
       <SettingFormModal
