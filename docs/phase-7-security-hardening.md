@@ -289,4 +289,33 @@ Uygulama sırasında şu dosyalar güncel tutulmalıdır:
 
 ---
 
+
+feature/sec7-07-mobile-ssl-pinning branch'i aşağıdaki kontroller yapılmadan merge edilmeyecek.
+
+1.Expo Go ile sınırlama
+Pinning yalnızca native modülde çalışır. Üretim doğrulaması için development / preview build (EAS veya npx expo prebuild + Xcode/Android Studio) kullan.
+
+2.Üretim .env (veya EAS secrets)
+
+EXPO_PUBLIC_API_URL=https://<senin-domain>/api/v1
+EXPO_PUBLIC_ENABLE_SSL_PINNING=true
+EXPO_PUBLIC_SSL_PUBLIC_KEY_HASHES=<en az iki pin>
+Pin üretimi (sunucu host adıyla):
+
+echo | openssl s_client -servername <hostname> -connect <hostname>:443 2>/dev/null \
+  | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform DER \
+  | openssl dgst -sha256 -binary \
+  | openssl enc -base64
+Yedek pin için yeni sertifika / ara CA ile aynı komutu tekrarlayıp ikinci hash’i ekle (Faz 7’deki 14 gün mağaza güncellemesi hedefiyle uyumlu).
+
+3.Negatif test (önerilen)
+Geçici olarak bilerek yanlış iki pin koyup build’i çalıştır; API çağrıları başarısız olmalı. Sonra doğru pin’lere dön.
+
+4.iOS development build + pinning
+Gerekirse dokümandaki gibi expo-build-properties ile iOS network inspector kapatma (pinning ile çakışma); üretim build’de genelde sorun olmaz.
+
+5.Tam tsc
+Projede mobil tarafta önceden de var olan bazı tsc uyarıları görülebilir; bu branch’teki yeni dosyalar lint’ten temiz. İstersen sadece şunu çalıştırarak derleme denemesi yap: npm run android / npm run ios (development build ile).
+
 *Ref: Proje güvenlik kuralları, `docs/deployment-and-env-strategy.md`, kesin barındırma **A** (tek host + `/api/v1`), saatlik oturum, CAPTCHA yok, MFA ek efor yok.*
