@@ -85,6 +85,16 @@ function cleanLine(line: string): string {
   return line.slice(start, end).trim();
 }
 
+const TRAILING_CANDIDATE_PUNCT = new Set([',', ';', ':', '!', '?', '(', ')']);
+
+function stripTrailingCandidatePunctuation(s: string): string {
+  let end = s.length;
+  while (end > 0 && TRAILING_CANDIDATE_PUNCT.has(s.charAt(end - 1))) {
+    end -= 1;
+  }
+  return end === s.length ? s : s.slice(0, end);
+}
+
 function getNonEmptyLines(text: string): string[] {
   return text
     .split(/[\r\n]+/)
@@ -231,7 +241,7 @@ function searchCompanyInText(text: string, domainBase: string): string {
   let m: RegExpExecArray | null;
   const candidates: string[] = [];
   while ((m = re.exec(text)) !== null) {
-    const candidate = (m[1] ?? '').trim().replace(/[,;:!?()]+$/, '');
+    const candidate = stripTrailingCandidatePunctuation((m[1] ?? '').trim());
     const cNorm = candidate.toLowerCase().replace(/[^a-zäöüßçğıöşü]/g, '');
     if (
       candidate.length >= 2 &&
