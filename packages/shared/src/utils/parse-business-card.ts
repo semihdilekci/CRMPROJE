@@ -70,7 +70,19 @@ function extractPhone(text: string): string {
 }
 
 function cleanLine(line: string): string {
-  return line.replace(/^[©®™\s]+|[©®™\s]+$/g, '').trim();
+  let start = 0;
+  let end = line.length;
+  while (start < end) {
+    const c = line.charAt(start);
+    if (c !== '©' && c !== '®' && c !== '™' && !/\s/.test(c)) break;
+    start += 1;
+  }
+  while (end > start) {
+    const c = line.charAt(end - 1);
+    if (c !== '©' && c !== '®' && c !== '™' && !/\s/.test(c)) break;
+    end -= 1;
+  }
+  return line.slice(start, end).trim();
 }
 
 function getNonEmptyLines(text: string): string[] {
