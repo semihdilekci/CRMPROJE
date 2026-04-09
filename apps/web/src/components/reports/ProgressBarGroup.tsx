@@ -9,20 +9,27 @@ interface ProgressBarGroupProps {
 
 function ProgressRow({ item, index }: { item: ProgressBarItem; index: number }) {
   const [animated, setAnimated] = useState(false);
-  const pct = item.max > 0 ? Math.min((item.value / item.max) * 100, 100) : 0;
+  const hasTarget = item.max > 0;
+  const rawPct = hasTarget ? (item.value / item.max) * 100 : 0;
+  const barWidthPct = Math.min(Math.max(rawPct, 0), 100);
+  const labelPct = hasTarget ? rawPct : 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimated(true), 200 + index * 100);
     return () => clearTimeout(timer);
   }, [index]);
 
+  const colorMetric = Math.min(Math.max(labelPct, 0), 100);
+
   const getColor = () => {
     if (item.color) return item.color;
-    if (pct >= 80) return '#4ade80';
-    if (pct >= 50) return '#8b5cf6';
-    if (pct >= 30) return '#fbbf24';
+    if (colorMetric >= 80) return '#4ade80';
+    if (colorMetric >= 50) return '#8b5cf6';
+    if (colorMetric >= 30) return '#fbbf24';
     return '#f87171';
   };
+
+  const labelStr = hasTarget ? `%${Math.round(labelPct * 10) / 10}` : '—';
 
   return (
     <div className="flex items-center gap-3">
@@ -33,15 +40,15 @@ function ProgressRow({ item, index }: { item: ProgressBarItem; index: number }) 
         <div
           className="h-full rounded-full transition-transform duration-1000 ease-out"
           style={{
-            width: `${pct}%`,
+            width: `${barWidthPct}%`,
             backgroundColor: getColor(),
             transform: animated ? 'scaleX(1)' : 'scaleX(0)',
             transformOrigin: 'left',
           }}
         />
       </div>
-      <span className="w-12 shrink-0 text-right text-[11px] font-medium text-white/60">
-        %{pct.toFixed(0)}
+      <span className="min-w-[3rem] shrink-0 text-right text-[11px] font-medium text-white/60">
+        {labelStr}
       </span>
       {item.sublabel && (
         <span className="w-20 shrink-0 text-right text-[10px] text-white/30">

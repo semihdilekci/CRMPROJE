@@ -59,6 +59,50 @@ export function ReportFilterBar({
           );
         }
 
+        if (filter.type === 'multi-select' && filter.options?.length) {
+          const allVals = filter.options.map((o) => o.value);
+          const raw = values[filter.key];
+          const selectedSet =
+            !raw?.trim() ? new Set(allVals) : new Set(raw.split(',').filter((v) => allVals.includes(v)));
+          if (selectedSet.size === 0) allVals.forEach((v) => selectedSet.add(v));
+
+          const toggle = (val: string) => {
+            const next = new Set(selectedSet);
+            if (next.has(val)) {
+              if (next.size <= 1) return;
+              next.delete(val);
+            } else {
+              next.add(val);
+            }
+            const full = allVals.length > 0 && allVals.every((v) => next.has(v));
+            onChange(filter.key, full ? '' : allVals.filter((v) => next.has(v)).join(','));
+          };
+
+          return (
+            <div key={filter.key} className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+                {filter.label}
+              </label>
+              <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                {filter.options.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-1.5 text-[11px] text-white/70"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSet.has(opt.value)}
+                      onChange={() => toggle(opt.value)}
+                      className="h-3.5 w-3.5 rounded border-white/20 bg-white/[0.06] text-violet-500 focus:ring-violet-500/40"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div key={filter.key} className="flex flex-col gap-1">
             <label className="text-[10px] font-medium uppercase tracking-wider text-white/40">

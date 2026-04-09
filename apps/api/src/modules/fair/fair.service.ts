@@ -11,6 +11,8 @@ import {
 } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
+import { SettingsService } from '@modules/settings/settings.service';
+import { budgetToTRY } from '@modules/report/report.helpers';
 
 export interface AuditUser {
   id: string;
@@ -24,6 +26,7 @@ export class FairService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async create(dto: CreateFairDto, createdById: string, auditUser?: AuditUser): Promise<Fair> {
@@ -197,6 +200,7 @@ export class FairService {
       throw new NotFoundException('Fuar bulunamadı');
     }
 
+    const rates = await this.settingsService.getExchangeRates();
     const opportunities = fair.opportunities;
     const totalOpportunities = opportunities.length;
 
@@ -221,12 +225,12 @@ export class FairService {
     let totalPipelineValue = 0;
     let wonPipelineValue = 0;
     for (const opp of opportunities) {
-      const budget = parseBudgetToNumber(opp.budgetRaw);
+      const budgetTry = budgetToTRY(opp.budgetRaw, opp.budgetCurrency, rates);
       if (opp.currentStage !== 'satisa_donustu' && opp.currentStage !== 'olumsuz') {
-        totalPipelineValue += budget;
+        totalPipelineValue += budgetTry;
       }
       if (opp.currentStage === 'satisa_donustu') {
-        wonPipelineValue += budget;
+        wonPipelineValue += budgetTry;
       }
     }
 

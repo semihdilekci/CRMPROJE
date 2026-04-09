@@ -33,6 +33,76 @@ const COMPANY_INDICATORS = [
   /\b(?:holding|grup|group|company|co\.?)\b/i,
 ];
 
+/**
+ * Satırda geçen herhangi bir kelime yaygın iş/organizasyon sözcüğüyse kişi adı adayı sayılmaz
+ * (örn. "Digital Advice Lab" → OCR doğru, şekil olarak ad gibi görünmesin diye negatif sinyal).
+ * Tam kelime eşleşmesi; mevcut parse akışını değiştirmez, yalnızca looksLikePersonName / isim regex adaylarını daraltır.
+ */
+const ORGANIZATION_WORD_SIGNALS = new Set([
+  // EN — işletme / ürün dili
+  'advice',
+  'agency',
+  'analytics',
+  'capital',
+  'cloud',
+  'consulting',
+  'corporation',
+  'creative',
+  'data',
+  'design',
+  'digital',
+  'global',
+  'group',
+  'holding',
+  'holdings',
+  'inc',
+  'industries',
+  'industry',
+  'innovation',
+  'international',
+  'lab',
+  'labs',
+  'limited',
+  'marketing',
+  'media',
+  'network',
+  'networks',
+  'partners',
+  'research',
+  'services',
+  'solutions',
+  'software',
+  'studio',
+  'systems',
+  'tech',
+  'technology',
+  'ventures',
+  // TR
+  'danismanlik',
+  'danışmanlık',
+  'grubu',
+  'teknoloji',
+  'yazilim',
+  'yazılım',
+]);
+
+function normalizeWordTokenForOrgCheck(raw: string): string {
+  const trimmed = raw.replace(/^[,;:!?.()[\]"']+|[,;:!?.()[\]"']+$/g, '');
+  return trimmed.toLocaleLowerCase('tr-TR');
+}
+
+function hasOrganizationWordSignal(line: string): boolean {
+  const words = line.split(/\s+/).filter((w) => w.length > 0);
+  for (const w of words) {
+    const key = normalizeWordTokenForOrgCheck(w);
+    if (!key) continue;
+    if (ORGANIZATION_WORD_SIGNALS.has(key)) return true;
+    const asciiKey = key.normalize('NFD').replace(/\p{M}/gu, '');
+    if (asciiKey !== key && ORGANIZATION_WORD_SIGNALS.has(asciiKey)) return true;
+  }
+  return false;
+}
+
 // Address indicators — exclude these from company/name assignment
 const ADDRESS_INDICATORS = [
   /\b(?:mah\.?|mahallesi|cad\.?|caddesi|sok\.?|sokak|bulvar|blv\.?)\b/i,
@@ -141,7 +211,8 @@ function looksLikePersonName(line: string): boolean {
     words.length >= 2 &&
     words.length <= 4 &&
     PERSON_NAME_REGEX.test(line) &&
-    !looksLikeAddress(line)
+    !looksLikeAddress(line) &&
+    !hasOrganizationWordSignal(line)
   );
 }
 
@@ -345,7 +416,8 @@ function extractNamePatternsFromText(text: string): string[] {
       full.length <= 50 &&
       !seen.has(full.toLowerCase()) &&
       !/\d/.test(full) &&
-      !looksLikeAddress(full)
+      !looksLikeAddress(full) &&
+      !hasOrganizationWordSignal(full)
     ) {
       seen.add(full.toLowerCase());
       results.push(full);
@@ -412,7 +484,12 @@ export function parseBusinessCardText(text: string): ParsedBusinessCard {
     }
   }
   if (!result.name && contentLines.length >= 1) {
-    const fallback = contentLines.find((l) => l !== result.company && !looksLikeAddress(l));
+    const fallback = contentLines.find(
+      (l) =>
+        l !== result.company &&
+        !looksLikeAddress(l) &&
+        !hasOrganizationWordSignal(l),
+    );
     if (fallback) result.name = fallback;
   }
   if (!result.name && result.email) {

@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 interface ReportGaugeProps {
   value: number;
   max?: number;
+  /** true: value zaten yüzde (0–100+); yay 100%’te tavanlanır, etiket gerçek yüzdeyi gösterir */
+  valueIsPercent?: boolean;
   label: string;
   sublabel?: string;
   size?: number;
@@ -14,6 +16,7 @@ interface ReportGaugeProps {
 export function ReportGauge({
   value,
   max = 100,
+  valueIsPercent = false,
   label,
   sublabel,
   size = 160,
@@ -22,7 +25,11 @@ export function ReportGauge({
   const [animatedValue, setAnimatedValue] = useState(0);
   const animRef = useRef<number>(0);
 
-  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  const arcPercent = valueIsPercent
+    ? Math.min(Math.max(value, 0), 100)
+    : max > 0
+      ? Math.min((value / max) * 100, 100)
+      : 0;
   const radius = (size - 20) / 2;
   const circumference = Math.PI * radius;
   const strokeDashoffset = circumference - (circumference * animatedValue) / 100;
@@ -34,21 +41,25 @@ export function ReportGauge({
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setAnimatedValue(percent * eased);
+      setAnimatedValue(arcPercent * eased);
       if (progress < 1) {
         animRef.current = requestAnimationFrame(animate);
       }
     };
     animRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animRef.current);
-  }, [percent]);
+  }, [arcPercent]);
+
+  const colorMetric = valueIsPercent ? Math.min(Math.max(value, 0), 100) : animatedValue;
 
   const getColor = () => {
-    if (animatedValue >= 80) return '#4ade80';
-    if (animatedValue >= 50) return color;
-    if (animatedValue >= 30) return '#fbbf24';
+    if (colorMetric >= 80) return '#4ade80';
+    if (colorMetric >= 50) return color;
+    if (colorMetric >= 30) return '#fbbf24';
     return '#f87171';
   };
+
+  const labelText = valueIsPercent ? Math.round(value) : Math.round(animatedValue);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -81,7 +92,7 @@ export function ReportGauge({
             className="text-2xl font-bold"
             style={{ fontFamily: 'Playfair Display, serif', color: getColor() }}
           >
-            %{Math.round(animatedValue)}
+            %{labelText}
           </span>
         </div>
       </div>
