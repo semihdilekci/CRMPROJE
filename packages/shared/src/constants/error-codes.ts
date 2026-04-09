@@ -8,6 +8,8 @@ export const ErrorCode = {
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Servis kullanılamıyor (ör. readiness: veritabanı erişilemez) */
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
 } as const;
 
 export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode];

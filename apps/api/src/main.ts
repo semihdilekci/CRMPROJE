@@ -7,6 +7,7 @@ import * as path from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
 import { getCorsOrigins } from '@common/cors-origins';
+import { jsonRequestLoggerMiddleware } from '@common/middleware/json-request-logger.middleware';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -24,6 +25,7 @@ async function bootstrap(): Promise<void> {
 
   const corsOrigins = getCorsOrigins();
   app.use(cookieParser());
+  app.use(jsonRequestLoggerMiddleware);
 
   app.enableCors({
     origin: corsOrigins,

@@ -1,0 +1,150 @@
+# Faz 8 — CRM izleme stack’i (Prometheus, Loki, Grafana, Blackbox, Promtail, postgres_exporter).
+# Kullanım (repo kökünden):
+#   cp infra/monitoring/.env.monitoring.example infra/monitoring/.env.monitoring
+#   mkdir -p logs && docker compose -f infra/monitoring/docker-compose.monitoring.yml --env-file infra/monitoring/.env.monitoring up -d
+#
+# API log dosyası: repo kökünde ./logs/api.log (API_JSON_LOG_FILE ile veya tee; bkz. docs/phase-8-monitoring.md §4.5)
+
+name: crm-monitoring
+
+services:
+  grafana-db:
+    image: postgres:16-alpine
+    container_name: crm-grafana-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${GRAFANA_DB_USER:-grafana}
+      POSTGRES_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_dev_change_me}
+      POSTGRES_DB: ${GRAFANA_DB_NAME:-grafana}
+    volumes:
+      - grafana_pg_data:/var/lib/postgresql/data
+    ports:
+      - "${GRAFANA_DB_PORT:-5433}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: crm-grafana
+    restart: unless-stopped
+    depends_on:
+      grafana-db:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_dev_change_me}
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: grafana-db:5432
+      GF_DATABASE_NAME: ${GRAFANA_DB_NAME:-grafana}
+      GF_DATABASE_USER: ${GRAFANA_DB_USER:-grafana}
+      GF_DATABASE_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_dev_change_me}
+      GF_DATABASE_SSL_MODE: disable
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3005}
+      GF_INSTALL_PLUGINS: ""
+      GF_SMTP_ENABLED: ${GF_SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${GF_SMTP_HOST:-}
+      GF_SMTP_USER: ${GF_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GF_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GF_SMTP_FROM_ADDRESS:-}
+      GF_SMTP_STARTTLS_POLICY: ${GF_SMTP_STARTTLS_POLICY:-OpportunisticStartTLS}
+    ports:
+      - "${GRAFANA_HTTP_PORT:-3005}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: crm-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-1h}"
+      - "--web.enable-lifecycle"
+    ports:
+      - "${PROMETHEUS_HTTP_PORT:-9090}:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/blackbox.yml:/etc/prometheus/blackbox.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: crm-blackbox-exporter
+    restart: unless-stopped
+    command:
+      - "--config.file=/config/blackbox.yml"
+    ports:
+      - "${BLACKBOX_HTTP_PORT:-9115}:9115"
+    volumes:
+      - ./prometheus/blackbox.yml:/config/blackbox.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: crm-postgres-exporter
+    restart: unless-stopped
+    environment:
+      # Yerel örnek: .env.monitoring içinde CRM ile aynı DB’ye salt okunur kullanıcı önerilir (Faz 8 §10).
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:-postgresql://postgres:postgres@host.docker.internal:5432/postgres?sslmode=disable}
+    ports:
+      - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  loki:
+    image: grafana/loki:3.0.1
+    container_name: crm-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    ports:
+      - "${LOKI_HTTP_PORT:-3100}:3100"
+    volumes:
+      - loki_data:/loki
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    networks:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:3.0.1
+    container_name: crm-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - ../../logs:/var/log/crm:ro
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+
+volumes:
+  grafana_pg_data:
+  grafana_data:
+  prometheus_data:
+  loki_data:
+
+networks:
+  monitoring:
+    driver: bridge

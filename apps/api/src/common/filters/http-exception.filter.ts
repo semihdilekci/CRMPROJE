@@ -16,6 +16,7 @@ const HTTP_STATUS_TO_ERROR_CODE: Record<number, string> = {
   [HttpStatus.NOT_FOUND]: ErrorCode.NOT_FOUND,
   [HttpStatus.CONFLICT]: ErrorCode.CONFLICT,
   [HttpStatus.TOO_MANY_REQUESTS]: ErrorCode.RATE_LIMIT_EXCEEDED,
+  [HttpStatus.SERVICE_UNAVAILABLE]: ErrorCode.SERVICE_UNAVAILABLE,
   [HttpStatus.INTERNAL_SERVER_ERROR]: ErrorCode.INTERNAL_ERROR,
 };
 
