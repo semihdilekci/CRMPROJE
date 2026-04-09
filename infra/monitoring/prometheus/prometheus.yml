@@ -14,8 +14,8 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          # API PORT varsayılanı apps/api (3001); farklıysa bu dosyayı düzenleyin
-          - http://host.docker.internal:3001/api/v1/health/ready
+          # apps/api `.env` içindeki PORT ile aynı olmalı (varsayılan 3001; örnek 3002)
+          - http://host.docker.internal:3002/api/v1/health/ready
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

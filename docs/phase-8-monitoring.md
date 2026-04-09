@@ -204,7 +204,7 @@ Profesyonel ekip için **yapılandırılmış log** önerilir:
 
 ### 4.5 Host’ta çalışan API + Docker’daki Promtail
 
-- API stdout → her istek için **tek satır JSON** (`json-request-logger` middleware); isteğe bağlı **`API_JSON_LOG_FILE`** (örn. repo kökü `logs/api.log`) ile aynı satırlar dosyaya da yazılır.
+- API stdout → her istek için **tek satır JSON** (`json-request-logger` middleware); dosyaya yazmak için **`API_JSON_LOG_FILE`** `apps/api/.env` içinde tanımlanmalıdır (değişken yoksa yalnızca stdout). `npm run dev -w apps/api` ile çalışma dizini genelde **`apps/api`** olduğundan repo kökü `logs/api.log` için örnek: `API_JSON_LOG_FILE=../../logs/api.log` (veya mutlak yol).
 - Alternatif: **`tee -a ./logs/api.log`** ile süreç çıktısını çoğaltma.
 - Compose’ta `./logs` klasörü **read-only veya read-write mount** ile Promtail container’a verilir.
 

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { appendFile } from 'fs/promises';
+import * as nodePath from 'path';
+import { appendFile, mkdir } from 'fs/promises';
 
 function logLine(obj: Record<string, unknown>): string {
   return `${JSON.stringify(obj)}\n`;
@@ -26,7 +27,7 @@ export function jsonRequestLoggerMiddleware(
     const statusCode = res.statusCode;
     const level =
       statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-    const path = req.originalUrl || req.url;
+    const requestPath = req.originalUrl || req.url;
     const payload = {
       timestamp: new Date().toISOString(),
       level,
@@ -34,19 +35,30 @@ export function jsonRequestLoggerMiddleware(
       env: process.env.NODE_ENV ?? 'development',
       requestId,
       method: req.method,
-      path,
+      path: requestPath,
       statusCode,
       durationMs,
-      message: `${req.method} ${path} ${statusCode}`,
+      message: `${req.method} ${requestPath} ${statusCode}`,
     };
     const line = logLine(payload);
     process.stdout.write(line);
 
     const file = process.env.API_JSON_LOG_FILE?.trim();
     if (file) {
-      void appendFile(file, line, { encoding: 'utf8' }).catch(() => {
-        /* dosya yoksa veya izin yoksa sessiz; stdout yeterli */
-      });
+      const resolved = nodePath.isAbsolute(file)
+        ? file
+        : nodePath.resolve(process.cwd(), file);
+      void mkdir(nodePath.dirname(resolved), { recursive: true })
+        .then(() => appendFile(resolved, line, { encoding: 'utf8' }))
+        .catch((err: unknown) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(
+              '[jsonRequestLogger] Dosyaya yazılamadı (API_JSON_LOG_FILE):',
+              resolved,
+              err,
+            );
+          }
+        });
     }
   });
 
