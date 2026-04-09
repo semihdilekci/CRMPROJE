@@ -535,15 +535,17 @@ Tüm panolar **klasör:** `CRM / Monitoring` altında toplanır. **Templating:**
 
 ### Feature Mon8-07 — Alert kuralları ve SMTP
 
-- [ ] Grafana alert rules (YAML veya UI export)
-- [ ] Contact point SMTP test e-postası
-- [ ] §8 e-posta şablonlarının Grafana’ya girilmesi
+- [x] Grafana alert rules (YAML — `infra/monitoring/grafana/provisioning/alerting/03-alert-rules.yaml`)
+- [x] Contact point + e-posta şablonları (`01-contact-points.yaml`); alıcı `CRM_ALERT_EMAIL_TO` (env)
+- [x] SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`; test: Grafana → Alerting → Contact points → **Test**
 
 ### Feature Mon8-08 — Dokümantasyon ve prod hazırlık
 
-- [ ] `docs/deployment-and-env-strategy.md` — monitoring env tablosu
-- [ ] Prod retention **7 gün** profili (ayrı override dosyası veya env)
-- [ ] Runbook iskeleti: `docs/runbooks/crm-api-down.md` (opsiyonel)
+- [x] `docs/deployment-and-env-strategy.md` — monitoring / uyarı env satırları (Mon8-07 ile güncellendi)
+- [x] Prod retention **7 gün** — `infra/monitoring/loki/loki-config.prod.yaml` (Loki mount override); Prometheus: `PROMETHEUS_RETENTION=7d`
+- [x] Runbook: `docs/runbooks/crm-api-down.md`
+
+**Alert provisioning (dosya yolları):** `infra/monitoring/grafana/provisioning/alerting/` — sırayla `01-contact-points.yaml` (şablon + `crm-email`), `02-notification-policies.yaml`, `03-alert-rules.yaml`. Grafana, `$CRM_ALERT_EMAIL_TO` ile alıcı adresini env’den alır (`docker-compose.monitoring.yml`). E-posta testi: Grafana UI → **Alerting** → **Contact points** → **Test**. Üretimde `dashboard_url` / `runbook_url` annotation’larını kendi Grafana/wiki adresinize göre düzenleyin.
 
 ---
 

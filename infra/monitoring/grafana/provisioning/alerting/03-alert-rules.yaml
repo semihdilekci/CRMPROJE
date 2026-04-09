@@ -1,0 +1,261 @@
+# Blackbox / Prometheus tabanlı kurallar (datasource uid: prometheus).
+# Koşullar: docs/phase-8-monitoring.md §7.1
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: crm_blackbox
+    folder: CRM / Monitoring
+    interval: 1m
+    rules:
+      - uid: crm_api_readiness_down
+        title: CRMApiReadinessDown
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: probe_success{job="blackbox-api-ready"} == 0
+              instant: false
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: API readiness probe 2 dakikadır başarısız — API veya veritabanı erişilemiyor olabilir.
+          description: Blackbox hedefi /api/v1/health/ready (probe_success == 0).
+          dashboard_url: http://localhost:3005/d/crm-synthetic
+          runbook_url: https://wiki.example.com/runbooks/crm-api-down
+        labels:
+          severity: critical
+          env: dev
+        isPaused: false
+
+      - uid: crm_web_home_down
+        title: CRMWebHomeDown
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: probe_success{job="blackbox-web"} == 0
+              instant: false
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: Web ana sayfa probe 2 dakikadır başarısız.
+          description: Blackbox job blackbox-web (host.docker.internal:3000).
+          dashboard_url: http://localhost:3005/d/crm-synthetic
+          runbook_url: https://wiki.example.com/runbooks/crm-api-down
+        labels:
+          severity: critical
+          env: dev
+        isPaused: false
+
+      - uid: crm_metro_dev_down
+        title: CRMMetroDevDown
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: probe_success{job="blackbox-mobile-dev"} == 0
+              instant: false
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        annotations:
+          summary: Metro/Expo dev sunucusu probe başarısız (geliştirme gürültüsü beklenir).
+          description: Blackbox job blackbox-mobile-dev (port 8081).
+          dashboard_url: http://localhost:3005/d/crm-synthetic
+          runbook_url: https://wiki.example.com/runbooks/crm-api-down
+        labels:
+          severity: warning
+          env: dev
+        isPaused: false

@@ -16,7 +16,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 | **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
 | **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
-| **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log dosyası: isteğe bağlı `API_JSON_LOG_FILE` (örn. repo kökü `logs/api.log`). | Aynı kalıp; prod’da retention ve SMTP `docs/phase-8-monitoring.md`; sırlar repoda yok. |
+| **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Uyarı e-postası alıcısı: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
 
 ---
 
@@ -81,6 +81,7 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **API HOST:** `apps/api/src/main.ts` — `HOST` (varsayılan `0.0.0.0`) ile LAN erişimi.
 - **Expo fiziksel cihaz:** `apps/mobile` — `npm run start:lan` (Metro LAN); `EXPO_PUBLIC_API_URL` Mac’in telefonun görebildiği IP’si + `/api/v1` (aynı Wi‑Fi veya hotspot). `docs/environment-setup.md`.
 - **Faz 8 monitoring:** `infra/monitoring/docker-compose.monitoring.yml`, `infra/monitoring/.env.monitoring.example` — Prometheus / Loki / Grafana / Blackbox / Promtail / postgres_exporter. API: `GET /api/v1/health` (liveness), `GET /api/v1/health/ready` (readiness, DB). JSON access log: `apps/api/src/common/middleware/json-request-logger.middleware.ts`, `apps/api/src/main.ts` (`API_JSON_LOG_FILE`).
+- **Faz 8 alerting (Grafana provisioning):** `infra/monitoring/grafana/provisioning/alerting/` — `01-contact-points.yaml` (e-posta + şablonlar), `02-notification-policies.yaml`, `03-alert-rules.yaml` (Blackbox kuralları). Runbook: `docs/runbooks/crm-api-down.md`. Prod Loki örnek: `infra/monitoring/loki/loki-config.prod.yaml`.
 
 ---
 

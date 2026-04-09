@@ -1,0 +1,53 @@
+# Grafana unified alerting — e-posta (SMTP: GF_SMTP_*). Alıcı: CRM_ALERT_EMAIL_TO.
+# Bildirim şablonları: Grafana template değişkenleri (Faz 8 §8.2 ile aynı içerik hedefi).
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: crm_email.subject
+    template: |
+      {{ define "crm_email.subject" }}
+      [{{ .Status | toUpper }}] Fuar CRM Monitoring
+      {{ end }}
+
+  - orgId: 1
+    name: crm_email.message
+    template: |
+      {{ define "crm_email.message" }}
+      CRM Monitoring Alert
+      ====================
+
+      {{ range .Alerts.Firing }}
+      Durum:        FIRING
+      Ortam:        {{ .Labels.env }}
+      Önem:         {{ .Labels.severity }}
+      Kural:        {{ .Labels.alertname }}
+      Başlangıç:    {{ .StartsAt }}
+      Özet:         {{ .Annotations.summary }}
+      Açıklama:     {{ .Annotations.description }}
+      Dashboard:    {{ .Annotations.dashboard_url }}
+      Runbook:      {{ .Annotations.runbook_url }}
+      {{ end }}
+
+      {{ range .Alerts.Resolved }}
+      Durum:        RESOLVED
+      Kural:        {{ .Labels.alertname }}
+      Çözülme:      {{ .EndsAt }}
+      Özet:         {{ .Annotations.summary }}
+      {{ end }}
+
+      Bu mesaj Grafana Alerting tarafından üretilmiştir.
+      {{ end }}
+
+contactPoints:
+  - orgId: 1
+    name: crm-email
+    receivers:
+      - uid: crm_email_receiver
+        type: email
+        settings:
+          addresses: $CRM_ALERT_EMAIL_TO
+          singleEmail: false
+          subject: '{{ template "crm_email.subject" . }}'
+          message: '{{ template "crm_email.message" . }}'
+        disableResolveMessage: false

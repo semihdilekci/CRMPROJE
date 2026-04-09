@@ -1,0 +1,13 @@
+# Tüm uyarılar varsayılan olarak crm-email contact point’e gider.
+# Uyarı: Bu dosya bildirim ağacının tamamını provision eder (Grafana dokümantasyonu).
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: crm-email
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
