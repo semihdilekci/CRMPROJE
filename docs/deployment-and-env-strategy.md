@@ -52,6 +52,8 @@ docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app
 
 **Ağ (Docker build):** `npm ci` sırasında `ECONNRESET` gibi hatalar olursa Dockerfile’larda npm yeniden deneme + BuildKit `/root/.npm` cache mount kullanılır; tekrar `docker compose ... build` deneyin. Mümkünse stabil ağ / VPN kapatılmış bağlantı.
 
+**API container hemen çıkıyorsa / DB hatası:** Log’da `Can't reach database server at localhost:5432` görürseniz, `infra/app/.env.app` içindeki `DATABASE_URL` hâlâ `localhost` kullanıyordur. Container içinde `localhost` = container kendisi. Host’taki Postgres için `host.docker.internal` kullanın (`infra/app/.env.app.example` uyarısı).
+
 **Kod inceleme / merge:** Bu iş feature branch üzerinde yapılır; `main`’e merge yalnızca siz Docker + uçtan uca akışı test edip onayladıktan sonra yapılmalıdır.
 
 ---
