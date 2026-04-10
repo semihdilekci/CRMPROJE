@@ -1,8 +1,15 @@
 # CRM uygulama stack — API + Web (Postgres varsayılan olarak host’ta kalır).
 #
-# Kullanım (repo kökünden):
+# ÖNEMLİ — Web imajı build-arg: `env_file: .env.app` sadece container çalışma anına uygulanır;
+# `docker compose build` içindeki ${NEXT_PUBLIC_API_URL} için proje ortamı gerekir.
+# Seçenekler (birini kullanın):
+#   A) Repo kökünden: docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
+#   B) infra/app/.env dosyası oluşturun (compose bu dosyayı otomatik okur — compose dosyasıyla aynı klasör)
+#   C) API_PORT ile hizalama: NEXT_PUBLIC set değilse http://localhost:${API_PORT}/api/v1 kullanılır
+#
+# Kullanım (repo kökünden, A):
 #   cp infra/app/.env.app.example infra/app/.env.app
-#   # .env.app içinde DATABASE_URL: host makinedeki Postgres için host.docker.internal kullanın
+#   # .env.app: DATABASE_URL host.docker.internal; API_PORT ve NEXT_PUBLIC_API_URL tutarlı olsun
 #   docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
 #
 # Migration (host’tan, aynı DATABASE_URL ile): apps/api içinde npx prisma migrate deploy
@@ -34,7 +41,7 @@ services:
       context: ../..
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-3001}/api/v1}
     ports:
       - "${WEB_PORT:-3000}:3000"
     env_file:

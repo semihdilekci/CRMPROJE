@@ -35,9 +35,13 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 
 ```bash
 cp infra/app/.env.app.example infra/app/.env.app
-# .env.app: DATABASE_URL, JWT_*, CORS_ORIGIN, NODE_ENV=production vb. doldurun
-docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
+# .env.app: DATABASE_URL, JWT_*, CORS_ORIGIN, NODE_ENV=production, API_PORT, NEXT_PUBLIC_API_URL
+cd infra/app && ln -sf .env.app .env
+cd ../..
+docker compose -f infra/app/docker-compose.app.yml up -d --build
 ```
+
+`infra/app/.env` (veya her seferinde `--env-file infra/app/.env.app`) **zorunludur**: aksi halde `docker compose build` içindeki `NEXT_PUBLIC_API_URL` / `API_PORT` birleştirmesi görülmez; web bundle yanlış porta gider ve girişte `ERR_NETWORK` oluşur.
 
 - Web: `http://localhost:${WEB_PORT:-3000}`  
 - API: `http://localhost:${API_PORT:-3001}/api/v1`  
