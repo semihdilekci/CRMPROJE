@@ -18,7 +18,15 @@ COPY apps/web ./apps/web
 COPY apps/api/package.json ./apps/api/
 COPY apps/mobile/package.json ./apps/mobile/
 
-RUN npm ci
+# ECONNRESET / düşük bant genişliği: yeniden deneme + BuildKit npm cache
+RUN npm config set fetch-retries 15 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 180000 \
+  && npm config set fetch-timeout 600000 \
+  && npm config set maxsockets 5
+
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 RUN npm run build -w @crm/shared
 RUN npm run build -w @crm/web

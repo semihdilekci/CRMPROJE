@@ -50,6 +50,8 @@ docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app
 - **Uploads:** `api_uploads` volume — kart görselleri container yeniden oluşturulunca kalır.  
 - **Monitoring:** `crm-monitoring` ayrı compose’tur; API/Web portları host’a publish edildiği sürece mevcut Blackbox hedefleri (`host.docker.internal:3000`, API portu) çalışmaya devam edebilir.
 
+**Ağ (Docker build):** `npm ci` sırasında `ECONNRESET` gibi hatalar olursa Dockerfile’larda npm yeniden deneme + BuildKit `/root/.npm` cache mount kullanılır; tekrar `docker compose ... build` deneyin. Mümkünse stabil ağ / VPN kapatılmış bağlantı.
+
 **Kod inceleme / merge:** Bu iş feature branch üzerinde yapılır; `main`’e merge yalnızca siz Docker + uçtan uca akışı test edip onayladıktan sonra yapılmalıdır.
 
 ---
