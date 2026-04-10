@@ -3,12 +3,23 @@
 import axios from 'axios';
 import { getAccessToken, setAccessToken } from '@/lib/access-token';
 
-/** Tarayıcıda proxy kullan (CORS önlenir). Sunucu tarafında env veya localhost. */
-const getBaseURL = () => {
-  if (typeof window !== 'undefined') return '/api/v1';
-  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  return envUrl || 'http://localhost:3002/api/v1';
-};
+/**
+ * DEV (next dev): tarayıcı `/api/v1` → next.config rewrites ile API'ye gider (CORS yok).
+ * PROD (next start / Docker): rewrite yok; tarayıcı doğrudan NEXT_PUBLIC_API_URL kullanmalı.
+ */
+function getBaseURL(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '') || '';
+
+  if (typeof window === 'undefined') {
+    return envUrl || 'http://localhost:3002/api/v1';
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return envUrl || 'http://localhost:3001/api/v1';
+  }
+
+  return '/api/v1';
+}
 
 const api = axios.create({
   baseURL: getBaseURL(),

@@ -108,7 +108,7 @@ docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app
 
 ## 3. Kod Tarafında Referanslar
 
-- **API base URL (web):** `apps/web/src/lib/api.ts` — `BACKEND_URL` sadece fallback (DEV); prod’da `NEXT_PUBLIC_API_URL` kullanılmalı.
+- **API base URL (web):** `apps/web/src/lib/api.ts` — DEV’de tarayıcı `/api/v1` (Next rewrite); **production’da tarayıcı `NEXT_PUBLIC_API_URL`** (rewrite yok; aksi halde istekler Next’e gider ve 404 HTML döner).
 - **CORS:** `apps/api/src/main.ts` + `apps/api/src/common/cors-origins.ts` — production’da `CORS_ORIGIN` zorunlu; development’ta whitelist veya varsayılanlar. `cookie-parser` kaydı aynı dosyada (httpOnly refresh hazırlığı). Faz 7: `docs/phase-7-security-hardening.md`.
 - **Auth httpOnly refresh (sec7-02):** `apps/api/src/modules/auth/auth-cookie.helper.ts`, `auth.controller.ts` — web’de refresh `crm_refresh` httpOnly çerez; yanıtta yalnızca `accessToken`. Mobil `POST /auth/login` ve `verify-mfa` gövdesinde `client: "mobile"` (sabit `AUTH_CLIENT_MOBILE` @ `@crm/shared`) ile refresh hem body’de kalır (Secure Store) hem çerez set edilmez.
 - **Rate limit (Sistem Ayarları) + hesap kilidi (sec7-06):** `apps/api/src/modules/auth/auth-throttle.factory.ts` (`@Throttle` limit/ttl → `RATE_LIMIT_*`); `auth.service.ts` (`failedLoginCount`, `lockedUntil`, env/ayar: `ACCOUNT_LOCKOUT_*`). Global `ThrottlerModule` + `ThrottlerGuard` `app.module.ts`.
