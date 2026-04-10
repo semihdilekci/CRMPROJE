@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+# Monorepo kökünden build: docker build -f apps/api/Dockerfile .
+#
+# Çalışma cwd: /app/apps/api (uploads/, Prisma, statik dosyalar)
+
+FROM node:20-bookworm-slim AS builder
+WORKDIR /app
+
+RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json tsconfig.json ./
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+COPY apps/web/package.json ./apps/web/
+COPY apps/mobile/package.json ./apps/mobile/
+
+RUN npm ci
+
+RUN npm run build -w @crm/shared
+
+WORKDIR /app/apps/api
+RUN npx prisma generate
+RUN npm run build
+
+WORKDIR /app
+RUN npm prune --omit=dev
+
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+
+RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/mobile/package.json ./apps/mobile/package.json
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/assets ./apps/api/assets
+
+WORKDIR /app/apps/api
+
+EXPOSE 3001
+
+CMD ["node", "dist/main.js"]

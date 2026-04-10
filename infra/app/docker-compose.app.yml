@@ -1,0 +1,46 @@
+# CRM uygulama stack — API + Web (Postgres varsayılan olarak host’ta kalır).
+#
+# Kullanım (repo kökünden):
+#   cp infra/app/.env.app.example infra/app/.env.app
+#   # .env.app içinde DATABASE_URL: host makinedeki Postgres için host.docker.internal kullanın
+#   docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
+#
+# Migration (host’tan, aynı DATABASE_URL ile): apps/api içinde npx prisma migrate deploy
+# Monitoring: crm-monitoring ayrı compose; API/Web portları host’a publish edildiği sürece mevcut blackbox hedefleri çalışır.
+
+name: crm-app
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "${API_PORT:-3001}:3001"
+    env_file:
+      - .env.app
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - api_uploads:/app/apps/api/uploads
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    env_file:
+      - .env.app
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api_uploads:

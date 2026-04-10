@@ -13,10 +13,44 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 | **Mobil → API** | Fiziksel cihaz: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:3001/api/v1`; Android emülatör: `10.0.2.2`; iOS Simülatör: `127.0.0.1` (localhost/IPv6 kaçağı) | `EXPO_PUBLIC_API_URL` canlı API HTTPS base URL |
 | **API CORS** | DEV: `CORS_ORIGIN` varsa bu liste; yoksa localhost web + Expo varsayılanları (`apps/api/src/common/cors-origins.ts`). LAN / fiziksel cihaz: `.env` içine ilgili origin’leri ekleyin (örn. `http://192.168.x.x:8081`). | PROD: **Yalnızca** `CORS_ORIGIN` (zorunlu); **wildcard yok**; `credentials: true` ile **tam origin** listesi |
 | **Çerez / oturum (Faz 7)** | DEV: `Secure` çerez localhost’ta genelde kapalı; `SameSite` test edilir | PROD: **HTTPS zorunlu**; refresh token **httpOnly**; **Senaryo A** ile **SameSite=Strict** ve path tabanlı çerez uyumu (bkz. `docs/phase-7-security-hardening.md` §2.1); web **access token** çerezde değil, **bellekte** |
-| **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (opsiyonel proxy) | Devre dışı (production build’de rewrite eklenmez) |
+| **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (DEV). Hedef: `INTERNAL_API_URL` yoksa `http://localhost:3002` (`apps/web/next.config.ts`). | Devre dışı (production build’de rewrite eklenmez) |
 | **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
+| **Docker (crm-app)** | API + Web imajları; Postgres varsayılan olarak **host’ta** kalır (`DATABASE_URL` içinde `host.docker.internal`). | Aynı desen veya tamamen uzak DB; `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` container ortamına göre set edilir. |
 | **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Uyarı e-postası alıcısı: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
+
+---
+
+## 1b. Docker — uygulama stack (crm-app)
+
+**Amaç:** `@crm/api` ve `@crm/web` süreçlerini container’da çalıştırmak; **PostgreSQL varsayılan olarak yerel makinenizde** kalır (ayrı bir DB container’ı eklemedik). Veri ve migration geçmişi aynı instance üzerinde kalır; API container `DATABASE_URL` ile host’taki Postgres’e bağlanır.
+
+**Dosyalar**
+
+- [`apps/api/Dockerfile`](apps/api/Dockerfile), [`apps/web/Dockerfile`](apps/web/Dockerfile)
+- [`infra/app/docker-compose.app.yml`](infra/app/docker-compose.app.yml)
+- Şablon: [`infra/app/.env.app.example`](infra/app/.env.app.example) → kopyalayıp `infra/app/.env.app` yapın (commit etmeyin).
+
+**Çalıştırma (repo kökünden)**
+
+```bash
+cp infra/app/.env.app.example infra/app/.env.app
+# .env.app: DATABASE_URL, JWT_*, CORS_ORIGIN, NODE_ENV=production vb. doldurun
+docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
+```
+
+- Web: `http://localhost:${WEB_PORT:-3000}`  
+- API: `http://localhost:${API_PORT:-3001}/api/v1`  
+- `NEXT_PUBLIC_API_URL` (web build arg): tarayıcının göreceği API base URL; yerel denemede genelde `http://localhost:3001/api/v1`.
+
+**Ortam notları**
+
+- **Host Postgres (Docker Desktop Mac/Win):** `DATABASE_URL` içinde host `host.docker.internal` kullanın. Compose’ta `extra_hosts: host.docker.internal:host-gateway` tanımlıdır (Linux uyumu).  
+- **Migration:** İmaj içinde `prisma` CLI yok (`npm prune` sonrası). Şemayı güncelledikten sonra migration’ı **host’tan** aynı `DATABASE_URL` ile çalıştırın: `cd apps/api && npx prisma migrate deploy`.  
+- **Uploads:** `api_uploads` volume — kart görselleri container yeniden oluşturulunca kalır.  
+- **Monitoring:** `crm-monitoring` ayrı compose’tur; API/Web portları host’a publish edildiği sürece mevcut Blackbox hedefleri (`host.docker.internal:3000`, API portu) çalışmaya devam edebilir.
+
+**Kod inceleme / merge:** Bu iş feature branch üzerinde yapılır; `main`’e merge yalnızca siz Docker + uçtan uca akışı test edip onayladıktan sonra yapılmalıdır.
 
 ---
 
@@ -74,7 +108,8 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 - **CORS:** `apps/api/src/main.ts` + `apps/api/src/common/cors-origins.ts` — production’da `CORS_ORIGIN` zorunlu; development’ta whitelist veya varsayılanlar. `cookie-parser` kaydı aynı dosyada (httpOnly refresh hazırlığı). Faz 7: `docs/phase-7-security-hardening.md`.
 - **Auth httpOnly refresh (sec7-02):** `apps/api/src/modules/auth/auth-cookie.helper.ts`, `auth.controller.ts` — web’de refresh `crm_refresh` httpOnly çerez; yanıtta yalnızca `accessToken`. Mobil `POST /auth/login` ve `verify-mfa` gövdesinde `client: "mobile"` (sabit `AUTH_CLIENT_MOBILE` @ `@crm/shared`) ile refresh hem body’de kalır (Secure Store) hem çerez set edilmez.
 - **Rate limit (Sistem Ayarları) + hesap kilidi (sec7-06):** `apps/api/src/modules/auth/auth-throttle.factory.ts` (`@Throttle` limit/ttl → `RATE_LIMIT_*`); `auth.service.ts` (`failedLoginCount`, `lockedUntil`, env/ayar: `ACCOUNT_LOCKOUT_*`). Global `ThrottlerModule` + `ThrottlerGuard` `app.module.ts`.
-- **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez.
+- **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez; DEV hedefi `INTERNAL_API_URL` veya varsayılan `http://localhost:3002`.
+- **Docker uygulama:** `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`, `infra/app/.env.app.example` — bkz. §1b.
 - **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist.
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
 - **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
