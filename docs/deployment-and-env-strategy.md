@@ -4,17 +4,33 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 
 ---
 
+## 0. Mimari kararlar (yerel geliştirme, Docker, güvenlik)
+
+Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimlerini tek yerde toplar; ayrıntılı komutlar için `docs/environment-setup.md` ve aşağıdaki bölümlere bakın.
+
+| Karar | İçerik |
+|--------|--------|
+| **Varsayılan geliştirme** | API ve Web **Node süreçleri** olarak çalışır (`npm run dev` / workspace script’leri). Ortam değişkenleri **`apps/api/.env`**, **`apps/web/.env.local`**, mobil için **`apps/mobile/.env`** ile yönetilir; bu dosyalar **git’e girmez**. |
+| **Docker (opsiyonel)** | Üretim benzeri çalıştırma için **API + Web** ayrı imajlarda paketlenir; **PostgreSQL varsayılan olarak host makinede** kalır (ayrı DB container’ı zorunlu değil). Tanım: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`. Ortam şablonu: `infra/app/.env.app.example` → `infra/app/.env.app` (commit edilmez). |
+| **Compose ortam dosyası** | `docker compose build` sırasında web imajına geçen **`NEXT_PUBLIC_API_URL`** ve **`API_PORT`** değişkenleri, compose’un **proje ortamından** okunur. Bu yüzden `infra/app/.env` → `.env.app` **symlink** veya her çalıştırmada `--env-file infra/app/.env.app` kullanımı önerilir; aksi halde web bundle yanlış API adresine gömülür. |
+| **Web → API (DEV)** | `next dev` iken tarayıcı istekleri **`/api/v1`** üzerinden gider; `apps/web/next.config.ts` içindeki rewrite hedefi **`INTERNAL_API_URL`** veya varsayılan `http://localhost:3002`. API’nin gerçek **`PORT`** değeri (`apps/api/.env`) ile bu hedef **aynı olmalı**dır. |
+| **Web → API (production build / Docker)** | Rewrite **yok**; tarayıcı doğrudan **`NEXT_PUBLIC_API_URL`** kullanır (`apps/web/src/lib/api.ts`). Bu değer **build zamanında** gömülür; değişince **web imajını yeniden build** etmek gerekir. |
+| **CSP ve çapraz origin (Faz 7)** | Production’da Content-Security-Policy **`connect-src`** ile kısıtlıdır. Web `:3000`, API farklı host/port’ta ise (ör. Docker’da `localhost:3002`), **`NEXT_PUBLIC_API_URL`’in origin’i** `connect-src` listesine eklenmelidir — aksi halde tarayıcı API çağrılarını engeller (`ERR_NETWORK`). Uygulama: `apps/web/src/lib/security-headers.ts` (`getApiOrigin()`). |
+| **Canlı hedef (Senaryo A)** | Tek site üzerinden path tabanlı API (`/api/v1`); ayrı `api.` alt alanı kullanılmıyor. Ayrıntı: `docs/phase-7-security-hardening.md`. |
+
+---
+
 ## 1. Ortam Farkları Özeti
 
 | Konu | DEV | PROD |
 |------|-----|------|
-| **Web → API adresi** | `NEXT_PUBLIC_API_URL` yoksa `http://localhost:3001/api/v1` kullanılır | **Faz 7 kararı — Senaryo A:** Tek host + path. `NEXT_PUBLIC_API_URL` canlıda API base URL (örn. `https://uygulama.com/api/v1` — web ile **aynı origin**). Ayrı `api.` alt alanı kullanılmıyor. |
+| **Web → API adresi** | **DEV (`next dev`):** Axios base URL çoğunlukla **`/api/v1`** (rewrite → `INTERNAL_API_URL` / varsayılan `http://localhost:3002`). **`NEXT_PUBLIC_API_URL`** doğrudan farklı porta işaret ederse çapraz origin + CORS/CSP dikkat. **Production build / Docker:** yalnızca **`NEXT_PUBLIC_API_URL`** (rewrite yok). | **Faz 7 — Senaryo A:** Canlıda tek host + path; `NEXT_PUBLIC_API_URL` örn. `https://uygulama.com/api/v1` (web ile **aynı origin**). Ayrı `api.` alt alanı kullanılmıyor. |
 | **API dinleme adresi (HOST)** | DEV: `HOST` yoksa `0.0.0.0` — LAN’dan mobil test için | Container / sunucuda genelde `0.0.0.0` veya platform dokümantasyonu |
 | **Mobil → API** | Fiziksel cihaz: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:3001/api/v1`; Android emülatör: `10.0.2.2`; iOS Simülatör: `127.0.0.1` (localhost/IPv6 kaçağı) | `EXPO_PUBLIC_API_URL` canlı API HTTPS base URL |
 | **API CORS** | DEV: `CORS_ORIGIN` varsa bu liste; yoksa localhost web + Expo varsayılanları (`apps/api/src/common/cors-origins.ts`). LAN / fiziksel cihaz: `.env` içine ilgili origin’leri ekleyin (örn. `http://192.168.x.x:8081`). | PROD: **Yalnızca** `CORS_ORIGIN` (zorunlu); **wildcard yok**; `credentials: true` ile **tam origin** listesi |
 | **Çerez / oturum (Faz 7)** | DEV: `Secure` çerez localhost’ta genelde kapalı; `SameSite` test edilir | PROD: **HTTPS zorunlu**; refresh token **httpOnly**; **Senaryo A** ile **SameSite=Strict** ve path tabanlı çerez uyumu (bkz. `docs/phase-7-security-hardening.md` §2.1); web **access token** çerezde değil, **bellekte** |
 | **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (DEV). Hedef: `INTERNAL_API_URL` yoksa `http://localhost:3002` (`apps/web/next.config.ts`). | Devre dışı (production build’de rewrite eklenmez) |
-| **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
+| **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. **`connect-src`:** `'self'` + CDN + **`NEXT_PUBLIC_API_URL` origin** (Docker’da web/API farklı port). Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
 | **Docker (crm-app)** | API + Web imajları; Postgres varsayılan olarak **host’ta** kalır (`DATABASE_URL` içinde `host.docker.internal`). | Aynı desen veya tamamen uzak DB; `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` container ortamına göre set edilir. |
 | **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Uyarı e-postası alıcısı: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
@@ -25,27 +41,94 @@ Bu doküman, **development (DEV)** ile **production (PROD)** ortamları arasınd
 
 **Amaç:** `@crm/api` ve `@crm/web` süreçlerini container’da çalıştırmak; **PostgreSQL varsayılan olarak yerel makinenizde** kalır (ayrı bir DB container’ı eklemedik). Veri ve migration geçmişi aynı instance üzerinde kalır; API container `DATABASE_URL` ile host’taki Postgres’e bağlanır.
 
+**Port hizalaması (kritik)**
+
+- API container **içinde** Nest her zaman **`PORT=3001`** ile dinler (`docker-compose.app.yml` → `environment.PORT`).
+- Host’a yayımlanan port **`API_PORT`** ile belirlenir: `${API_PORT:-3001}:3001` → ör. `API_PORT=3002` ise tarayıcıdan API **`http://localhost:3002/api/v1`** olur.
+- **`NEXT_PUBLIC_API_URL`** web imajı **build** aşamasında gömülür; değer **host’tan erişilen** tam base URL olmalıdır ve **`API_PORT` ile aynı porta** işaret etmelidir (örn. `http://localhost:3002/api/v1`).
+- **CSP:** Production web’de `connect-src`, `NEXT_PUBLIC_API_URL`’den türetilen **API origin**’ini içerir; URL değişince web’i **yeniden build** edin.
+
 **Dosyalar**
 
 - [`apps/api/Dockerfile`](apps/api/Dockerfile), [`apps/web/Dockerfile`](apps/web/Dockerfile)
 - [`infra/app/docker-compose.app.yml`](infra/app/docker-compose.app.yml)
 - Şablon: [`infra/app/.env.app.example`](infra/app/.env.app.example) → kopyalayıp `infra/app/.env.app` yapın (commit etmeyin).
 
+**`.dockerignore`:** Repo kökündeki [`.dockerignore`](../.dockerignore) **`apps/web/.env.local`** ve tüm **`.env*`** dosyalarını imaj bağlamından çıkarır; böylece yerel geliştirme sırları imaja sızamaz. Docker için yalnızca **compose `--env-file` / build-arg** ve `infra/app/.env.app` kullanılır.
+
+**API imajı — bağımlılık kurulumu:** `apps/api/Dockerfile` içinde `npm ci -w @crm/api -w @crm/shared` kullanılır; böylece Next/mobil workspace paketleri `node_modules`’e girmez ve imaj boyutu belirgin şekilde küçülür (tam monorepo `npm ci` ile kıyaslandığında ~GB → ~0,5 GB bandı; ortama göre değişir). `npm prune --omit=dev` aynı workspace filtresiyle çalışır.
+
+**Web imajı — bağımlılık kurulumu:** `apps/web/Dockerfile` içinde `npm ci -w @crm/web -w @crm/shared` ve `npm prune --omit=dev -w @crm/web -w @crm/shared` kullanılır; Nest/Prisma/mobil ağacı imaja girmez.
+
+**Web imajı — runner (`output: 'standalone'`):** `apps/web/next.config.ts` içinde `output: 'standalone'` ve monorepo için `outputFileTracingRoot` tanımlıdır. Runner aşamasında **tam kök `node_modules` kopyalanmaz**; yalnızca `.next/standalone`, `.next/static` ve `public` kopyalanır ve süreç `node apps/web/server.js` ile başlar (bkz. `apps/web/Dockerfile`). Bu düzen tipik olarak web imajını **~0,9 GB bandından daha aşağı** çeker (CPU mimarisine göre değişir).
+
+---
+
+## 1c. Docker imaj boyutu — zorunlu kurallar ve doğrulama
+
+Bu kurallar regresyonu önler; ayrıntılı gerekçe: `.cursor/rules/docker-images.mdc`.
+
+**Zorunlu (Dockerfile)**
+
+| İmaj | `npm ci` | `npm prune` | Runner |
+|------|----------|-------------|--------|
+| **API** | `npm ci -w @crm/api -w @crm/shared` — **tam monorepo `npm ci` kullanılmaz** | `npm prune --omit=dev -w @crm/api -w @crm/shared` | Tam `node_modules` + `dist` + Prisma şeması (Nest standalone bundle değil); ağır bağımlılıklar ürün kararıyla sınırlı. |
+| **Web** | `npm ci -w @crm/web -w @crm/shared` | `npm prune --omit=dev -w @crm/web -w @crm/shared` | **Yalnızca** Next `standalone` çıktısı + `static` + `public` — runner’a gereksiz workspace veya tam monorepo `node_modules` eklenmez. |
+
+**Referans boyutlar (rehber; ortam mimarisine göre değişir)**
+
+- API (workspace filtresi + çift Prisma `binaryTargets` sonrası): tipik **~0,5–0,55 GB** (`docker images` sütunu; ikinci engine birkaç on MB ekler).
+- Web (standalone runner sonrası): tipik **~0,3–0,4 GB** (`docker images`; runner içi `/app` ~80MB bandı).
+
+**Doğrulama komutları**
+
+```bash
+docker images --format "{{.Repository}}:{{.Tag}}\t{{.Size}}" | grep crm-app
+# İçerik (API örneği):
+docker run --rm --entrypoint sh crm-app-api:latest -c "du -sh /app /app/node_modules 2>/dev/null | head -5"
+# Web (standalone): /app/apps/web ve kök yapı — build sonrası:
+docker run --rm --entrypoint sh crm-app-web:latest -c "du -sh /app 2>/dev/null; ls -la /app/apps/web 2>/dev/null | head"
+```
+
+**Sık hata (Web standalone):** Sayfa 500 veya statik dosya 404 → `.next/static` veya `public` yanlış göreli yola kopyalanmıştır; `outputFileTracingRoot` monorepo köküne (`apps/web`’den iki seviye yukarı) işaret etmelidir.
+
+**İleri seviye (onaylı değişiklik):** Alpine / distroless taban imaj, CI’da sabit boyut eşiği — `docs/deployment-and-env-strategy.md` §4 güncelleme tetikleyicileri.
+
+**Gelecek mimari — P2 / epic (ürün onayı):** Sunucu tarafında OCR için `tesseract.js` (~40MB+ `tesseract.js-core`) API imajını şişirir. Olası yönler: (1) OCR yalnız istemci (mevcut web Tesseract + CDN), (2) ayrı OCR mikroservisi / kuyruk worker’ı, (3) API’de lazy yükleme ile sınırlı kazanım. Uygulamaya başlamadan önce KVKK/performans gereksinimleri ve `apps/api/src/modules/upload/upload.service.ts` akışı gözden geçirilir; bu repoda **karar alınana kadar kod kaldırılmaz**.
+
+**Prisma `binaryTargets` (API):** [`apps/api/prisma/schema.prisma`](apps/api/prisma/schema.prisma) içinde `native` (yerel `npx prisma generate`) ve `debian-openssl-3.0.x` (Debian bookworm tabanlı Docker imajı) tanımlıdır. Şema değişince yerelde `npx prisma generate` çalıştırın. **Alpine / farklı OpenSSL** kullanıyorsanız hedefi [Prisma dokümantasyonuna](https://www.prisma.io/docs/orm/reference/prisma-schema-reference#binarytargets-options) göre güncelleyin.
+
+**NestJS webpack bundle:** Şu an **kullanılmıyor**. Webpack modu `ts-loader` (ve bakım) gerektirir; Prisma/Tesseract gibi paketler için `externals` ayrıca ayarlanmalıdır. İmaj boyutunda asıl kazanç **workspace-filtreli `npm ci`** ve **Prisma `binaryTargets`** ile sağlanır. Tek dosya bundle ihtiyacı doğarsa ayrı feature branch’te değerlendirilir.
+
+---
+
 **Çalıştırma (repo kökünden)**
 
 ```bash
 cp infra/app/.env.app.example infra/app/.env.app
-# .env.app: DATABASE_URL, JWT_*, CORS_ORIGIN, NODE_ENV=production, API_PORT, NEXT_PUBLIC_API_URL
+# .env.app: DATABASE_URL (host.docker.internal), JWT_*, CORS_ORIGIN, NODE_ENV=production,
+#           API_PORT ve NEXT_PUBLIC_API_URL aynı host portuna hizalı olsun
 cd infra/app && ln -sf .env.app .env
 cd ../..
 docker compose -f infra/app/docker-compose.app.yml up -d --build
 ```
 
-`infra/app/.env` (veya her seferinde `--env-file infra/app/.env.app`) **zorunludur**: aksi halde `docker compose build` içindeki `NEXT_PUBLIC_API_URL` / `API_PORT` birleştirmesi görülmez; web bundle yanlış porta gider ve girişte `ERR_NETWORK` oluşur.
+`infra/app/.env` (veya her seferinde `--env-file infra/app/.env.app`) **zorunludur**: aksi halde `docker compose build` içindeki `NEXT_PUBLIC_API_URL` / `API_PORT` birleştirmesi görülmez; web bundle yanlış porta gider veya CSP `connect-src` API origin’ini içermez; girişte ağ hatası oluşur.
 
 - Web: `http://localhost:${WEB_PORT:-3000}`  
-- API: `http://localhost:${API_PORT:-3001}/api/v1`  
-- `NEXT_PUBLIC_API_URL` (web build arg): tarayıcının göreceği API base URL; yerel denemede genelde `http://localhost:3001/api/v1`.
+- API (host tarafı): `http://localhost:${API_PORT:-3001}/api/v1`  
+- `NEXT_PUBLIC_API_URL` (web build arg): tarayıcının göreceği API base URL; **`http://localhost:<API_PORT>/api/v1`** ile birebir uyumlu olmalıdır.
+
+**Çoklu `.env` dosyaları — kısa özet**
+
+| Dosya | Rol |
+|--------|-----|
+| `apps/api/.env` | Yerel **`npm run dev`** ile API; `PORT`, `DATABASE_URL` (`localhost` Postgres), JWT, CORS vb. |
+| `apps/web/.env.local` | Yerel **`npm run dev`** ile Web; özellikle `NEXT_PUBLIC_API_URL` API’nin gerçek portu ile uyumlu olmalı (rewrite kullanılmıyorsa veya doğrudan API’ye gidiliyorsa). |
+| `infra/app/.env.app` | **Sadece Docker** compose + container runtime; `DATABASE_URL` içinde **`host.docker.internal`** (host Postgres). |
+| `infra/app/.env` | Compose’un `${VAR}` interpolasyonu için; pratikte **`.env.app`’a symlink**. |
+
+Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri repoya commit edilmez (`.gitignore`).
 
 **Ortam notları**
 
@@ -117,8 +200,9 @@ docker compose -f infra/app/docker-compose.app.yml up -d --build
 - **Auth httpOnly refresh (sec7-02):** `apps/api/src/modules/auth/auth-cookie.helper.ts`, `auth.controller.ts` — web’de refresh `crm_refresh` httpOnly çerez; yanıtta yalnızca `accessToken`. Mobil `POST /auth/login` ve `verify-mfa` gövdesinde `client: "mobile"` (sabit `AUTH_CLIENT_MOBILE` @ `@crm/shared`) ile refresh hem body’de kalır (Secure Store) hem çerez set edilmez.
 - **Rate limit (Sistem Ayarları) + hesap kilidi (sec7-06):** `apps/api/src/modules/auth/auth-throttle.factory.ts` (`@Throttle` limit/ttl → `RATE_LIMIT_*`); `auth.service.ts` (`failedLoginCount`, `lockedUntil`, env/ayar: `ACCOUNT_LOCKOUT_*`). Global `ThrottlerModule` + `ThrottlerGuard` `app.module.ts`.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez; DEV hedefi `INTERNAL_API_URL` veya varsayılan `http://localhost:3002`.
-- **Docker uygulama:** `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`, `infra/app/.env.app.example` — bkz. §1b.
-- **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist.
+- **Docker uygulama:** `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`, `infra/app/.env.app.example` — bkz. §1b ve **§1c** (imaj boyutu). Web: Next `standalone` + `outputFileTracingRoot` (`apps/web/next.config.ts`).
+- **Prisma engine hedefleri:** `apps/api/prisma/schema.prisma` `generator` → `binaryTargets` — bkz. §1c.
+- **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist. **`connect-src`:** `getApiOrigin()` ile `NEXT_PUBLIC_API_URL`’in origin’i eklenir (Docker’da web/API farklı port).
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
 - **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
 - **API HOST:** `apps/api/src/main.ts` — `HOST` (varsayılan `0.0.0.0`) ile LAN erişimi.
@@ -132,7 +216,8 @@ docker compose -f infra/app/docker-compose.app.yml up -d --build
 
 - Yeni bir **ortam değişkeni** (env) eklendiğinde veya mevcut bir env’in DEV/PROD’da farklı kullanımı tanımlandığında.
 - **CORS**, **proxy**, **log seviyesi**, **feature flag** gibi ortama göre değişen davranış eklendiğinde.
-- **Çerez / oturum / CSP** (Faz 7) değiştiğinde.
+- **Çerez / oturum / CSP** (Faz 7) değiştiğinde; **Docker / compose** port veya build-arg davranışı değiştiğinde.
+- **Docker imaj boyutu standartları** (§1c) veya `.cursor/rules/docker-images.mdc` ile çelişen Dockerfile / `next.config` / Prisma `binaryTargets` değişikliği yapıldığında.
 - Canlıya geçiş sürecinde yeni bir adım veya risk fark edildiğinde.
 
 Bu sayede tek bir yerden DEV/PROD farkları ve go-live adımları takip edilmiş olur.

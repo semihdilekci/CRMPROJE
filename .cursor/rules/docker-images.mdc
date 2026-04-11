@@ -1,0 +1,40 @@
+---
+description: Docker imaj boyutu ve monorepo Dockerfile standartları (API + Web).
+alwaysApply: false
+---
+
+# Docker imaj boyutu ve Dockerfile standartları
+
+Monorepo’da `npm ci` kökte **tüm workspace’leri** kurar; API ve Web Dockerfile’larında bu **kullanılmamalı** — imajlar GB seviyesine çıkar.
+
+## Zorunlu kurallar
+
+### API — [apps/api/Dockerfile](apps/api/Dockerfile)
+
+- Bağımlılık kurulumu: **`npm ci -w @crm/api -w @crm/shared`** (tam `npm ci` yok).
+- Üretim prune: **`npm prune --omit=dev -w @crm/api -w @crm/shared`**.
+- Runner’a yalnızca çalışma için gerekli dosyalar kopyalanır (`dist`, `prisma`, `node_modules`, vb.).
+
+### Web — [apps/web/Dockerfile](apps/web/Dockerfile)
+
+- Bağımlılık kurulumu: **`npm ci -w @crm/web -w @crm/shared`**.
+- Üretim prune: **`npm prune --omit=dev -w @crm/web -w @crm/shared`**.
+- **Runner:** Next.js **`output: 'standalone'`** kullanılır ([apps/web/next.config.ts](apps/web/next.config.ts)); tam monorepo `node_modules` runner’a kopyalanmaz. Kopya seti: `.next/standalone`, `.next/static`, `public` — `CMD` **`node`** ile `server.js` (bkz. Dockerfile yorumları).
+- Monorepo iz sürme: `outputFileTracingRoot` repo köküne işaret etmeli (`@crm/shared` için).
+
+## Yeni bağımlılık eklerken
+
+Aşağıdakiler imaj boyutunu hızlı büyütür; eklerken **gerekçe** ve mümkünse **alternatif** (harici servis, isteğe bağlı dynamic import) not edin:
+
+- `tesseract.js` / `puppeteer` / `playwright` / büyük native/WASM paketleri
+- Gereksiz **optional** peer veya dev araçlarının production ağacına sızması
+
+## NestJS webpack (bilinçli olarak kapalı)
+
+API build varsayılanı **`nest build`** (webpack yok). Webpack ile tek bundle **şu an etkin değildir**: `ts-loader` bağımlılığı ve Prisma/Tesseract `externals` bakımı gerekir; kazanım workspace-filtreli kuruluma göre sınırlı kalabilir. Açmadan önce `docs/deployment-and-env-strategy.md` §1c’yi güncelleyin.
+
+## Dokümantasyon
+
+Tek kaynak özeti: **`docs/deployment-and-env-strategy.md`** §1b ve §1c.
+
+Dockerfile veya bu kurallarla çelişen bir değişiklik yapılıyorsa **`docs/deployment-and-env-strategy.md`** ve gerekiyorsa bu kural dosyası güncellenmelidir.

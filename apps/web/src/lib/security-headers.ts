@@ -7,6 +7,22 @@
  */
 const TESSERACT_CDN = 'https://cdn.jsdelivr.net';
 
+/**
+ * NEXT_PUBLIC_API_URL farklı bir origin'e işaret ediyorsa (örn. Docker'da
+ * web :3000, API :3002) CSP connect-src'ye eklenmeli; aksi halde tarayıcı
+ * cross-origin API çağrılarını engeller.
+ */
+function getApiOrigin(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '') || '';
+  if (!raw) return '';
+  try {
+    const u = new URL(raw);
+    return u.origin;
+  } catch {
+    return '';
+  }
+}
+
 export function getSecurityHeaders(): { key: string; value: string }[] {
   const isProd = process.env.NODE_ENV === 'production';
 
@@ -41,7 +57,7 @@ export function getSecurityHeaders(): { key: string; value: string }[] {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self'",
-      `connect-src 'self' ${TESSERACT_CDN}`,
+      `connect-src 'self' ${TESSERACT_CDN}${getApiOrigin() ? ' ' + getApiOrigin() : ''}`,
       `worker-src 'self' blob: ${TESSERACT_CDN}`,
       "media-src 'self'",
       'upgrade-insecure-requests',

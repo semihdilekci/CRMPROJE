@@ -22,6 +22,7 @@ Detaylı teknoloji listesi için: [docs/tech-stack.md](docs/tech-stack.md)
    ```
 3. Veritabanı ve ortam değişkenleri için **kurulum rehberini** takip edin:  
    **[docs/environment-setup.md](docs/environment-setup.md)**
+4. *(İsteğe bağlı)* API + Web’i **Docker** ile çalıştırmak: **`docs/deployment-and-env-strategy.md`** içindeki §0 ve §1b (compose komutları, `infra/app/.env.app`, port / CSP notları). **İmaj boyutu standartları ve doğrulama:** aynı dokümanda **§1c**; Cursor kuralı: `.cursor/rules/docker-images.mdc`.
 
 ## Proje Yapısı
 
@@ -33,10 +34,12 @@ CRMProje/
 │   └── mobile/       # React Native + Expo (Faz 2)
 ├── packages/
 │   └── shared/       # Paylaşılan tipler, şemalar, yardımcılar
+├── infra/            # Docker app stack, monitoring compose
 ├── docs/             # Dokümantasyon
 │   ├── tech-stack.md
 │   ├── phase-1-features.md
-│   └── environment-setup.md
+│   ├── environment-setup.md
+│   └── deployment-and-env-strategy.md
 └── .cursor/rules/    # Geliştirme kuralları (Cursor)
 ```
 
@@ -47,6 +50,7 @@ CRMProje/
 | [docs/tech-stack.md](docs/tech-stack.md)               | Sabit teknoloji yığını            |
 | [docs/phase-1-features.md](docs/phase-1-features.md)   | Faz 1 feature listesi (25 adet)   |
 | [docs/environment-setup.md](docs/environment-setup.md) | Geliştirme ortamı kurulum rehberi |
+| [docs/deployment-and-env-strategy.md](docs/deployment-and-env-strategy.md) | DEV/PROD farkları, Docker (crm-app), env checklist, CSP / canlıya geçiş |
 
 Geliştirme kuralları (mimari, güvenlik, git, test, API tasarımı vb.) `.cursor/rules/` altındaki `.mdc` dosyalarında tanımlıdır.
 

@@ -88,6 +88,35 @@ UYARI: .env dosyalarını ASLA git'e commit etmeyin.
 
 ---
 
+### Ortam dosyaları — hangi `.env` nerede?
+
+Aynı monorepoda **birden fazla .env** olması normaldir; her biri farklı çalışma biçimine hizmet eder:
+
+| Dosya | Ne zaman kullanılır | Not |
+|--------|---------------------|-----|
+| **`apps/api/.env`** | API’yi **yerelde** `npm run start:dev` ile çalıştırırken | `DATABASE_URL` genelde `localhost` Postgres; `PORT` (örn. 3001) burada tanımlıdır. |
+| **`apps/web/.env.local`** | Web’i **yerelde** `npm run dev` ile çalıştırırken | `NEXT_PUBLIC_*` burada; API portu ile uyumlu olmalıdır. Geliştirmede çoğu istek rewrite ile gider; doğrudan API URL kullanıyorsanız portu `apps/api/.env` ile eşleştirin. |
+| **`infra/app/.env.app`** | **Docker** (`docker-compose.app.yml`) ile API + Web çalıştırırken | `DATABASE_URL` içinde **`host.docker.internal`** kullanın. `API_PORT` ile **`NEXT_PUBLIC_API_URL`** aynı host portuna işaret etmelidir. |
+| **`infra/app/.env`** | Docker Compose’un `${VAR}` okuması | Pratikte **`infra/app/.env.app` dosyasına symlink** (`ln -sf .env.app .env`). |
+
+**Docker imajı:** Repo kökündeki `.dockerignore`, `**/.env` ve `**/.env.local` dosyalarını build bağlamına **almaz**; sırlar container imajına gömülmez.
+
+**Ayrıntılı Docker + CSP + canlı checklist:** `docs/deployment-and-env-strategy.md` (§0, §1b).
+
+---
+
+### Docker ile API + Web (isteğe bağlı)
+
+Yerel Node süreçleri yerine **container** kullanmak istiyorsanız:
+
+1. `cp infra/app/.env.app.example infra/app/.env.app` — değerleri doldurun (`DATABASE_URL`, JWT, `CORS_ORIGIN`, `API_PORT`, `NEXT_PUBLIC_API_URL`).
+2. `cd infra/app && ln -sf .env.app .env` (compose build sırasında değişkenlerin görülmesi için önerilir).
+3. Repo kökünden: `docker compose -f infra/app/docker-compose.app.yml up -d --build`.
+
+PostgreSQL varsayılan olarak **host makinede** kalır; migration’ları host’tan çalıştırmaya devam edersiniz (`cd apps/api && npx prisma migrate deploy`). Tam prosedür, port hizalaması ve CSP notları: **`docs/deployment-and-env-strategy.md` §1b**.
+
+---
+
 ### Fiziksel iPhone + Expo Go (şirket Wi‑Fi dahil)
 
 İki uç nokta gerekir; ikisi de **telefonun Mac’e LAN üzerinden** erişebilmesine bağlıdır:
@@ -135,6 +164,8 @@ Bu mesaj **Nest API’ye** (axios) erişilemediğinde çıkar; **telefon `EXPO_P
 5. Telefonda tarayıcıdan dene: `http://<aynı-ip>:3001/api/v1` — yanıt yoksa önce ağ / güvenlik duvarı.
 
 # ============================== 4. VERİTABANI MIGRATION
+
+**Prisma `binaryTargets`:** `apps/api/prisma/schema.prisma` içinde `native` + `debian-openssl-3.0.x` tanımlıdır (yerel geliştirme + API Docker imajı). Şema veya generator değişince: `cd apps/api && npx prisma generate`. Docker tabanı (Alpine vb.) değişirse hedefleri `docs/deployment-and-env-strategy.md` §1c ve Prisma dokümantasyonuna göre güncelleyin.
 
 Prisma migration'larını çalıştırın:
 cd apps/api

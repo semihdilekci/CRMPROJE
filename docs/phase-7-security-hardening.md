@@ -119,6 +119,8 @@ Her branch kapanmadan önce:
 5. **Sıkı CSP + güvenlik başlıkları (Next)** — Harici script yok; HSTS (HTTPS ortamlarında).  
 6. **Rate limit + hesap kilidi** — Auth uçlarında sıkı limit; başarısız denemede kilitleme (IP + hesap birleşimi tercih edilir). CAPTCHA **yok**.
 
+**CSP — `connect-src` (Docker veya farklı port):** Canlıda hedef **Senaryo A** (tek host + `/api/v1`) ile web ve API aynı origin’deyken sorun yok. **Yerel Docker** veya geçici olarak web ile API **farklı origin**’deyse (örn. `http://localhost:3000` → `http://localhost:3002`), tarayıcı `fetch`/`axios` çağrıları CSP `connect-src` tarafından engellenebilir. Çözüm: `NEXT_PUBLIC_API_URL`’den türetilen API **origin**’inin whitelist’e eklenmesi — uygulama `apps/web/src/lib/security-headers.ts` (`getApiOrigin()`). Operasyonel özet ve port hizalaması: **`docs/deployment-and-env-strategy.md`** §0 ve §1b.
+
 ---
 
 ## 5. P1 kapsamı

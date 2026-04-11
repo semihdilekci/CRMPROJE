@@ -25,15 +25,17 @@ RUN npm config set fetch-retries 15 \
   && npm config set fetch-timeout 600000 \
   && npm config set maxsockets 5
 
+# Yalnızca Web + shared: API/mobil (Nest, Prisma, Expo) node_modules'e girmez — imaj boyutu.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci -w @crm/web -w @crm/shared
 
 RUN npm run build -w @crm/shared
 RUN npm run build -w @crm/web
 
 WORKDIR /app
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev -w @crm/web -w @crm/shared
 
+# Runner: Next standalone — tam node_modules kopyalanmaz (imaj boyutu).
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
@@ -42,15 +44,13 @@ ENV NODE_ENV=production
 RUN apt-get update -y && apt-get install -y openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/shared ./packages/shared
-COPY --from=builder /app/apps/web ./apps/web
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder /app/apps/mobile/package.json ./apps/mobile/package.json
-
-WORKDIR /app/apps/web
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
 EXPOSE 3000
 
-CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["node", "apps/web/server.js"]

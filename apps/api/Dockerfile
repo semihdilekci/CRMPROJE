@@ -22,8 +22,9 @@ RUN npm config set fetch-retries 15 \
   && npm config set fetch-timeout 600000 \
   && npm config set maxsockets 5
 
+# Yalnızca API + shared: Next/mobil bağımlılıkları imaja girmez (imaj boyutu).
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci -w @crm/api -w @crm/shared
 
 RUN npm run build -w @crm/shared
 
@@ -32,7 +33,7 @@ RUN npx prisma generate
 RUN npm run build
 
 WORKDIR /app
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev -w @crm/api -w @crm/shared
 
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app

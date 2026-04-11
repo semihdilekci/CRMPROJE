@@ -124,6 +124,8 @@ INFRASTRUCTURE & SERVICES
 - File Storage: Cloudinary or AWS S3
 - Email: Resend or SendGrid
 
+**Yerel / ön-prod container (repo içi):** API ve Web için Dockerfile’lar (`apps/api/Dockerfile`, `apps/web/Dockerfile`) ve `infra/app/docker-compose.app.yml` ile birlikte çalıştırılabilir; Postgres varsayılan olarak host’ta kalabilir. Ortam şablonu, port hizalaması, `NEXT_PUBLIC_API_URL` + CSP (`connect-src`), çoklu `.env` ayrımı ve **imaj boyutu standartları** (workspace `npm ci`, Web `standalone`): **`docs/deployment-and-env-strategy.md`** (§0, §1b, **§1c**), **`.cursor/rules/docker-images.mdc`**, **`docs/environment-setup.md`** (Docker bölümü).
+
 ==============================
 GENERAL RULES
 ==============================

@@ -12,6 +12,7 @@ Ortam bağımlı (DEV / PROD) bir değişiklik yapıldığında **mutlaka** `doc
 - Yeni **ortam değişkeni** (env) eklendiğinde veya mevcut bir env'in DEV/PROD'da farklı kullanıldığında
 - **CORS**, **proxy**, **rewrite**, **log seviyesi**, **feature flag** gibi ortama göre değişen davranış eklendiğinde
 - Kodda `NODE_ENV`, `process.env.NEXT_PUBLIC_*`, `localhost`, port veya CORS ile ilgili özel mantık yazıldığında
+- **Dockerfile**, `next.config` (`output` / `outputFileTracingRoot`), Prisma `binaryTargets` veya **imaj boyutu standartları** (bkz. `docs/deployment-and-env-strategy.md` §1c, `.cursor/rules/docker-images.mdc`) değiştiğinde
 
 ## Nasıl Güncelle?
 
