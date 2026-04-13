@@ -1,4 +1,5 @@
 # Grafana unified alerting — e-posta (SMTP: GF_SMTP_*). Alıcı: CRM_ALERT_EMAIL_TO.
+# addresses: Grafana önce ${VAR} sonra $VAR genişletir; çok parçalı isimler için ${...} kullanın (dok: file-provisioning).
 # Bildirim şablonları: Grafana template değişkenleri (Faz 8 §8.2 ile aynı içerik hedefi).
 apiVersion: 1
 
@@ -46,7 +47,7 @@ contactPoints:
       - uid: crm_email_receiver
         type: email
         settings:
-          addresses: $CRM_ALERT_EMAIL_TO
+          addresses: ${CRM_ALERT_EMAIL_TO}
           singleEmail: false
           subject: '{{ template "crm_email.subject" . }}'
           message: '{{ template "crm_email.message" . }}'

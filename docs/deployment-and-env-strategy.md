@@ -33,7 +33,7 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 | **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. **`connect-src`:** `'self'` + CDN + **`NEXT_PUBLIC_API_URL` origin** (Docker’da web/API farklı port). Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
 | **Docker (crm-app)** | API + Web imajları; Postgres varsayılan olarak **host’ta** kalır (`DATABASE_URL` içinde `host.docker.internal`). | Aynı desen veya tamamen uzak DB; `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` container ortamına göre set edilir. |
-| **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Uyarı e-postası alıcısı: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
+| **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Promtail Loki etiketi `env`: **`MONITORING_ENV`** (varsayılan `development`; API `NODE_ENV` ile hizalayın). Uyarı e-postası: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
 
 ---
 
@@ -61,6 +61,10 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 **Web imajı — bağımlılık kurulumu:** `apps/web/Dockerfile` içinde `npm ci -w @crm/web -w @crm/shared` ve `npm prune --omit=dev -w @crm/web -w @crm/shared` kullanılır; Nest/Prisma/mobil ağacı imaja girmez.
 
 **Web imajı — runner (`output: 'standalone'`):** `apps/web/next.config.ts` içinde `output: 'standalone'` ve monorepo için `outputFileTracingRoot` tanımlıdır. Runner aşamasında **tam kök `node_modules` kopyalanmaz**; yalnızca `.next/standalone`, `.next/static` ve `public` kopyalanır ve süreç `node apps/web/server.js` ile başlar (bkz. `apps/web/Dockerfile`). Bu düzen tipik olarak web imajını **~0,9 GB bandından daha aşağı** çeker (CPU mimarisine göre değişir).
+
+**Non-root süreç (Fortify / güvenlik):** API ve Web runner aşamalarında süreç **`USER node`** (resmi `node:20-bookworm-slim` içinde uid **1000**) ile çalışır; `apps/api/Dockerfile` içinde `uploads/` ve `exports/` önceden oluşturulur ve `/app` ağacı `node` kullanıcısına devredilir. **`infra/app/docker-compose.app.yml`** içindeki **`api_uploads`** adlı volume ilk oluşturulduğunda dizin sahibi root olabilir; kart yükleme vb. **EACCES** alırsanız bir kez (veya volume yenilendiğinde) host’tan şunu çalıştırın:  
+`docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app exec -u root api chown -R 1000:1000 /app/apps/api/uploads`  
+Kalıcı çözüm olarak aynı uid ile bind mount da kullanılabilir (host dizinini `chown 1000:1000`).
 
 ---
 
@@ -207,7 +211,7 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 - **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
 - **API HOST:** `apps/api/src/main.ts` — `HOST` (varsayılan `0.0.0.0`) ile LAN erişimi.
 - **Expo fiziksel cihaz:** `apps/mobile` — `npm run start:lan` (Metro LAN); `EXPO_PUBLIC_API_URL` Mac’in telefonun görebildiği IP’si + `/api/v1` (aynı Wi‑Fi veya hotspot). `docs/environment-setup.md`.
-- **Faz 8 monitoring:** `infra/monitoring/docker-compose.monitoring.yml`, `infra/monitoring/.env.monitoring.example` — Prometheus / Loki / Grafana / Blackbox / Promtail / postgres_exporter. API: `GET /api/v1/health` (liveness), `GET /api/v1/health/ready` (readiness, DB). JSON access log: `apps/api/src/common/middleware/json-request-logger.middleware.ts`, `apps/api/src/main.ts` (`API_JSON_LOG_FILE`).
+- **Faz 8 monitoring:** `infra/monitoring/docker-compose.monitoring.yml`, `infra/monitoring/.env.monitoring.example` — Prometheus / Loki / Grafana / Blackbox / Promtail / postgres_exporter. API: `GET /api/v1/health` (liveness), `GET /api/v1/health/ready` (readiness, DB). JSON log: `apps/api/src/common/middleware/json-request-logger.middleware.ts`, `apps/api/src/common/logging/`, `apps/api/src/main.ts` (`API_JSON_LOG_FILE`). Promtail `env` etiketi: **`MONITORING_ENV`**. Docker API imajı: **`GIT_COMMIT` / `GIT_BRANCH`** build-arg → `ENV` (`apps/api/Dockerfile`, `infra/app/docker-compose.app.yml`). Paylaşılan olay sabitleri: `packages/shared/src/constants/structured-logging.ts`.
 - **Faz 8 alerting (Grafana provisioning):** `infra/monitoring/grafana/provisioning/alerting/` — `01-contact-points.yaml` (e-posta + şablonlar), `02-notification-policies.yaml`, `03-alert-rules.yaml` (Blackbox kuralları). Runbook: `docs/runbooks/crm-api-down.md`. Prod Loki örnek: `infra/monitoring/loki/loki-config.prod.yaml`.
 
 ---

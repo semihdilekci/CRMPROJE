@@ -53,11 +53,11 @@ export default function LoginScreen() {
     formState: { errors },
   } = useForm<LoginDto>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '' },
   });
 
   const email = watch('email');
-  const password = watch('password');
+  const password = watch('password') ?? '';
   const credentialsValid = !!email && password.length >= 6;
   const otpValid = otpCode.length === 6;
 
@@ -152,7 +152,7 @@ export default function LoginScreen() {
               render={({ field: { value, onChange, onBlur } }) => (
                 <Input
                   label="Parola"
-                  value={value}
+                  value={value ?? ''}
                   onChangeText={onChange}
                   onBlur={onBlur}
                   placeholder="••••••••"

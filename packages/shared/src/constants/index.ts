@@ -6,3 +6,4 @@ export * from './auth-session';
 export * from './api-endpoints';
 export * from './pipeline';
 export * from './report-catalog';
+export * from './structured-logging';

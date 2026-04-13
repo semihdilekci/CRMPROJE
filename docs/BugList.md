@@ -40,3 +40,5 @@ Next.js version: 16.1.6 (Turbopack)
 
 7. < Bug Çözüldü > Mobil (Expo Go): API’ye LAN üzerinden erişilemiyor; web çalışıyor. Kök nedenler: fiziksel cihazda `localhost` telefonu işaret eder; API yalnızca loopback dinliyorsa LAN’dan erişilemez; Android emülatörde `localhost` geliştirme makinesine gitmez; `EXPO_PUBLIC_API_URL` pakete gömülmezken veya iOS’ta simülatör dalı `.env`’den önce çalışırken yanlış taban URL. Çözüm: `HOST=0.0.0.0`, DEV CORS `origin: true`, `getApiBaseUrl()` (önce `EXPO_PUBLIC_API_URL`, sonra Android emülatör / iOS simülatör varsayılanları), auth hydrate sonrası `useFairs` sorgusu, dokümantasyon.
 
+
+8. Müşteriler sayfasında herhangi bir müşterinin ekranında düzenle ve sil butonları çalışmıyor. Buton aksiyonları boş gibi. tıklanınca birşey olmuyor.

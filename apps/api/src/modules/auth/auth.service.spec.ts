@@ -4,12 +4,21 @@ import { ConfigService } from '@nestjs/config';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
+import { StructuredLogService } from '@common/logging/structured-log.service';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
 import { SmsService } from '@modules/sms/sms.service';
 
+/** Yalnızca unit test sabitleri — prod sırları değildir (Fortify hardcoded password). */
+const MOCK_PRISMA_USER_PASSWORD_HASH =
+  'fixture_prisma_user_password_column_stored_hash_stub';
+const LOGIN_PLAINTEXT_LOCKOUT_CASE =
+  'fixture_plaintext_lockout_branch_7a8b9c0d1e2f345678901234567890ab';
+const LOGIN_PLAINTEXT_VERIFY_FAIL =
+  'fixture_plaintext_wrong_password_verify_fail_c0ffee00deadbeef';
+
 jest.mock('argon2', () => ({
-  hash: jest.fn().mockResolvedValue('argon-hash'),
+  hash: jest.fn().mockResolvedValue('fixture_argon2_hash_fn_return_not_a_secret'),
   verify: jest.fn(),
 }));
 
@@ -27,6 +36,7 @@ describe('AuthService', () => {
   };
   let settingsGet: jest.Mock;
   let jwtService: { verify: jest.Mock; signAsync: jest.Mock; decode: jest.Mock };
+  let structuredLogWrite: jest.Mock;
 
   const mockConfig = (key: string) => {
     const map: Record<string, string> = {
@@ -60,6 +70,16 @@ describe('AuthService', () => {
       decode: jest.fn(),
     };
 
+    structuredLogWrite = jest.fn();
+    const structuredLog = {
+      writeLine: structuredLogWrite,
+      baseFields: jest.fn().mockReturnValue({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        service: 'api',
+        env: 'test',
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -85,6 +105,7 @@ describe('AuthService', () => {
           },
         },
         { provide: SmsService, useValue: { sendOtp: jest.fn(), verifyOtp: jest.fn() } },
+        { provide: StructuredLogService, useValue: structuredLog },
       ],
     }).compile();
 
@@ -153,7 +174,7 @@ describe('AuthService', () => {
     const baseUser = {
       id: 'user-1',
       email: 'u@test.com',
-      password: 'argon-hash',
+      password: MOCK_PRISMA_USER_PASSWORD_HASH,
       name: 'Test',
       role: 'user',
       phone: null,
@@ -179,7 +200,11 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.login({ email: 'u@test.com', password: 'secret12', client: 'web' })
+        service.login({
+          email: 'u@test.com',
+          password: LOGIN_PLAINTEXT_LOCKOUT_CASE,
+          client: 'web',
+        })
       ).rejects.toThrow(ForbiddenException);
 
       expect(prisma.user.update).not.toHaveBeenCalled();
@@ -194,7 +219,11 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.login({ email: 'u@test.com', password: 'wrongpass', client: 'web' })
+        service.login({
+          email: 'u@test.com',
+          password: LOGIN_PLAINTEXT_VERIFY_FAIL,
+          client: 'web',
+        })
       ).rejects.toThrow(UnauthorizedException);
 
       expect(prisma.user.update).toHaveBeenCalledWith({
@@ -204,6 +233,14 @@ describe('AuthService', () => {
           lockedUntil: expect.any(Date),
         }),
       });
+      expect(structuredLogWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logCategory: 'security',
+          event: 'auth.login.failure',
+          userId: 'user-1',
+          outcome: 'failure',
+        }),
+      );
     });
   });
 

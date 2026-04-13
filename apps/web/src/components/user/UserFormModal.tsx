@@ -45,7 +45,7 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
           teamId: initial.teamId ?? '',
           phone: initial.phone ?? '',
         }
-      : { name: '', email: '', password: '', role: 'user', teamId: '', phone: '' },
+      : { name: '', email: '', role: 'user', teamId: '', phone: '' },
   });
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function UserFormModal({ open, onClose, initial }: UserFormModalProps) {
         phone: initial.phone ?? '',
       });
     } else {
-      reset({ name: '', email: '', password: '', role: 'user', teamId: '', phone: '' });
+      reset({ name: '', email: '', role: 'user', teamId: '', phone: '' });
     }
   }, [open, initial, reset]);
 

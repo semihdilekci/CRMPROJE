@@ -16,7 +16,7 @@ scrape_configs:
         labels:
           job: api
           service: api
-          env: dev
+          env: ${MONITORING_ENV}
           __path__: /var/log/crm/api.log
     pipeline_stages:
       - json:
@@ -26,6 +26,10 @@ scrape_configs:
             path: path
             method: method
             requestId: requestId
+            logCategory: logCategory
+            event: event
+            userId: userId
+            outcome: outcome
       - labels:
           level:
       - labeldrop:

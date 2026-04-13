@@ -205,8 +205,10 @@ Profesyonel ekip için **yapılandırılmış log** önerilir:
 ### 4.5 Host’ta çalışan API + Docker’daki Promtail
 
 - API stdout → her istek için **tek satır JSON** (`json-request-logger` middleware); dosyaya yazmak için **`API_JSON_LOG_FILE`** `apps/api/.env` içinde tanımlanmalıdır (değişken yoksa yalnızca stdout). `npm run dev -w apps/api` ile çalışma dizini genelde **`apps/api`** olduğundan repo kökü `logs/api.log` için örnek: `API_JSON_LOG_FILE=../../logs/api.log` (veya mutlak yol).
+- **Alanlar (özet):** `logCategory` (`access` \| `security` \| `audit` \| `ai`), erişimde `userId` / `role` (JWT sonrası), `requestId`, `gitBranch` / `gitCommit` (**`GIT_BRANCH` / `GIT_COMMIT`** env — Docker’da `apps/api/Dockerfile` build-arg). Güvenlik satırlarında **e-posta ve token yok**; `event` / `outcome` sabitleri `@crm/shared` içinde.
 - Alternatif: **`tee -a ./logs/api.log`** ile süreç çıktısını çoğaltma.
 - Compose’ta `./logs` klasörü **read-only veya read-write mount** ile Promtail container’a verilir.
+- Promtail: **`MONITORING_ENV`** (`.env.monitoring` veya compose varsayılanı `development`) Loki etiketi `env` ile eşleşir; `-config.expand-env=true` ile `promtail-config.yaml` içinde `${MONITORING_ENV}` genişletilir.
 
 ---
 
@@ -418,7 +420,7 @@ Dashboard:    https://grafana.example.com/d/crm-logs/application-logs
 
 ## 9. Grafana pano tasarımı (wireframe seviyesinde)
 
-Tüm panolar **klasör:** `CRM / Monitoring` altında toplanır. **Templating:** `env` (dev/staging/prod), `cluster` (ileride).
+Tüm panolar **klasör:** `CRM Monitoring` altında toplanır (tek seviye; iç içe `CRM / Monitoring` Grafana 11’de provision çakışmasına yol açabiliyor). **Templating:** `env` (dev/staging/prod), `cluster` (ileride). Provisioned uyarı kuralları **`CRM Alerting`** klasöründedir.
 
 ### 9.1 Pano A — “Executive / SLO Özeti” (UID: `crm-exec`)
 
@@ -443,11 +445,14 @@ Tüm panolar **klasör:** `CRM / Monitoring` altında toplanır. **Templating:**
 
 ### 9.3 Pano C — “Uygulama logları” (UID: `crm-logs`)
 
+**Provisioning:** `infra/monitoring/grafana/provisioning/dashboards/json/crm-logs.json` (klasör: CRM Monitoring). Şablon değişkeni **`env`** (`.*` \| `development` \| `production`).
+
 | Satır | Panel | İçerik |
 |-------|--------|--------|
 | 1 | **Log volume by level** | Loki — `sum by (level) (count_over_time(...))` |
-| 2 | **Log stream** | Loki Explore benzeri canlı akış, `service`, `env` filtresi. |
-| 3 | **En çok 5xx path** | Loki — `topk` by path. |
+| 2 | **Log volume by logCategory** | Loki — `| json` sonrası `logCategory` dağılımı |
+| 3 | **Log stream** | Ham JSON akışı; Explore’da `| json` ile `event` / `logCategory` filtreleri |
+| 4 | **En çok 5xx path** | Loki — `topk` by path (isteğe bağlı genişletme) |
 
 ### 9.4 Pano D — “PostgreSQL — CRM” (UID: `crm-pg`)
 
@@ -482,6 +487,7 @@ Tüm panolar **klasör:** `CRM / Monitoring` altında toplanır. **Templating:**
 | Ağ | Prod’da Grafana ve Prometheus **kamuya açık olmamalı** veya **WAF + IP allowlist**. |
 | postgres_exporter | Minimum yetki; **SELECT** pg_catalog; şifre rotation. |
 | E-posta | SMTP kimlik bilgisi ayrı hesap; gönderim loglarında PII minimum. |
+| Yapılandırılmış uygulama logları | **E-posta, parola, token, OTP, sohbet metni, rapor içeriği** Loki satırına yazılmaz; başarısız girişte yalnızca `security` olayı ve gerekçe kodu (`reason`). |
 
 ---
 

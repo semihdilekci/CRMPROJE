@@ -12,6 +12,11 @@ import * as ExcelJS from 'exceljs';
 import * as path from 'path';
 import * as fs from 'fs';
 import type { ChatQueryInput, ChatQueryResponse, ChartData, TableData } from '@crm/shared';
+import {
+  AI_LOG_EVENTS,
+  LOG_CATEGORIES,
+} from '@crm/shared';
+import { StructuredLogService } from '@common/logging/structured-log.service';
 
 const EXPORT_DIR = path.join(process.cwd(), 'exports');
 const EXPORT_TTL_MS = 60 * 60 * 1000;
@@ -41,6 +46,7 @@ export class ChatService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly structuredLog: StructuredLogService,
   ) {
     if (!fs.existsSync(EXPORT_DIR)) {
       fs.mkdirSync(EXPORT_DIR, { recursive: true });
@@ -52,6 +58,7 @@ export class ChatService {
     input: ChatQueryInput,
   ): Promise<ChatQueryResponse> {
     const provider = (input.provider ?? 'ollama') as 'ollama' | 'claude' | 'gemini';
+    const started = Date.now();
     try {
       const contextData = await this.gatherContextData();
       const wantsExport = this.detectExportIntent(input.message);
@@ -68,14 +75,35 @@ export class ChatService {
             ]
           : [{ role: 'user' as const, content: input.message }];
 
+      let result: ChatQueryResponse;
       if (provider === 'ollama') {
-        return this.queryOllama(userId, systemPrompt, messages, wantsExport, input.ollamaModel);
+        result = await this.queryOllama(
+          userId,
+          systemPrompt,
+          messages,
+          wantsExport,
+          input.ollamaModel,
+        );
+      } else if (provider === 'gemini') {
+        result = await this.queryGemini(userId, systemPrompt, messages, wantsExport);
+      } else {
+        result = await this.queryClaude(userId, systemPrompt, messages, wantsExport);
       }
-      if (provider === 'gemini') {
-        return this.queryGemini(userId, systemPrompt, messages, wantsExport);
-      }
-      return this.queryClaude(userId, systemPrompt, messages, wantsExport);
+
+      this.writeAiChatLine({
+        userId,
+        provider,
+        durationMs: Date.now() - started,
+        outcome: 'success',
+      });
+      return result;
     } catch (error) {
+      this.writeAiChatLine({
+        userId,
+        provider,
+        durationMs: Date.now() - started,
+        outcome: 'failure',
+      });
       if (
         error instanceof InternalServerErrorException ||
         error instanceof BadRequestException
@@ -88,6 +116,25 @@ export class ChatService {
         'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin. API loglarına bakın.',
       );
     }
+  }
+
+  private writeAiChatLine(opts: {
+    userId: string;
+    provider: string;
+    durationMs: number;
+    outcome: 'success' | 'failure';
+  }): void {
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: opts.outcome === 'success' ? 'info' : 'warn',
+      logCategory: LOG_CATEGORIES.ai,
+      event: AI_LOG_EVENTS.CHAT_QUERY,
+      outcome: opts.outcome,
+      userId: opts.userId,
+      aiProvider: opts.provider,
+      durationMs: opts.durationMs,
+      message: `ai chat ${opts.outcome}`,
+    });
   }
 
   private async queryOllama(
@@ -695,6 +742,16 @@ export class ChatService {
       if (fs.existsSync(cached.filePath)) fs.unlinkSync(cached.filePath);
       throw new BadRequestException('Export süresi dolmuş');
     }
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.ai,
+      event: AI_LOG_EVENTS.EXPORT_DOWNLOAD,
+      outcome: 'success',
+      userId,
+      exportId,
+      message: 'ai export download',
+    });
     return {
       filePath: cached.filePath,
       fileName: `analiz-${exportId}.xlsx`,

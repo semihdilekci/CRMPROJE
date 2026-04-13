@@ -3,7 +3,9 @@ apiVersion: 1
 providers:
   - name: CRM Monitoring
     orgId: 1
-    folder: CRM / Monitoring
+    # Tek seviye isim: "CRM / Monitoring" iç içe klasör + alert provisioning ile
+    # "a folder with the same name already exists" çakışmasına yol açabiliyor (Grafana 11).
+    folder: CRM Monitoring
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

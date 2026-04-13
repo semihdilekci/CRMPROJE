@@ -48,6 +48,11 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
+# Resmi imajdaki node kullanıcısı (uid 1000) — Fortify: Default User Privilege
+RUN chown -R node:node /app
+
+USER node
+
 EXPOSE 3000
 
 ENV PORT=3000

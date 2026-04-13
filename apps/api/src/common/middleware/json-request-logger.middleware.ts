@@ -1,15 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
-import { randomUUID } from 'crypto';
-import * as nodePath from 'path';
-import { appendFile, mkdir } from 'fs/promises';
+import { LOG_CATEGORIES } from '@crm/shared';
+import { getGitLogFields } from '@common/logging/git-log-fields';
+import { writeStructuredJsonLogLine } from '@common/logging/json-log.transport';
+import { resolveTrustedRequestId } from './resolve-request-id';
 
-function logLine(obj: Record<string, unknown>): string {
-  return `${JSON.stringify(obj)}\n`;
-}
+type RequestWithUser = Request & {
+  user?: { id: string; role: string };
+};
 
 /**
  * Satır bazlı JSON access log (Loki / Promtail ile uyumlu).
- * İsteğe bağlı: API_JSON_LOG_FILE (örn. repo kökünde logs/api.log).
+ * İsteğe bağlı dosya: API_JSON_LOG_FILE (örn. repo kökünde logs/api.log).
  */
 export function jsonRequestLoggerMiddleware(
   req: Request,
@@ -17,9 +18,7 @@ export function jsonRequestLoggerMiddleware(
   next: NextFunction,
 ): void {
   const start = Date.now();
-  const requestId =
-    (typeof req.headers['x-request-id'] === 'string' && req.headers['x-request-id']) ||
-    randomUUID();
+  const requestId = resolveTrustedRequestId(req.headers['x-request-id']);
   res.setHeader('X-Request-Id', requestId);
 
   res.on('finish', () => {
@@ -28,38 +27,34 @@ export function jsonRequestLoggerMiddleware(
     const level =
       statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
     const requestPath = req.originalUrl || req.url;
-    const payload = {
+    const r = req as RequestWithUser;
+    const payload: Record<string, unknown> = {
       timestamp: new Date().toISOString(),
       level,
       service: 'api',
       env: process.env.NODE_ENV ?? 'development',
+      logCategory: LOG_CATEGORIES.access,
       requestId,
       method: req.method,
       path: requestPath,
       statusCode,
       durationMs,
       message: `${req.method} ${requestPath} ${statusCode}`,
+      ...getGitLogFields(),
     };
-    const line = logLine(payload);
-    process.stdout.write(line);
 
-    const file = process.env.API_JSON_LOG_FILE?.trim();
-    if (file) {
-      const resolved = nodePath.isAbsolute(file)
-        ? file
-        : nodePath.resolve(process.cwd(), file);
-      void mkdir(nodePath.dirname(resolved), { recursive: true })
-        .then(() => appendFile(resolved, line, { encoding: 'utf8' }))
-        .catch((err: unknown) => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn(
-              '[jsonRequestLogger] Dosyaya yazılamadı (API_JSON_LOG_FILE):',
-              resolved,
-              err,
-            );
-          }
-        });
+    const user = r.user;
+    if (user?.id) {
+      payload.userId = user.id;
+      payload.role = user.role;
     }
+
+    const clientHeader = req.headers['x-client'];
+    if (typeof clientHeader === 'string' && clientHeader.trim()) {
+      payload.client = clientHeader.trim().slice(0, 64);
+    }
+
+    writeStructuredJsonLogLine(payload);
   });
 
   next();

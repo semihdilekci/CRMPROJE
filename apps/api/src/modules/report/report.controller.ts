@@ -1,6 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { ReportService } from './report.service';
+import { ReportAuditLogInterceptor } from './report-audit-log.interceptor';
 import type {
   ApiSuccessResponse,
   ExecutiveSummaryResponse,
@@ -24,6 +25,7 @@ import type {
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(ReportAuditLogInterceptor)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 

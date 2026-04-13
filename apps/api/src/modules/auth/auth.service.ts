@@ -17,7 +17,10 @@ import {
   LoginSuccess,
   MfaRequiredResponse,
   User,
+  LOG_CATEGORIES,
+  SECURITY_EVENTS,
 } from '@crm/shared';
+import { StructuredLogService } from '@common/logging/structured-log.service';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
 import { SmsService } from '@modules/sms/sms.service';
@@ -43,7 +46,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly settingsService: SettingsService,
-    private readonly smsService: SmsService
+    private readonly smsService: SmsService,
+    private readonly structuredLog: StructuredLogService
   ) {}
 
   async register(dto: RegisterDto): Promise<LoginSuccess> {
@@ -68,7 +72,17 @@ export class AuthService {
 
     const tokens = await this.generateTokensForNewSession(user.id, user.role);
 
-    this.logger.log(`User registered: ${user.email}`);
+    this.logger.log('User registered');
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.security,
+      event: SECURITY_EVENTS.REGISTER_SUCCESS,
+      outcome: 'success',
+      userId: user.id,
+      role: user.role,
+      message: 'auth register success',
+    });
 
     return { user: this.toUserResponse(user), tokens };
   }
@@ -85,6 +99,15 @@ export class AuthService {
     });
 
     if (!user) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.LOGIN_FAILURE,
+        outcome: 'failure',
+        reason: 'invalid_credentials',
+        message: 'login failed — user not found',
+      });
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
 
@@ -103,6 +126,16 @@ export class AuthService {
 
     if (lockedUntil && lockedUntil > now) {
       const minutesLeft = Math.max(1, Math.ceil((lockedUntil.getTime() - now.getTime()) / 60_000));
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.LOGIN_LOCKED,
+        outcome: 'failure',
+        userId: user.id,
+        role: user.role,
+        message: `login blocked — locked ${minutesLeft}m`,
+      });
       throw new ForbiddenException(
         `Hesabınız geçici olarak kilitlendi. ${minutesLeft} dakika sonra tekrar deneyin.`
       );
@@ -122,7 +155,18 @@ export class AuthService {
           lockedUntil: shouldLock ? new Date(now.getTime() + lockMinutes * 60_000) : null,
         },
       });
-      this.logger.warn(`Failed login attempt for: ${dto.email}`);
+      this.logger.warn('Failed login attempt');
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.LOGIN_FAILURE,
+        outcome: 'failure',
+        userId: user.id,
+        role: user.role,
+        reason: 'invalid_credentials',
+        message: 'login failed — bad password',
+      });
       throw new UnauthorizedException('E-posta veya parola hatalı');
     }
 
@@ -135,7 +179,17 @@ export class AuthService {
 
     if (!mfaEnabled) {
       const tokens = await this.generateTokensForNewSession(user.id, user.role);
-      this.logger.log(`User logged in: ${user.email}`);
+      this.logger.log('User logged in');
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'info',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.LOGIN_SUCCESS,
+        outcome: 'success',
+        userId: user.id,
+        role: user.role,
+        message: 'login success',
+      });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- password excluded from response
       const { password: _pw, ...userWithoutPassword } = user;
       return { user: this.toUserResponse(userWithoutPassword), tokens };
@@ -143,6 +197,17 @@ export class AuthService {
 
     const phone = user.phone?.trim();
     if (!phone) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.LOGIN_FAILURE,
+        outcome: 'failure',
+        userId: user.id,
+        role: user.role,
+        reason: 'mfa_phone_missing',
+        message: 'login blocked — no phone for mfa',
+      });
       throw new UnauthorizedException(
         'Telefon numaranız kayıtlı değil. Yöneticinize başvurun.'
       );
@@ -150,7 +215,17 @@ export class AuthService {
 
     await this.smsService.sendOtp(phone);
     const tempToken = await this.generateTempToken(user.id);
-    this.logger.log(`MFA OTP sent to ${user.email}`);
+    this.logger.log('MFA OTP sent');
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.security,
+      event: SECURITY_EVENTS.MFA_OTP_SENT,
+      outcome: 'success',
+      userId: user.id,
+      role: user.role,
+      message: 'mfa otp sent',
+    });
     return { tempToken, requiresMfa: true };
   }
 
@@ -162,12 +237,30 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
     } catch {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.MFA_VERIFY_FAILURE,
+        outcome: 'failure',
+        reason: 'invalid_temp_token',
+        message: 'mfa verify failed',
+      });
       throw new UnauthorizedException(
         'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
       );
     }
 
     if (!payload.mfa) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.MFA_VERIFY_FAILURE,
+        outcome: 'failure',
+        reason: 'invalid_temp_token',
+        message: 'mfa verify failed — not mfa token',
+      });
       throw new UnauthorizedException(
         'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
       );
@@ -179,6 +272,16 @@ export class AuthService {
     });
 
     if (!user || !user.phone?.trim()) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.MFA_VERIFY_FAILURE,
+        outcome: 'failure',
+        userId: payload.sub,
+        reason: 'user_or_phone_missing',
+        message: 'mfa verify failed',
+      });
       throw new UnauthorizedException(
         'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
       );
@@ -186,6 +289,17 @@ export class AuthService {
 
     const valid = await this.smsService.verifyOtp(user.phone.trim(), code);
     if (!valid) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.MFA_VERIFY_FAILURE,
+        outcome: 'failure',
+        userId: user.id,
+        role: user.role,
+        reason: 'bad_otp',
+        message: 'mfa verify failed — bad otp',
+      });
       throw new UnauthorizedException(
         'Geçersiz veya süresi dolmuş kod. Lütfen tekrar giriş yapın.'
       );
@@ -196,7 +310,17 @@ export class AuthService {
       where: { id: user.id },
       data: { failedLoginCount: 0, lockedUntil: null },
     });
-    this.logger.log(`User logged in (MFA verified): ${user.email}`);
+    this.logger.log('User logged in (MFA verified)');
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.security,
+      event: SECURITY_EVENTS.MFA_VERIFY_SUCCESS,
+      outcome: 'success',
+      userId: user.id,
+      role: user.role,
+      message: 'mfa verify success',
+    });
     return { user: this.toUserResponse(user), tokens };
   }
 
@@ -208,10 +332,29 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        reason: 'jwt_invalid',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
     }
 
     if (!payload.rtid) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        userId: payload.sub,
+        reason: 'missing_rtid',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
     }
 
@@ -220,6 +363,16 @@ export class AuthService {
     });
 
     if (!record || record.userId !== payload.sub) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        userId: payload.sub,
+        reason: 'record_mismatch',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
@@ -228,18 +381,48 @@ export class AuthService {
       this.logger.warn(
         `Refresh token reuse detected (rotated token replay), family revoked: ${record.familyId}`
       );
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_REUSE_DETECTED,
+        outcome: 'failure',
+        userId: record.userId,
+        reason: 'token_replay',
+        message: `refresh reuse — family ${record.familyId}`,
+      });
       throw new UnauthorizedException(
         'Oturum güvenlik nedeniyle sonlandırıldı. Lütfen tekrar giriş yapın.'
       );
     }
 
     if (record.expiresAt < new Date()) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        userId: record.userId,
+        reason: 'expired',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş refresh token');
     }
 
     const tokenValid = await argon2.verify(record.tokenHash, refreshToken);
 
     if (!tokenValid) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        userId: record.userId,
+        reason: 'hash_mismatch',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
@@ -249,10 +432,19 @@ export class AuthService {
     });
 
     if (!user) {
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'warn',
+        logCategory: LOG_CATEGORIES.security,
+        event: SECURITY_EVENTS.REFRESH_FAILURE,
+        outcome: 'failure',
+        reason: 'user_missing',
+        message: 'refresh failed',
+      });
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const tokens = await this.prisma.$transaction(async (tx) => {
       const rotated = await tx.refreshToken.updateMany({
         where: { id: record.id, replacedAt: null },
         data: { replacedAt: new Date() },
@@ -264,12 +456,34 @@ export class AuthService {
 
       return this.persistRefreshTokenPair(user.id, user.role, record.familyId, tx);
     });
+
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.security,
+      event: SECURITY_EVENTS.REFRESH_SUCCESS,
+      outcome: 'success',
+      userId: user.id,
+      role: user.role,
+      message: 'refresh success',
+    });
+
+    return tokens;
   }
 
   async logout(userId: string): Promise<void> {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
 
     this.logger.log(`User logged out: ${userId}`);
+    this.structuredLog.writeLine({
+      ...this.structuredLog.baseFields(),
+      level: 'info',
+      logCategory: LOG_CATEGORIES.security,
+      event: SECURITY_EVENTS.LOGOUT,
+      outcome: 'success',
+      userId,
+      message: 'logout',
+    });
   }
 
   private async revokeFamilyTokens(familyId: string): Promise<void> {

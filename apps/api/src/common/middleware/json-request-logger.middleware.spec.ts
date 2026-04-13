@@ -71,6 +71,43 @@ describe('jsonRequestLoggerMiddleware', () => {
     expect(row.path).toBe('/api/v1/health');
     expect(row.method).toBe('GET');
     expect(row.statusCode).toBe(200);
+    expect((row as { logCategory?: string }).logCategory).toBe('access');
+  });
+
+  it('req.user varsa userId ve role JSON satırına eklenir', async () => {
+    process.env.API_JSON_LOG_FILE = '/tmp/crm-json-log-test-user.log';
+
+    const finishCbs: Array<() => void> = [];
+    const res = {
+      statusCode: 200,
+      setHeader: jest.fn(),
+      on(event: string, cb: () => void) {
+        if (event === 'finish') {
+          finishCbs.push(cb);
+        }
+        return this;
+      },
+    } as unknown as Response;
+
+    const req = {
+      method: 'GET',
+      originalUrl: '/api/v1/fairs',
+      url: '/api/v1/fairs',
+      headers: {},
+      user: { id: 'u-1', role: 'admin' },
+    } as unknown as Request;
+
+    jsonRequestLoggerMiddleware(req, res, jest.fn());
+    finishCbs.forEach((cb) => cb());
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const written = String(mockAppendFile.mock.calls[0]![1]);
+    const row = JSON.parse(written.trim()) as {
+      userId?: string;
+      role?: string;
+    };
+    expect(row.userId).toBe('u-1');
+    expect(row.role).toBe('admin');
   });
 
   it('göreli API_JSON_LOG_FILE yolunu process.cwd üzerinden çözümler', async () => {
@@ -104,5 +141,63 @@ describe('jsonRequestLoggerMiddleware', () => {
     const targetPath = String(relCall![0]);
     expect(targetPath).toContain('rel');
     expect(targetPath).toContain('api.log');
+  });
+
+  it('geçerli X-Request-Id response başlığına aynen yazılır', () => {
+    const finishCbs: Array<() => void> = [];
+    const setHeader = jest.fn();
+    const res = {
+      statusCode: 200,
+      setHeader,
+      on(event: string, cb: () => void) {
+        if (event === 'finish') {
+          finishCbs.push(cb);
+        }
+        return this;
+      },
+    } as unknown as Response;
+
+    const trusted = 'aaaaaaaa-bbbb-4ccc-bddd-eeeeeeeeeeee';
+    const req = {
+      method: 'GET',
+      originalUrl: '/api/v1/health',
+      url: '/api/v1/health',
+      headers: { 'x-request-id': trusted },
+    } as unknown as Request;
+
+    jsonRequestLoggerMiddleware(req, res, jest.fn());
+
+    expect(setHeader).toHaveBeenCalledWith('X-Request-Id', trusted);
+  });
+
+  it('X-Request-Id içinde CRLF varsa güvenli UUID yazılır (header injection önlenir)', () => {
+    const finishCbs: Array<() => void> = [];
+    const setHeader = jest.fn();
+    const res = {
+      statusCode: 200,
+      setHeader,
+      on(event: string, cb: () => void) {
+        if (event === 'finish') {
+          finishCbs.push(cb);
+        }
+        return this;
+      },
+    } as unknown as Response;
+
+    const req = {
+      method: 'GET',
+      originalUrl: '/x',
+      url: '/x',
+      headers: { 'x-request-id': 'evil\r\nSet-Cookie: a=b' },
+    } as unknown as Request;
+
+    jsonRequestLoggerMiddleware(req, res, jest.fn());
+
+    expect(setHeader).toHaveBeenCalledTimes(1);
+    const writtenId = setHeader.mock.calls[0]![1] as string;
+    expect(writtenId).not.toMatch(/[\r\n]/);
+    expect(writtenId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
   });
 });

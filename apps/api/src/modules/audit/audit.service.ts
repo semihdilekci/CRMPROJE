@@ -1,4 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  AUDIT_LOG_EVENTS,
+  LOG_CATEGORIES,
+} from '@crm/shared';
+import { StructuredLogService } from '@common/logging/structured-log.service';
 import { PrismaService } from '@prisma/prisma.service';
 
 export type EntityType = 'fair' | 'customer' | 'opportunity' | 'user' | 'product' | 'setting';
@@ -42,7 +47,10 @@ export interface AuditLogListResult {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly structuredLog: StructuredLogService,
+  ) {}
 
   async findAll(filters: AuditLogFilters = {}): Promise<AuditLogListResult> {
     const where: {
@@ -111,6 +119,18 @@ export class AuditService {
           before: payload.before != null ? (payload.before as object) : undefined,
           after: payload.after != null ? (payload.after as object) : undefined,
         },
+      });
+      this.structuredLog.writeLine({
+        ...this.structuredLog.baseFields(),
+        level: 'info',
+        logCategory: LOG_CATEGORIES.audit,
+        event: AUDIT_LOG_EVENTS.ENTITY_CHANGE,
+        outcome: 'success',
+        userId: payload.userId,
+        entityType: payload.entityType,
+        entityId: payload.entityId,
+        action: payload.action,
+        message: `audit ${payload.action} ${payload.entityType}`,
       });
     } catch (err) {
       this.logger.warn(`Audit log failed: ${err}`);

@@ -4,6 +4,7 @@
 #   mkdir -p logs && docker compose -f infra/monitoring/docker-compose.monitoring.yml --env-file infra/monitoring/.env.monitoring up -d
 #
 # API log dosyası: repo kökünde ./logs/api.log (API_JSON_LOG_FILE ile veya tee; bkz. docs/phase-8-monitoring.md §4.5)
+# Promtail Loki etiketi env: MONITORING_ENV (.env.monitoring veya varsayılan development; API NODE_ENV ile hizalayın)
 
 name: crm-monitoring
 
@@ -56,7 +57,7 @@ services:
       GF_SMTP_PASSWORD: ${GF_SMTP_PASSWORD:-}
       GF_SMTP_FROM_ADDRESS: ${GF_SMTP_FROM_ADDRESS:-}
       GF_SMTP_STARTTLS_POLICY: ${GF_SMTP_STARTTLS_POLICY:-OpportunisticStartTLS}
-      # Grafana alerting provisioning: 01-contact-points.yaml ($CRM_ALERT_EMAIL_TO)
+      # Grafana alerting provisioning: 01-contact-points.yaml — Grafana ${CRM_ALERT_EMAIL_TO} genişletmesi (konteyner ortamı)
       CRM_ALERT_EMAIL_TO: ${CRM_ALERT_EMAIL_TO:-nobody@localhost}
     ports:
       - "${GRAFANA_HTTP_PORT:-3005}:3000"
@@ -106,8 +107,8 @@ services:
     container_name: crm-postgres-exporter
     restart: unless-stopped
     environment:
-      # Yerel örnek: .env.monitoring içinde CRM ile aynı DB’ye salt okunur kullanıcı önerilir (Faz 8 §10).
-      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:-postgresql://postgres:postgres@host.docker.internal:5432/postgres?sslmode=disable}
+      # Zorunlu: .env.monitoring içinde POSTGRES_EXPORTER_DSN (repoda sırlı varsayılan yok — Fortify).
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN}
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     extra_hosts:
@@ -132,7 +133,11 @@ services:
     image: grafana/promtail:3.0.1
     container_name: crm-promtail
     restart: unless-stopped
-    command: -config.file=/etc/promtail/promtail-config.yaml
+    command:
+      - -config.file=/etc/promtail/promtail-config.yaml
+      - -config.expand-env=true
+    environment:
+      MONITORING_ENV: ${MONITORING_ENV:-development}
     volumes:
       - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
       - ../../logs:/var/log/crm:ro

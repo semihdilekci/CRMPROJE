@@ -41,6 +41,10 @@ WORKDIR /app
 RUN apt-get update -y && apt-get install -y openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+ARG GIT_COMMIT=
+ARG GIT_BRANCH=
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV GIT_BRANCH=$GIT_BRANCH
 ENV NODE_ENV=production
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
@@ -54,6 +58,12 @@ COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/apps/api/assets ./apps/api/assets
 
 WORKDIR /app/apps/api
+
+# Non-root (Fortify: Default User Privilege). uploads/exports ve API_JSON_LOG_FILE için yazılabilirlik.
+RUN mkdir -p uploads/card-images uploads/teklif-templates exports \
+  && chown -R node:node /app
+
+USER node
 
 EXPOSE 3001
 
