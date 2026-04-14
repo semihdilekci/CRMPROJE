@@ -10,7 +10,8 @@ name: crm-monitoring
 
 services:
   grafana-db:
-    image: postgres:16-alpine
+    # Pin: Fortify — zayıf tag yerine sürüm + linux/amd64 digest (imaj güncellenince digest doğrulayın).
+    image: postgres:16.13-alpine3.23@sha256:60b180625695e90b6e450405d5f0bcb74bc8c52c65d1cd11aeb3da46cac06dd8
     container_name: crm-grafana-postgres
     restart: unless-stopped
     environment:

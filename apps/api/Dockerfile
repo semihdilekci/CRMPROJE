@@ -1,13 +1,16 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.12
 # Monorepo kökünden build: docker build -f apps/api/Dockerfile .
 #
 # Çalışma cwd: /app/apps/api (uploads/, Prisma, statik dosyalar)
 
-FROM node:20-bookworm-slim AS builder
+# Pin: Fortify / tekrarlanabilir build — tag + linux/amd64 digest (digest güncellenince apt sürümleri de kontrol edin).
+FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS builder
 WORKDIR /app
 
 # Paket kurulumu root; ardından Fortify (Default User Privilege): derleme npm/prisma node ile.
-RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    "openssl=3.0.19-1~deb12u2" \
+    "ca-certificates=20230311+deb12u1" \
   && rm -rf /var/lib/apt/lists/* \
   && chown node:node /app
 
@@ -39,10 +42,12 @@ RUN npm run build
 WORKDIR /app
 RUN npm prune --omit=dev -w @crm/api -w @crm/shared
 
-FROM node:20-bookworm-slim AS runner
+FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS runner
 WORKDIR /app
 
-RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    "openssl=3.0.19-1~deb12u2" \
+    "ca-certificates=20230311+deb12u1" \
   && rm -rf /var/lib/apt/lists/*
 
 ARG GIT_COMMIT=

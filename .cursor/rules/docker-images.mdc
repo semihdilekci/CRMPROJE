@@ -7,6 +7,13 @@ alwaysApply: false
 
 Monorepo’da `npm ci` kökte **tüm workspace’leri** kurar; API ve Web Dockerfile’larında bu **kullanılmamalı** — imajlar GB seviyesine çıkar.
 
+## Sürüm pinleme (Fortify / tekrarlanabilir build)
+
+- **Taban imaj:** `FROM` satırında **semver tag + `@sha256:…` digest** kullanın (`latest` / yalnızca major tag kullanmayın). Üretim hedefi **linux/amd64** ise digest’i bu platform manifest’i için alın (`docker buildx imagetools inspect <image>`).
+- **APT:** `apt-get install` içinde paketleri **`paket=versiyon`** biçiminde sabitleyin; sürüm `~` veya `+` içeriyorsa Dockerfile’da **çift tırnak** kullanın. Taban imaj güncellenince `apt-cache policy` ile pin’leri doğrulayın.
+- **BuildKit sözdizimi:** `# syntax=docker/dockerfile:1.12` gibi **sabit minor** kullanın; `# syntax=docker/dockerfile:1` (floating) kullanmayın.
+- **Compose imajları:** Zayıf tag’ler (`postgres:16-alpine`) yerine **sürüm + digest** tercih edin; ayrıntı: `docs/deployment-and-env-strategy.md` §1b.
+
 ## Zorunlu kurallar
 
 ### API — [apps/api/Dockerfile](apps/api/Dockerfile)

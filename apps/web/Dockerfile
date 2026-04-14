@@ -1,16 +1,19 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.12
 # Monorepo kökünden build: docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_API_URL=... .
 #
 # NEXT_PUBLIC_* build zamanında gömülür; tarayıcının erişebileceği tam API base URL verin.
 
-FROM node:20-bookworm-slim AS builder
+# Pin: Fortify / tekrarlanabilir build — tag + linux/amd64 digest (digest güncellenince apt sürümleri de kontrol edin).
+FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS builder
 WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # Paket kurulumu root; ardından Fortify (Default User Privilege): derleme npm node ile.
-RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    "openssl=3.0.19-1~deb12u2" \
+    "ca-certificates=20230311+deb12u1" \
   && rm -rf /var/lib/apt/lists/* \
   && chown node:node /app
 
@@ -40,12 +43,14 @@ WORKDIR /app
 RUN npm prune --omit=dev -w @crm/web -w @crm/shared
 
 # Runner: Next standalone — tam node_modules kopyalanmaz (imaj boyutu).
-FROM node:20-bookworm-slim AS runner
+FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apt-get update -y && apt-get install -y openssl ca-certificates \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    "openssl=3.0.19-1~deb12u2" \
+    "ca-certificates=20230311+deb12u1" \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/apps/web/public ./apps/web/public
