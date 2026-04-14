@@ -3,8 +3,8 @@
 #
 # Çalışma cwd: /app/apps/api (uploads/, Prisma, statik dosyalar)
 
-# Pin: Fortify / tekrarlanabilir build — tag + linux/amd64 digest (digest güncellenince apt sürümleri de kontrol edin).
-FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS builder
+# Pin: Fortify — tag + çok mimarili manifest listesi digest (ARM64/amd64); yalnız amd64 üretim: docker build --platform linux/amd64
+FROM node:20.20.2-bookworm-slim@sha256:f93745c153377ee2fbbdd6e24efcd03cd2e86d6ab1d8aa9916a3790c40313a55 AS builder
 WORKDIR /app
 
 # Paket kurulumu root; ardından Fortify (Default User Privilege): derleme npm/prisma node ile.
@@ -42,7 +42,7 @@ RUN npm run build
 WORKDIR /app
 RUN npm prune --omit=dev -w @crm/api -w @crm/shared
 
-FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS runner
+FROM node:20.20.2-bookworm-slim@sha256:f93745c153377ee2fbbdd6e24efcd03cd2e86d6ab1d8aa9916a3790c40313a55 AS runner
 WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \

@@ -9,7 +9,7 @@ Monorepo’da `npm ci` kökte **tüm workspace’leri** kurar; API ve Web Docker
 
 ## Sürüm pinleme (Fortify / tekrarlanabilir build)
 
-- **Taban imaj:** `FROM` satırında **semver tag + `@sha256:…` digest** kullanın (`latest` / yalnızca major tag kullanmayın). Üretim hedefi **linux/amd64** ise digest’i bu platform manifest’i için alın (`docker buildx imagetools inspect <image>`).
+- **Taban imaj:** `FROM` satırında **semver tag + `@sha256:…` digest** kullanın (`latest` / yalnızca major tag kullanmayın). Digest’i `docker buildx imagetools inspect <image>:<tag>` çıktısındaki **üst** `Digest:` satırından alın (**OCI image index** — çok mimarili); `Manifests` altındaki tek platform digest’i kullanmayın — Apple Silicon’da “platform does not match” oluşur. Yalnız **linux/amd64** üretim imajı: `docker build --platform linux/amd64`.
 - **APT:** `apt-get install` içinde paketleri **`paket=versiyon`** biçiminde sabitleyin; sürüm `~` veya `+` içeriyorsa Dockerfile’da **çift tırnak** kullanın. Taban imaj güncellenince `apt-cache policy` ile pin’leri doğrulayın.
 - **BuildKit sözdizimi:** `# syntax=docker/dockerfile:1.12` gibi **sabit minor** kullanın; `# syntax=docker/dockerfile:1` (floating) kullanmayın.
 - **Compose imajları:** Zayıf tag’ler (`postgres:16-alpine`) yerine **sürüm + digest** tercih edin; ayrıntı: `docs/deployment-and-env-strategy.md` §1b.

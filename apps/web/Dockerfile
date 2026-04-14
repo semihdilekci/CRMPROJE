@@ -3,8 +3,8 @@
 #
 # NEXT_PUBLIC_* build zamanında gömülür; tarayıcının erişebileceği tam API base URL verin.
 
-# Pin: Fortify / tekrarlanabilir build — tag + linux/amd64 digest (digest güncellenince apt sürümleri de kontrol edin).
-FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS builder
+# Pin: Fortify — tag + çok mimarili manifest listesi digest (ARM64/amd64); yalnız amd64 üretim: docker build --platform linux/amd64
+FROM node:20.20.2-bookworm-slim@sha256:f93745c153377ee2fbbdd6e24efcd03cd2e86d6ab1d8aa9916a3790c40313a55 AS builder
 WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
@@ -43,7 +43,7 @@ WORKDIR /app
 RUN npm prune --omit=dev -w @crm/web -w @crm/shared
 
 # Runner: Next standalone — tam node_modules kopyalanmaz (imaj boyutu).
-FROM node:20.20.2-bookworm-slim@sha256:677c9bc72e8f52777aa42241fdb12a0aa87dc23f76299871686443907619f767 AS runner
+FROM node:20.20.2-bookworm-slim@sha256:f93745c153377ee2fbbdd6e24efcd03cd2e86d6ab1d8aa9916a3790c40313a55 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
