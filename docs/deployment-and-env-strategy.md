@@ -141,7 +141,7 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 - **Uploads:** `api_uploads` volume — kart görselleri container yeniden oluşturulunca kalır.  
 - **Monitoring:** `crm-monitoring` ayrı compose’tur; API/Web portları host’a publish edildiği sürece mevcut Blackbox hedefleri (`host.docker.internal:3000`, API portu) çalışmaya devam edebilir.
 
-**Ağ (Docker build):** `npm ci` sırasında `ECONNRESET` gibi hatalar olursa Dockerfile’larda npm yeniden deneme + BuildKit `/root/.npm` cache mount kullanılır; tekrar `docker compose ... build` deneyin. Mümkünse stabil ağ / VPN kapatılmış bağlantı.
+**Ağ (Docker build):** `npm ci` sırasında `ECONNRESET` gibi hatalar olursa Dockerfile’larda npm yeniden deneme + BuildKit cache mount kullanılır (`/home/node/.npm`, `uid=1000,gid=1000` — builder `USER node` ile uyumlu); tekrar `docker compose ... build` deneyin. Mümkünse stabil ağ / VPN kapatılmış bağlantı.
 
 **API container hemen çıkıyorsa / DB hatası:** Log’da `Can't reach database server at localhost:5432` görürseniz, `infra/app/.env.app` içindeki `DATABASE_URL` hâlâ `localhost` kullanıyordur. Container içinde `localhost` = container kendisi. Host’taki Postgres için `host.docker.internal` kullanın (`infra/app/.env.app.example` uyarısı).
 

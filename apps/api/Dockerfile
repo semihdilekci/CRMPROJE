@@ -6,14 +6,18 @@
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
+# Paket kurulumu root; ardından Fortify (Default User Privilege): derleme npm/prisma node ile.
 RUN apt-get update -y && apt-get install -y openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && chown node:node /app
 
-COPY package.json package-lock.json tsconfig.json ./
-COPY packages/shared ./packages/shared
-COPY apps/api ./apps/api
-COPY apps/web/package.json ./apps/web/
-COPY apps/mobile/package.json ./apps/mobile/
+USER node
+
+COPY --chown=node:node package.json package-lock.json tsconfig.json ./
+COPY --chown=node:node packages/shared ./packages/shared
+COPY --chown=node:node apps/api ./apps/api
+COPY --chown=node:node apps/web/package.json ./apps/web/
+COPY --chown=node:node apps/mobile/package.json ./apps/mobile/
 
 # ECONNRESET / düşük bant genişliği: yeniden deneme + BuildKit npm cache
 RUN npm config set fetch-retries 15 \
@@ -23,7 +27,7 @@ RUN npm config set fetch-retries 15 \
   && npm config set maxsockets 5
 
 # Yalnızca API + shared: Next/mobil bağımlılıkları imaja girmez (imaj boyutu).
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,target=/home/node/.npm,uid=1000,gid=1000 \
     npm ci -w @crm/api -w @crm/shared
 
 RUN npm run build -w @crm/shared
