@@ -2,7 +2,10 @@ import type { NextFunction, Request, Response } from 'express';
 import { LOG_CATEGORIES } from '@crm/shared';
 import { getGitLogFields } from '@common/logging/git-log-fields';
 import { writeStructuredJsonLogLine } from '@common/logging/json-log.transport';
-import { resolveTrustedRequestId } from './resolve-request-id';
+import {
+  assignServerRequestIdHeader,
+  getInboundRequestIdForLog,
+} from './resolve-request-id';
 
 type RequestWithUser = Request & {
   user?: { id: string; role: string };
@@ -18,8 +21,7 @@ export function jsonRequestLoggerMiddleware(
   next: NextFunction,
 ): void {
   const start = Date.now();
-  const requestId = resolveTrustedRequestId(req.headers['x-request-id']);
-  res.setHeader('X-Request-Id', requestId);
+  const requestId = assignServerRequestIdHeader(res);
 
   res.on('finish', () => {
     const durationMs = Date.now() - start;
@@ -52,6 +54,13 @@ export function jsonRequestLoggerMiddleware(
     const clientHeader = req.headers['x-client'];
     if (typeof clientHeader === 'string' && clientHeader.trim()) {
       payload.client = clientHeader.trim().slice(0, 64);
+    }
+
+    const inboundRequestId = getInboundRequestIdForLog(
+      req.headers['x-request-id'],
+    );
+    if (inboundRequestId !== undefined) {
+      payload.inboundRequestId = inboundRequestId;
     }
 
     writeStructuredJsonLogLine(payload);

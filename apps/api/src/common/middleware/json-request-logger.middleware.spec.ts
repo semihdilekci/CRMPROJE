@@ -143,7 +143,7 @@ describe('jsonRequestLoggerMiddleware', () => {
     expect(targetPath).toContain('api.log');
   });
 
-  it('geçerli X-Request-Id response başlığına aynen yazılır', () => {
+  it('X-Request-Id yanıt başlığı her zaman sunucu UUID; istemci değeri echo edilmez', () => {
     const finishCbs: Array<() => void> = [];
     const setHeader = jest.fn();
     const res = {
@@ -167,10 +167,15 @@ describe('jsonRequestLoggerMiddleware', () => {
 
     jsonRequestLoggerMiddleware(req, res, jest.fn());
 
-    expect(setHeader).toHaveBeenCalledWith('X-Request-Id', trusted);
+    expect(setHeader).toHaveBeenCalledTimes(1);
+    const writtenId = setHeader.mock.calls[0]![1] as string;
+    expect(writtenId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(writtenId).not.toBe(trusted);
   });
 
-  it('X-Request-Id içinde CRLF varsa güvenli UUID yazılır (header injection önlenir)', () => {
+  it('X-Request-Id içinde CRLF varsa yanıt başlığında yine sunucu UUID olur', () => {
     const finishCbs: Array<() => void> = [];
     const setHeader = jest.fn();
     const res = {
@@ -199,5 +204,75 @@ describe('jsonRequestLoggerMiddleware', () => {
     expect(writtenId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
+  });
+
+  it('geçerli istemci X-Request-Id access log satırında inboundRequestId olarak yer alır', async () => {
+    process.env.API_JSON_LOG_FILE = '/tmp/crm-json-log-inbound.log';
+
+    const finishCbs: Array<() => void> = [];
+    const res = {
+      statusCode: 200,
+      setHeader: jest.fn(),
+      on(event: string, cb: () => void) {
+        if (event === 'finish') {
+          finishCbs.push(cb);
+        }
+        return this;
+      },
+    } as unknown as Response;
+
+    const inbound = 'aaaaaaaa-bbbb-4ccc-bddd-eeeeeeeeeeee';
+    const req = {
+      method: 'GET',
+      originalUrl: '/api/v1/health',
+      url: '/api/v1/health',
+      headers: { 'x-request-id': inbound },
+    } as unknown as Request;
+
+    jsonRequestLoggerMiddleware(req, res, jest.fn());
+    finishCbs.forEach((cb) => cb());
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const written = String(mockAppendFile.mock.calls[0]![1]);
+    const row = JSON.parse(written.trim()) as {
+      requestId: string;
+      inboundRequestId?: string;
+    };
+    expect(row.inboundRequestId).toBe(inbound);
+    expect(row.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(row.requestId).not.toBe(inbound);
+  });
+
+  it('kötü amaçlı X-Request-Id access logda inboundRequestId oluşturmaz', async () => {
+    process.env.API_JSON_LOG_FILE = '/tmp/crm-json-log-no-inbound.log';
+
+    const finishCbs: Array<() => void> = [];
+    const res = {
+      statusCode: 200,
+      setHeader: jest.fn(),
+      on(event: string, cb: () => void) {
+        if (event === 'finish') {
+          finishCbs.push(cb);
+        }
+        return this;
+      },
+    } as unknown as Response;
+
+    const req = {
+      method: 'GET',
+      originalUrl: '/x',
+      url: '/x',
+      headers: { 'x-request-id': 'evil\r\nx' },
+    } as unknown as Request;
+
+    jsonRequestLoggerMiddleware(req, res, jest.fn());
+    finishCbs.forEach((cb) => cb());
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const written = String(mockAppendFile.mock.calls[0]![1]);
+    const row = JSON.parse(written.trim()) as { inboundRequestId?: string };
+    expect(row.inboundRequestId).toBeUndefined();
   });
 });

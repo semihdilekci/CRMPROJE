@@ -1,11 +1,39 @@
+import type { Response } from 'express';
 import {
   REQUEST_ID_MAX_LENGTH,
+  assignServerRequestIdHeader,
+  getInboundRequestIdForLog,
   resolveTrustedRequestId,
 } from './resolve-request-id';
 
 /** Node crypto.randomUUID — RFC 4122 v4 */
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+describe('assignServerRequestIdHeader', () => {
+  it('X-Request-Id yanıtına her zaman sunucu UUID yazar', () => {
+    const setHeader = jest.fn();
+    const res = { setHeader } as unknown as Response;
+    const id = assignServerRequestIdHeader(res);
+    expect(id).toMatch(UUID_V4);
+    expect(setHeader).toHaveBeenCalledWith('X-Request-Id', id);
+  });
+});
+
+describe('getInboundRequestIdForLog', () => {
+  it('başlık yoksa undefined döner', () => {
+    expect(getInboundRequestIdForLog(undefined)).toBeUndefined();
+  });
+
+  it('allowlist geçerli değeri döndürür', () => {
+    const id = 'aaaaaaaa-bbbb-4ccc-bddd-eeeeeeeeeeee';
+    expect(getInboundRequestIdForLog(id)).toBe(id);
+  });
+
+  it('CRLF içeren değerde undefined döner', () => {
+    expect(getInboundRequestIdForLog('evil\r\nx')).toBeUndefined();
+  });
+});
 
 describe('resolveTrustedRequestId', () => {
   it('başlık yoksa UUID döner', () => {

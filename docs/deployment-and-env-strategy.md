@@ -66,6 +66,8 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 `docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app exec -u root api chown -R 1000:1000 /app/apps/api/uploads`  
 Kalıcı çözüm olarak aynı uid ile bind mount da kullanılabilir (host dizinini `chown 1000:1000`).
 
+**API `X-Request-Id` (yanıt vs access log):** Yanıt başlığı `X-Request-Id` **yalnızca sunucu üretimi** (`crypto.randomUUID`) ile set edilir; istemci gönderdiği değer **yanıtta echo edilmez** (HTTP header manipulation / SCA uyumu). İstemci allowlist’e uyan bir `X-Request-Id` gönderdiyse, JSON access log satırında isteğe bağlı **`inboundRequestId`** alanında görünür; **`requestId`** alanı her zaman sunucu UUID ile ana korelasyon anahtarıdır. Uygulama: `apps/api/src/common/middleware/resolve-request-id.ts`, `json-request-logger.middleware.ts`.
+
 ---
 
 ## 1c. Docker imaj boyutu — zorunlu kurallar ve doğrulama
