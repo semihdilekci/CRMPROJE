@@ -206,6 +206,7 @@ IMPORTANT
 ==============================
 
 - Never bypass Prisma — no raw SQL, no direct PostgreSQL queries.
+- Managed PostgreSQL (ör. **AWS RDS**) yalnızca `DATABASE_URL` ve ağ/TLS yapılandırması ile kullanılır; şema ve erişim deseni Prisma ile aynı kalır (`docs/deployment-and-env-strategy.md` §1d).
 - Never store sensitive data unencrypted (passwords must be hashed before storage).
 - Always validate data with Zod before writing to database.
 - Database schema must stay in sync with TypeScript types in @crm/shared.

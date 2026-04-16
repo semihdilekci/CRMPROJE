@@ -1,4 +1,4 @@
-# CRM uygulama stack — API + Web (Postgres varsayılan olarak host’ta kalır).
+# CRM uygulama stack — API + Web (Postgres host’ta veya AWS RDS; `DATABASE_URL` → infra/app/.env.app).
 #
 # ÖNEMLİ — Web imajı build-arg: `env_file: .env.app` sadece container çalışma anına uygulanır;
 # `docker compose build` içindeki ${NEXT_PUBLIC_API_URL} için proje ortamı gerekir.
@@ -9,11 +9,13 @@
 #
 # Kullanım (repo kökünden, A):
 #   cp infra/app/.env.app.example infra/app/.env.app
-#   # .env.app: DATABASE_URL host.docker.internal; API_PORT ve NEXT_PUBLIC_API_URL tutarlı olsun
+#   # .env.app: DATABASE_URL — host PG: host.docker.internal | RDS: endpoint + ?sslmode=require
+#   #         API_PORT ve NEXT_PUBLIC_API_URL tutarlı olsun
 #   docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app up -d --build
 #
-# Migration (host’tan, aynı DATABASE_URL ile): apps/api içinde npx prisma migrate deploy
+# Migration (DB’ye ağ erişimi olan ortamda, hedef DATABASE_URL ile): apps/api içinde npx prisma migrate deploy
 # Monitoring: crm-monitoring ayrı compose; API/Web portları host’a publish edildiği sürece mevcut blackbox hedefleri çalışır.
+# API JSON dosya logu: host ./logs (repo kökü) ↔ konteyner /app/logs — Promtail aynı host yolunu okur (Faz 8).
 
 name: crm-app
 
@@ -29,7 +31,7 @@ services:
       - "${API_PORT:-3001}:3001"
     env_file:
       - .env.app
-    # DATABASE_URL: Postgres host'ta ise @host.docker.internal:5432 — localhost container içidir.
+    # DATABASE_URL: host Postgres → host.docker.internal; RDS → endpoint hostname (localhost container içidir).
     environment:
       PORT: "3001"
       HOST: "0.0.0.0"
@@ -38,6 +40,7 @@ services:
     # İlk volume oluşturulduğunda izin: bkz. docs/deployment-and-env-strategy.md §1b (non-root / chown).
     volumes:
       - api_uploads:/app/apps/api/uploads
+      - ../../logs:/app/logs
     restart: unless-stopped
 
   web:

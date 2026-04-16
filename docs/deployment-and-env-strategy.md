@@ -11,7 +11,7 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 | Karar | İçerik |
 |--------|--------|
 | **Varsayılan geliştirme** | API ve Web **Node süreçleri** olarak çalışır (`npm run dev` / workspace script’leri). Ortam değişkenleri **`apps/api/.env`**, **`apps/web/.env.local`**, mobil için **`apps/mobile/.env`** ile yönetilir; bu dosyalar **git’e girmez**. |
-| **Docker (opsiyonel)** | Üretim benzeri çalıştırma için **API + Web** ayrı imajlarda paketlenir; **PostgreSQL varsayılan olarak host makinede** kalır (ayrı DB container’ı zorunlu değil). Tanım: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`. Ortam şablonu: `infra/app/.env.app.example` → `infra/app/.env.app` (commit edilmez). |
+| **Docker (opsiyonel)** | Üretim benzeri çalıştırma için **API + Web** ayrı imajlarda paketlenir; **PostgreSQL** varsayılan olarak **host makinede** kalabilir veya **AWS RDS** gibi uzak bir yönetilen instance’a `DATABASE_URL` ile bağlanır (ayrı DB container’ı zorunlu değil). Tanım: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`. Ortam şablonu: `infra/app/.env.app.example` → `infra/app/.env.app` (commit edilmez). RDS ayrıntıları: **§1d**. |
 | **Compose ortam dosyası** | `docker compose build` sırasında web imajına geçen **`NEXT_PUBLIC_API_URL`** ve **`API_PORT`** değişkenleri, compose’un **proje ortamından** okunur. Bu yüzden `infra/app/.env` → `.env.app` **symlink** veya her çalıştırmada `--env-file infra/app/.env.app` kullanımı önerilir; aksi halde web bundle yanlış API adresine gömülür. |
 | **Web → API (DEV)** | `next dev` iken tarayıcı istekleri **`/api/v1`** üzerinden gider; `apps/web/next.config.ts` içindeki rewrite hedefi **`INTERNAL_API_URL`** veya varsayılan `http://localhost:3002`. API’nin gerçek **`PORT`** değeri (`apps/api/.env`) ile bu hedef **aynı olmalı**dır. |
 | **Web → API (production build / Docker)** | Rewrite **yok**; tarayıcı doğrudan **`NEXT_PUBLIC_API_URL`** kullanır (`apps/web/src/lib/api.ts`). Bu değer **build zamanında** gömülür; değişince **web imajını yeniden build** etmek gerekir. |
@@ -32,14 +32,14 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 | **Next.js rewrites** | `/api/v1/*` ve `/uploads/*` → API (DEV). Hedef: `INTERNAL_API_URL` yoksa `http://localhost:3002` (`apps/web/next.config.ts`). | Devre dışı (production build’de rewrite eklenmez) |
 | **Web güvenlik başlıkları (Faz 7 sec7-05)** | Middleware; **CSP yalnızca üretimde** (`NODE_ENV=production`) — `next dev` sıkı CSP ile HMR/WebSocket çakışmasını önlemek için CSP gönderilmez | **HSTS** yalnızca production. `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` dev’de de vardır. **Tesseract (prod CSP):** `https://cdn.jsdelivr.net` whitelist. **`connect-src`:** `'self'` + CDN + **`NEXT_PUBLIC_API_URL` origin** (Docker’da web/API farklı port). Kaynak: `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` |
 | **API log seviyesi** | error, warn, log, debug, verbose | error, warn, log |
-| **Docker (crm-app)** | API + Web imajları; Postgres varsayılan olarak **host’ta** kalır (`DATABASE_URL` içinde `host.docker.internal`). | Aynı desen veya tamamen uzak DB; `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` container ortamına göre set edilir. |
+| **Docker (crm-app)** | API + Web imajları; Postgres **host’ta** ise `DATABASE_URL` içinde `host.docker.internal`; **RDS** ise endpoint hostname (TLS için sorgu dizesinde `sslmode=require` — bkz. **§1d**). | Aynı desen veya tamamen uzak DB; `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` container ortamına göre set edilir. |
 | **Faz 8 — İzleme stack** | `docker compose -f infra/monitoring/docker-compose.monitoring.yml` + `infra/monitoring/.env.monitoring` (örnek: `.env.monitoring.example`). API log: `API_JSON_LOG_FILE`. Promtail Loki etiketi `env`: **`MONITORING_ENV`** (varsayılan `development`; API `NODE_ENV` ile hizalayın). Uyarı e-postası: `CRM_ALERT_EMAIL_TO`; SMTP: `GF_SMTP_*` + `GF_SMTP_ENABLED=true`. | Prod: `PROMETHEUS_RETENTION=7d`; Loki için `loki/loki-config.prod.yaml` mount override; gerçek runbook/wiki URL’lerini alert annotation’larında güncelleyin; sırlar repoda yok. |
 
 ---
 
 ## 1b. Docker — uygulama stack (crm-app)
 
-**Amaç:** `@crm/api` ve `@crm/web` süreçlerini container’da çalıştırmak; **PostgreSQL varsayılan olarak yerel makinenizde** kalır (ayrı bir DB container’ı eklemedik). Veri ve migration geçmişi aynı instance üzerinde kalır; API container `DATABASE_URL` ile host’taki Postgres’e bağlanır.
+**Amaç:** `@crm/api` ve `@crm/web` süreçlerini container’da çalıştırmak; **PostgreSQL** ya **yerel makinede** (varsayılan anlatım) ya da **AWS RDS** gibi uzak bir sunucuda olabilir (ayrı bir DB container’ı eklemedik). API container yalnızca `DATABASE_URL` ile bağlanır; uzak RDS kullanımı için **§1d** ve `infra/app/.env.app.example` içindeki örnek satırlara bakın.
 
 **Port hizalaması (kritik)**
 
@@ -67,6 +67,8 @@ Bu bölüm, monorepo içinde **süreç boyunca netleşen** çalışma biçimleri
 **Non-root süreç (Fortify / güvenlik):** API ve Web runner aşamalarında süreç **`USER node`** (resmi Node bookworm-slim imajında uid **1000**) ile çalışır; `apps/api/Dockerfile` içinde `uploads/` ve `exports/` önceden oluşturulur ve `/app` ağacı `node` kullanıcısına devredilir. **`infra/app/docker-compose.app.yml`** içindeki **`api_uploads`** adlı volume ilk oluşturulduğunda dizin sahibi root olabilir; kart yükleme vb. **EACCES** alırsanız bir kez (veya volume yenilendiğinde) host’tan şunu çalıştırın:  
 `docker compose -f infra/app/docker-compose.app.yml --env-file infra/app/.env.app exec -u root api chown -R 1000:1000 /app/apps/api/uploads`  
 Kalıcı çözüm olarak aynı uid ile bind mount da kullanılabilir (host dizinini `chown 1000:1000`).
+
+**Faz 8 — `API_JSON_LOG_FILE` (Docker API + Promtail):** `crm-monitoring` içindeki Promtail, host’taki repo kökü **`logs/api.log`** dosyasını okur. API konteynerinde dosya yolu **`/app/logs/api.log`** olmalıdır; `infra/app/docker-compose.app.yml` **`../../logs:/app/logs`** bind mount ile host `logs/` klasörünü konteynıra bağlar. `infra/app/.env.app` içinde **`API_JSON_LOG_FILE=/app/logs/api.log`** (şablon: `.env.app.example`). Host’ta `logs/` yoksa `mkdir -p logs`; yazma hatasında dizin sahibinin container içi **`node` (uid 1000)** ile uyumlu olması gerekir.
 
 **API `X-Request-Id` (yanıt vs access log):** Yanıt başlığı `X-Request-Id` **yalnızca sunucu üretimi** (`crypto.randomUUID`) ile set edilir; istemci gönderdiği değer **yanıtta echo edilmez** (HTTP header manipulation / SCA uyumu). İstemci allowlist’e uyan bir `X-Request-Id` gönderdiyse, JSON access log satırında isteğe bağlı **`inboundRequestId`** alanında görünür; **`requestId`** alanı her zaman sunucu UUID ile ana korelasyon anahtarıdır. Uygulama: `apps/api/src/common/middleware/resolve-request-id.ts`, `json-request-logger.middleware.ts`.
 
@@ -114,7 +116,8 @@ docker run --rm --entrypoint sh crm-app-web:latest -c "du -sh /app 2>/dev/null; 
 
 ```bash
 cp infra/app/.env.app.example infra/app/.env.app
-# .env.app: DATABASE_URL (host.docker.internal), JWT_*, CORS_ORIGIN, NODE_ENV=production,
+# .env.app: DATABASE_URL — host Postgres: host.docker.internal; RDS: endpoint + ?sslmode=require
+#           JWT_*, CORS_ORIGIN, NODE_ENV=production,
 #           API_PORT ve NEXT_PUBLIC_API_URL aynı host portuna hizalı olsun
 cd infra/app && ln -sf .env.app .env
 cd ../..
@@ -131,9 +134,9 @@ docker compose -f infra/app/docker-compose.app.yml up -d --build
 
 | Dosya | Rol |
 |--------|-----|
-| `apps/api/.env` | Yerel **`npm run dev`** ile API; `PORT`, `DATABASE_URL` (`localhost` Postgres), JWT, CORS vb. |
+| `apps/api/.env` | Yerel **`npm run dev`** ile API; `PORT`, `DATABASE_URL` (yerelde genelde `localhost` Postgres; **RDS** hedefliyorsanız endpoint + TLS — **§1d**), JWT, CORS vb. |
 | `apps/web/.env.local` | Yerel **`npm run dev`** ile Web; özellikle `NEXT_PUBLIC_API_URL` API’nin gerçek portu ile uyumlu olmalı (rewrite kullanılmıyorsa veya doğrudan API’ye gidiliyorsa). |
-| `infra/app/.env.app` | **Sadece Docker** compose + container runtime; `DATABASE_URL` içinde **`host.docker.internal`** (host Postgres). |
+| `infra/app/.env.app` | **Sadece Docker** compose + container runtime; `DATABASE_URL` içinde **host Postgres** için `host.docker.internal`, **RDS** için **endpoint hostname** (asla container içi `localhost` değil). |
 | `infra/app/.env` | Compose’un `${VAR}` interpolasyonu için; pratikte **`.env.app`’a symlink**. |
 
 Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri repoya commit edilmez (`.gitignore`).
@@ -141,15 +144,73 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 **Ortam notları**
 
 - **Host Postgres (Docker Desktop Mac/Win):** `DATABASE_URL` içinde host `host.docker.internal` kullanın. Compose’ta `extra_hosts: host.docker.internal:host-gateway` tanımlıdır (Linux uyumu).  
-- **Migration:** İmaj içinde `prisma` CLI yok (`npm prune` sonrası). Şemayı güncelledikten sonra migration’ı **host’tan** aynı `DATABASE_URL` ile çalıştırın: `cd apps/api && npx prisma migrate deploy`.  
+- **AWS RDS:** `DATABASE_URL` içinde RDS **endpoint** hostname; genelde `?sslmode=require`. Güvenlik grubunda **5432** için yalnızca gerekli kaynaklar (geliştirici IP’si, uygulama sunucusu/VPC). **Private RDS** ise geliştirici makinesinden VPN veya bastion üzerinden erişim gerekir.  
+- **Migration:** İmaj içinde `prisma` CLI yok (`npm prune` sonrası). Şemayı güncelledikten sonra migration’ı, veritabanına **ağdan erişebilen** bir ortamda (host veya CI) hedef `DATABASE_URL` ile çalıştırın: `cd apps/api && npx prisma migrate deploy`.  
 - **Uploads:** `api_uploads` volume — kart görselleri container yeniden oluşturulunca kalır.  
 - **Monitoring:** `crm-monitoring` ayrı compose’tur; API/Web portları host’a publish edildiği sürece mevcut Blackbox hedefleri (`host.docker.internal:3000`, API portu) çalışmaya devam edebilir.
 
 **Ağ (Docker build):** `npm ci` sırasında `ECONNRESET` gibi hatalar olursa Dockerfile’larda npm yeniden deneme + BuildKit cache mount kullanılır (`/home/node/.npm`, `uid=1000,gid=1000` — builder `USER node` ile uyumlu); tekrar `docker compose ... build` deneyin. Mümkünse stabil ağ / VPN kapatılmış bağlantı.
 
-**API container hemen çıkıyorsa / DB hatası:** Log’da `Can't reach database server at localhost:5432` görürseniz, `infra/app/.env.app` içindeki `DATABASE_URL` hâlâ `localhost` kullanıyordur. Container içinde `localhost` = container kendisi. Host’taki Postgres için `host.docker.internal` kullanın (`infra/app/.env.app.example` uyarısı).
+**API container hemen çıkıyorsa / DB hatası:** Log’da `Can't reach database server at localhost:5432` görürseniz, `infra/app/.env.app` içindeki `DATABASE_URL` hâlâ `localhost` kullanıyordur. Container içinde `localhost` = container kendisi. Host’taki Postgres için `host.docker.internal` kullanın (`infra/app/.env.app.example` uyarısı). **RDS** kullanıyorsanız endpoint’in çözüldüğünü ve güvenlik grubunun container çıkış IP’sine (veya VPC yönlendirmesine) izin verdiğini doğrulayın.
 
 **Kod inceleme / merge:** Bu iş feature branch üzerinde yapılır; `main`’e merge yalnızca siz Docker + uçtan uca akışı test edip onayladıktan sonra yapılmalıdır.
+
+---
+
+## 1d. AWS RDS PostgreSQL (yönetilen CRM veritabanı)
+
+Prisma veri kaynağı yalnızca `DATABASE_URL` kullanır; **uygulama kodunda RDS’e özel değişiklik gerekmez**. Bağlantı dizesi, ağ (VPC / public erişim) ve TLS kurumsal politikanıza göre ayarlanır.
+
+### RDS örneği hazırlık kontrol listesi (AWS konsol veya IaC)
+
+1. **Motor sürümü:** Projede yerel geliştirme için PostgreSQL **15+** önerilir (`docs/environment-setup.md`); RDS’te aynı major ile başlamak migration uyumu için uygundur (15 veya 16).
+2. **Ağ:** Subnet grubu ve erişilebilirlik (**public** mi **private** mi). Geliştirici makinesi veya Docker host’tan doğrudan bağlanacaksanız public erişim + sıkı güvenlik grubu veya **VPN / bastion** ile private erişim.
+3. **Güvenlik grubu:** Gelen **5432** yalnızca gerekli IP aralıkları veya VPC içi kaynaklar; `0.0.0.0/0` önerilmez. Ev / mobil ofiste IP sık değişiyorsa kuralı güncellemeniz gerekir.
+4. **Kullanıcı ve veritabanı:** RDS oluşturma sırasındaki yönetici kullanıcıdan ayrı olarak, uygulama için güçlü parolalı bir kullanıcı ve boş bir veritabanı oluşturun; `DATABASE_URL` bu bilgileri içerir (sırlar repoda tutulmaz).
+5. **TLS:** Bağlantı URI’sinde genelde **`?sslmode=require`**. Kurum CA doğrulaması zorunluysa `sslrootcert` ile sertifika dosyası yolu eklenir (Prisma/Node TLS davranışı; ayrıntı AWS ve kurum dokümantasyonunda).
+
+### `DATABASE_URL` (örnek şekil)
+
+`postgresql://APP_USER:URL_ENCODED_PASSWORD@YOUR_RDS_ENDPOINT.region.rds.amazonaws.com:5432/crm_db?sslmode=require`
+
+- Özel karakterli parolalar URI içinde **URL-encode** edilmelidir.
+- Docker’daki API container’ı RDS’e bağlanırken hostname olarak **RDS endpoint** kullanılır; `localhost` veya `127.0.0.1` **kullanılmaz**.
+
+### Şema ve migration (RDS boşken)
+
+Hedef veritabanına ağ erişimi olan makinede `apps/api/.env` veya ortam değişkeni ile RDS `DATABASE_URL` set edin:
+
+```bash
+cd apps/api && npx prisma migrate deploy
+```
+
+Bu komut tabloları ve `_prisma_migrations` kayıtlarını RDS üzerinde oluşturur (tek doğruluk kaynağı: repodaki Prisma migration’ları).
+
+### Yerel PostgreSQL’den veri taşıma
+
+1. Yukarıdaki `migrate deploy` ile RDS şeması hazır olduktan sonra, **yerel** veritabanından veri aktarın (şema zaten RDS’te olduğu için çoğu senaryoda **yalnızca veri** yeterlidir).
+2. Örnek (yerel URL ile dump, sıkıştırılmış custom format):
+
+```bash
+pg_dump "postgresql://crm_user:...@localhost:5432/crm_db" -Fc --no-owner --no-acl -f crm_local.dump
+pg_restore -h YOUR_RDS_ENDPOINT.region.rds.amazonaws.com -p 5432 -U APP_USER -d crm_db --no-owner --no-acl --data-only crm_local.dump
+```
+
+- Tablo sırası / FK nedeniyle hata alırsanız: dump’ı **`--data-only`** ile şema eşleştiğinden emin olun veya geçici olarak bağımlılıkları dokümantasyona göre sırayla yükleyin.
+- Alternatif: `pg_dump --data-only` metin çıktısı + `psql` ile RDS’e import (küçük veri setleri için).
+
+### `uploads` (dosya sistemi)
+
+Kart görselleri vb. **`apps/api/uploads`** altında dosya olarak durur; veritabanı dump’ına dahil değildir. Ortam değişince bu dizini ihtiyaca göre **kopyalayın** veya aynı volume stratejisini koruyun.
+
+### Faz 8 — `postgres_exporter`
+
+CRM metrikleri için `infra/monitoring/.env.monitoring` içindeki **`POSTGRES_EXPORTER_DSN`** değerini RDS endpoint ve uygulama politikasına uygun TLS (`sslmode=require` gibi) ile güncelleyin; aksi halde exporter eski host’u gösterir. Örnek şablon: `infra/monitoring/.env.monitoring.example`.
+
+### Doğrulama
+
+- `GET /api/v1/health/ready` — veritabanı hazır mı (runbook: `docs/runbooks/crm-api-down.md`).
+- Giriş ve kritik bir CRUD ekranı duman testi.
 
 ---
 
@@ -159,7 +220,7 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 
 - [ ] **CORS_ORIGIN** ortam değişkeni set edildi (canlı **web origin**(leri); virgülle ayrılmış birden fazla olabilir).  
   **Senaryo A (kesin):** Tek site — örnek: `CORS_ORIGIN=https://uygulama.com` (`www` kullanılıyorsa ikinci satır olarak eklenir).
-- [ ] **DATABASE_URL** production veritabanına işaret ediyor.
+- [ ] **DATABASE_URL** production veritabanına işaret ediyor (ör. **AWS RDS** endpoint; TLS için `sslmode=require` veya kurum politikası; güvenlik grubu erişimi doğrulandı — bkz. **§1d**).
 - [ ] **JWT_ACCESS_SECRET**, **JWT_REFRESH_SECRET** güçlü ve production’a özel değerler.
 - [ ] **PORT** (veya host) production ortamına uygun.
 - [ ] **ANTHROPIC_API_KEY** (AI analiz — Claude) — console.anthropic.com'dan alınır; Claude seçildiğinde zorunlu.
@@ -209,7 +270,7 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 - **Rate limit (Sistem Ayarları) + hesap kilidi (sec7-06):** `apps/api/src/modules/auth/auth-throttle.factory.ts` (`@Throttle` limit/ttl → `RATE_LIMIT_*`); `auth.service.ts` (`failedLoginCount`, `lockedUntil`, env/ayar: `ACCOUNT_LOCKOUT_*`). Global `ThrottlerModule` + `ThrottlerGuard` `app.module.ts`.
 - **Rewrites:** `apps/web/next.config.ts` — `NODE_ENV === 'production'` iken rewrite eklenmez; DEV hedefi `INTERNAL_API_URL` veya varsayılan `http://localhost:3002`.
 - **Docker uygulama:** `apps/api/Dockerfile`, `apps/web/Dockerfile`, `infra/app/docker-compose.app.yml`, `infra/app/.env.app.example` — bkz. §1b ve **§1c** (imaj boyutu). Web: Next `standalone` + `outputFileTracingRoot` (`apps/web/next.config.ts`). **Sürüm pinleme (Fortify):** taban imaj + apt + monitoring Grafana Postgres imajı — §1b “Sürüm pinleme” paragrafı.
-- **Prisma engine hedefleri:** `apps/api/prisma/schema.prisma` `generator` → `binaryTargets` — bkz. §1c.
+- **Prisma engine hedefleri:** `apps/api/prisma/schema.prisma` `generator` → `binaryTargets` — bkz. §1c. Veritabanı bağlantısı: `datasource` → `env("DATABASE_URL")`; **AWS RDS** için **§1d**.
 - **Web CSP / güvenlik başlıkları (sec7-05):** `apps/web/src/middleware.ts` + `apps/web/src/lib/security-headers.ts` — **CSP + HSTS yalnızca production**; geliştirmede CSP yok (Turbopack/HMR uyumu). Diğer başlıklar (nosniff, frame, referrer, permissions) dev’de de gelir. Tesseract CDN yalnızca prod CSP’de whitelist. **`connect-src`:** `getApiOrigin()` ile `NEXT_PUBLIC_API_URL`’in origin’i eklenir (Docker’da web/API farklı port).
 - **MFA SMS:** `apps/api/src/modules/sms/sms.service.ts` — Twilio Verify API; credentials yoksa OTP terminale basar.
 - **API base URL (mobile):** `apps/mobile/lib/api.ts` — `getApiBaseUrl()` / `EXPO_PUBLIC_API_URL`; Android emülatör `10.0.2.2`, fiziksel cihaz LAN IP.
@@ -226,6 +287,7 @@ Bunlar **farklı amaçlar** içindir; biri diğerinin yerine geçmez. Hiçbiri r
 - **CORS**, **proxy**, **log seviyesi**, **feature flag** gibi ortama göre değişen davranış eklendiğinde.
 - **Çerez / oturum / CSP** (Faz 7) değiştiğinde; **Docker / compose** port veya build-arg davranışı değiştiğinde.
 - **Docker imaj boyutu standartları** (§1c) veya `.cursor/rules/docker-images.mdc` ile çelişen Dockerfile / `next.config` / Prisma `binaryTargets` değişikliği yapıldığında.
+- **Yönetilen PostgreSQL (ör. AWS RDS)** bağlantı modeli, TLS veya migration / veri taşıma prosedürü değiştiğinde (**§1d**).
 - Canlıya geçiş sürecinde yeni bir adım veya risk fark edildiğinde.
 
 Bu sayede tek bir yerden DEV/PROD farkları ve go-live adımları takip edilmiş olur.

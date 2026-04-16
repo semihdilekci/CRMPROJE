@@ -133,7 +133,7 @@ ENVIRONMENT VARIABLES
 ==============================
 
 Required environment variables (never hardcode these):
-- DATABASE_URL — PostgreSQL connection string
+- DATABASE_URL — PostgreSQL connection string (yerel, **AWS RDS** veya diğer yönetilen PG; TLS ve erişim: `docs/deployment-and-env-strategy.md` §1d)
 - JWT_ACCESS_SECRET — access token signing key
 - JWT_REFRESH_SECRET — refresh token signing key
 - JWT_ACCESS_EXPIRATION — access token TTL

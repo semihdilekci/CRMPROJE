@@ -11,6 +11,8 @@ Fuarlarda tanışılan müşterilerin kayıtlarının tutulduğu kurumsal CRM uy
 
 Detaylı teknoloji listesi için: [docs/tech-stack.md](docs/tech-stack.md)
 
+Veritabanını **AWS RDS PostgreSQL** ile kullanmak için: [docs/deployment-and-env-strategy.md](docs/deployment-and-env-strategy.md) (§1d) ve [docs/environment-setup.md](docs/environment-setup.md) (§2a).
+
 ## Kurulum
 
 1. Gereksinimler: Node.js v20+, PostgreSQL 15+, npm

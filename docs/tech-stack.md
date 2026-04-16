@@ -37,7 +37,7 @@ BACKEND STACK (MANDATORY)
 - Node.js
 - NestJS (NOT Express standalone)
 - TypeScript (strict mode)
-- PostgreSQL (local development, Supabase-ready for production)
+- PostgreSQL (local development; staging/production: Supabase, **AWS RDS**, or any managed PostgreSQL)
 - Prisma ORM
 - JWT Authentication (access + refresh tokens via Passport.js)
 - Zod Validation
@@ -92,10 +92,10 @@ No direct database access from mobile.
 DATABASE STRATEGY
 ==============================
 
-- Development: Local PostgreSQL
-- Staging/Production: Supabase (PostgreSQL) or any cloud PostgreSQL provider
+- Development: Local PostgreSQL (or optional direct connection to a **dev RDS** instance — see `docs/deployment-and-env-strategy.md` §1d)
+- Staging/Production: **AWS RDS** (PostgreSQL), Supabase (PostgreSQL), or any cloud PostgreSQL provider
 - ORM: Prisma (mandatory, no raw SQL)
-- Migration between local and cloud requires only DATABASE_URL change in .env
+- Migration between environments is primarily a **`DATABASE_URL`** change in `.env` (plus network access and TLS, e.g. `sslmode=require` for RDS)
 - Do not use Supabase Auth, Storage, or Realtime — custom implementations via NestJS.
 - No vendor lock-in. Database layer is fully abstracted by Prisma.
 
