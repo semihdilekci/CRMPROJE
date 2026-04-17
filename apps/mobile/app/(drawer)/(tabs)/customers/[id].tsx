@@ -113,7 +113,7 @@ export default function CustomerDetailScreen() {
           name: profile.customer.name,
           phone: profile.customer.phone ?? '',
           email: profile.customer.email ?? '',
-          address: null,
+          address: profile.customer.address ?? null,
         }}
         onClose={() => setEditVisible(false)}
       />

@@ -115,8 +115,11 @@ export function useDeleteCustomer() {
     mutationFn: async (id: string) => {
       await api.delete(`/customers/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customers.profile(id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
     },
   });

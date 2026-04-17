@@ -86,6 +86,7 @@ export interface CustomerProfileResponse {
     id: string;
     company: string;
     name: string;
+    address: string | null;
     phone: string | null;
     email: string | null;
     cardImage: string | null;

@@ -8,11 +8,14 @@ import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import {
   useCustomerProfile,
+  useDeleteCustomer,
   useDeleteOpportunityNote,
   useUpdateOpportunityNote,
 } from '@/hooks/use-customers';
+import { CustomerEditModal } from '@/components/customer/CustomerEditModal';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const ORDERED_STAGES = ['tanisma', 'toplanti', 'teklif', 'sozlesme'] as const;
 
@@ -88,8 +91,12 @@ export default function CustomerProfilePage() {
   const { data: profile, isLoading } = useCustomerProfile(customerId);
   const updateNote = useUpdateOpportunityNote(customerId);
   const deleteNote = useDeleteOpportunityNote(customerId);
+  const deleteCustomer = useDeleteCustomer();
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [editCustomerOpen, setEditCustomerOpen] = useState(false);
+  const [deleteCustomerOpen, setDeleteCustomerOpen] = useState(false);
+  const [deleteCustomerError, setDeleteCustomerError] = useState('');
 
   const timeline = useMemo(() => {
     if (!profile) return [];
@@ -134,6 +141,20 @@ export default function CustomerProfilePage() {
   const handleDeleteNote = async (opportunityId: string, noteId: string) => {
     await deleteNote.mutateAsync({ opportunityId, noteId });
     if (editingNoteId === noteId) setEditingNoteId(null);
+  };
+
+  const handleConfirmDeleteCustomer = async () => {
+    setDeleteCustomerError('');
+    try {
+      await deleteCustomer.mutateAsync(customerId);
+      setDeleteCustomerOpen(false);
+      router.push('/customers');
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Müşteri silinemedi.';
+      setDeleteCustomerError(message);
+    }
   };
 
   if (isLoading || !profile) {
@@ -222,10 +243,21 @@ export default function CustomerProfilePage() {
               </div>
 
               <div className="flex gap-2 md:flex-col md:items-end">
-                <Button className="px-5 py-2 text-[13px]">✏️ Düzenle</Button>
                 <Button
+                  type="button"
+                  className="px-5 py-2 text-[13px]"
+                  onClick={() => setEditCustomerOpen(true)}
+                >
+                  ✏️ Düzenle
+                </Button>
+                <Button
+                  type="button"
                   variant="danger"
                   className="border border-red-400/25 bg-red-400/10 px-5 py-2 text-[13px] text-red-400"
+                  onClick={() => {
+                    setDeleteCustomerError('');
+                    setDeleteCustomerOpen(true);
+                  }}
                 >
                   🗑 Sil
                 </Button>
@@ -538,6 +570,24 @@ export default function CustomerProfilePage() {
           </section>
         </ContentWrapper>
       </div>
+
+      <CustomerEditModal
+        open={editCustomerOpen}
+        onClose={() => setEditCustomerOpen(false)}
+        initial={profile.customer}
+      />
+      <ConfirmDialog
+        open={deleteCustomerOpen}
+        onClose={() => {
+          setDeleteCustomerOpen(false);
+          setDeleteCustomerError('');
+        }}
+        onConfirm={handleConfirmDeleteCustomer}
+        title="Müşteriyi Sil"
+        message={`"${profile.customer.company}" müşterisini ve ilişkili tüm fırsat verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        loading={deleteCustomer.isPending}
+        error={deleteCustomerError || undefined}
+      />
 
       <style jsx global>{`
         @keyframes fadeUp {
