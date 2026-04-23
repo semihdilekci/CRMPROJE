@@ -33,6 +33,8 @@ export const queryKeys = {
       ['opportunities', opportunityId, 'stages'] as const,
     hasOffer: (opportunityId: string) =>
       ['opportunities', opportunityId, 'has-offer'] as const,
+    notes: (opportunityId: string) =>
+      ['opportunities', opportunityId, 'notes'] as const,
   },
   reports: {
     executiveSummary: (filters?: Record<string, string>) => ['reports', 'executive-summary', filters ?? {}] as const,

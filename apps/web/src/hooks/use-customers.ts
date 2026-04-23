@@ -10,6 +10,7 @@ import type {
   CreateCustomerDto,
   UpdateCustomerDto,
 } from '@crm/shared';
+import { API_ENDPOINTS } from '@crm/shared';
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -97,6 +98,38 @@ export function useDeleteCustomer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+    },
+  });
+}
+
+export function useCreateOpportunityNote(customerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      opportunityId,
+      fairId,
+      content,
+    }: {
+      opportunityId: string;
+      fairId: string;
+      content: string;
+    }) => {
+      const { data } = await api.post<ApiSuccessResponse<OpportunityNote>>(
+        API_ENDPOINTS.OPPORTUNITIES.NOTES(opportunityId),
+        { content },
+      );
+      return data.data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customers.profile(customerId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.notes(variables.opportunityId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.byFair(variables.fairId),
+      });
     },
   });
 }
