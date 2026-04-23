@@ -7,6 +7,7 @@ import { formatBudget, getStageLabel } from '@crm/shared';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import {
+  useCreateOpportunityNote,
   useCustomerProfile,
   useDeleteCustomer,
   useDeleteOpportunityNote,
@@ -14,6 +15,8 @@ import {
 } from '@/hooks/use-customers';
 import { CustomerEditModal } from '@/components/customer/CustomerEditModal';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -92,11 +95,16 @@ export default function CustomerProfilePage() {
   const updateNote = useUpdateOpportunityNote(customerId);
   const deleteNote = useDeleteOpportunityNote(customerId);
   const deleteCustomer = useDeleteCustomer();
+  const createOpportunityNote = useCreateOpportunityNote(customerId);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [editCustomerOpen, setEditCustomerOpen] = useState(false);
   const [deleteCustomerOpen, setDeleteCustomerOpen] = useState(false);
   const [deleteCustomerError, setDeleteCustomerError] = useState('');
+  const [addNoteOpen, setAddNoteOpen] = useState(false);
+  const [addNoteOpportunityId, setAddNoteOpportunityId] = useState('');
+  const [addNoteContent, setAddNoteContent] = useState('');
+  const [addNoteError, setAddNoteError] = useState('');
 
   const timeline = useMemo(() => {
     if (!profile) return [];
@@ -154,6 +162,47 @@ export default function CustomerProfilePage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Müşteri silinemedi.';
       setDeleteCustomerError(message);
+    }
+  };
+
+  const openAddNoteModal = () => {
+    if (timeline.length === 0) return;
+    setAddNoteError('');
+    setAddNoteContent('');
+    setAddNoteOpportunityId(timeline[0]!.id);
+    setAddNoteOpen(true);
+  };
+
+  const closeAddNoteModal = () => {
+    setAddNoteOpen(false);
+    setAddNoteError('');
+    setAddNoteContent('');
+  };
+
+  const handleSubmitNewNote = async () => {
+    const trimmed = addNoteContent.trim();
+    if (!trimmed) {
+      setAddNoteError('Not içeriği zorunludur.');
+      return;
+    }
+    const opp = timeline.find((item) => item.id === addNoteOpportunityId);
+    if (!opp) {
+      setAddNoteError('Lütfen bir fırsat seçin.');
+      return;
+    }
+    setAddNoteError('');
+    try {
+      await createOpportunityNote.mutateAsync({
+        opportunityId: opp.id,
+        fairId: opp.fairId,
+        content: trimmed,
+      });
+      closeAddNoteModal();
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Not eklenirken bir hata oluştu.';
+      setAddNoteError(message);
     }
   };
 
@@ -560,12 +609,21 @@ export default function CustomerProfilePage() {
                 );
               })}
 
-              <button
-                type="button"
-                className="my-4 w-full rounded-xl border border-dashed border-violet-500/25 bg-violet-500/8 px-4 py-3 text-sm text-violet-300/80 transition-colors hover:bg-violet-500/14 hover:text-violet-300"
-              >
-                + Not Ekle
-              </button>
+              <div className="my-4">
+                <button
+                  type="button"
+                  disabled={timeline.length === 0}
+                  onClick={openAddNoteModal}
+                  className="w-full rounded-xl border border-dashed border-violet-500/25 bg-violet-500/8 px-4 py-3 text-sm text-violet-300/80 transition-colors hover:bg-violet-500/14 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-violet-500/8"
+                >
+                  + Not Ekle
+                </button>
+                {timeline.length === 0 && (
+                  <p className="mt-2 text-center text-[12px] text-[#f0ede8]/40">
+                    Not eklemek için müşterinin en az bir fuar fırsatı olmalıdır.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
         </ContentWrapper>
@@ -588,6 +646,44 @@ export default function CustomerProfilePage() {
         loading={deleteCustomer.isPending}
         error={deleteCustomerError || undefined}
       />
+      <Modal open={addNoteOpen} onClose={closeAddNoteModal} title="Not Ekle" strongerBlur>
+        <div className="flex flex-col gap-4">
+          {addNoteError && (
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{addNoteError}</p>
+          )}
+          <Select
+            label="Fırsat (fuar)"
+            value={addNoteOpportunityId}
+            onChange={(e) => setAddNoteOpportunityId(e.target.value)}
+          >
+            {timeline.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.fairName} · {formatDateRange(item.fairStartDate, item.fairEndDate)}
+              </option>
+            ))}
+          </Select>
+          <Textarea
+            label="Not"
+            placeholder="Not metnini yazın..."
+            value={addNoteContent}
+            onChange={(e) => setAddNoteContent(e.target.value)}
+            className="min-h-[120px] text-[13px]"
+          />
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" className="flex-1" onClick={closeAddNoteModal}>
+              İptal
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={createOpportunityNote.isPending}
+              onClick={() => void handleSubmitNewNote()}
+            >
+              {createOpportunityNote.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <style jsx global>{`
         @keyframes fadeUp {
