@@ -4,6 +4,7 @@
   "private": true,
   "description": "NestJS backend API",
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",

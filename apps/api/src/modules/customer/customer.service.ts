@@ -264,6 +264,7 @@ export class CustomerService {
         id: customer.id,
         company: customer.company,
         name: customer.name,
+        address: customer.address ?? null,
         phone: customer.phone,
         email: customer.email,
         cardImage: customer.cardImage ?? null,
