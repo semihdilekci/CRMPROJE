@@ -37,11 +37,17 @@ export class CustomerContactService {
     await this.ensureCustomerExists(customerId);
 
     if (!options.force) {
-      const duplicate = await this.findDuplicate(customerId, dto);
-      if (duplicate) {
+      const duplicateResult = await this.findDuplicate(customerId, dto);
+      if (duplicateResult) {
+        const { contact: duplicate, matchedBy } = duplicateResult;
+        const messageMap = {
+          both: 'Bu firmada aynı e-posta ve telefon numarasına sahip bir temsilci zaten mevcut',
+          email: 'Bu firmada aynı e-posta adresine sahip bir temsilci zaten mevcut',
+          phone: 'Bu firmada aynı telefon numarasına sahip bir temsilci zaten mevcut',
+        };
         throw new HttpException(
           {
-            message: 'Bu firmada aynı e-posta veya telefona sahip bir temsilci zaten mevcut',
+            message: messageMap[matchedBy],
             error: 'CONFLICT',
             details: {
               duplicateOf: {
@@ -49,6 +55,7 @@ export class CustomerContactService {
                 name: duplicate.name,
                 phone: duplicate.phone,
                 email: duplicate.email,
+                matchedBy,
               },
             },
           },
@@ -147,7 +154,7 @@ export class CustomerContactService {
   private async findDuplicate(
     customerId: string,
     dto: CreateCustomerContactDto,
-  ) {
+  ): Promise<{ contact: { id: string; name: string; phone: string | null; email: string | null }; matchedBy: 'email' | 'phone' | 'both' } | null> {
     const contacts = await this.prisma.customerContact.findMany({
       where: { customerId },
     });
@@ -155,15 +162,17 @@ export class CustomerContactService {
     const normalizedEmail = this.normalizeEmail(dto.email);
     const normalizedPhone = this.normalizePhone(dto.phone);
 
-    return contacts.find((c) => {
-      if (normalizedEmail && this.normalizeEmail(c.email) === normalizedEmail) {
-        return true;
+    for (const c of contacts) {
+      const emailMatch = !!(normalizedEmail && this.normalizeEmail(c.email) === normalizedEmail);
+      const phoneMatch = !!(normalizedPhone && this.normalizePhone(c.phone) === normalizedPhone);
+      if (emailMatch || phoneMatch) {
+        return {
+          contact: c,
+          matchedBy: emailMatch && phoneMatch ? 'both' : emailMatch ? 'email' : 'phone',
+        };
       }
-      if (normalizedPhone && this.normalizePhone(c.phone) === normalizedPhone) {
-        return true;
-      }
-      return false;
-    }) ?? null;
+    }
+    return null;
   }
 
   private normalizePhone(phone: string | null | undefined): string | null {

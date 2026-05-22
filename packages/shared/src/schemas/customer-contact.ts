@@ -3,7 +3,14 @@ import { z } from 'zod';
 export const createCustomerContactSchema = z.object({
   name: z.string().min(1, 'Ad soyad zorunludur'),
   phone: z.string().nullable().optional(),
-  email: z.string().email('E-posta formatı geçersizdir.').nullable().optional(),
+  email: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => !val || /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(val),
+      { message: 'Geçerli bir e-posta adresi giriniz' },
+    ),
   cardImage: z.string().nullable().optional(),
 });
 

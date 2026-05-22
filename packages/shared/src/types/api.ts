@@ -22,6 +22,8 @@ export interface DuplicateContactMeta {
     name: string;
     phone: string | null;
     email: string | null;
+    /** Hangi alanın eşleştiğini belirtir */
+    matchedBy: 'email' | 'phone' | 'both';
   };
 }
 

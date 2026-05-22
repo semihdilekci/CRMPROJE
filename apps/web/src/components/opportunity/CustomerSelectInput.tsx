@@ -31,6 +31,7 @@ interface DuplicateWarning {
   name: string;
   phone: string | null;
   email: string | null;
+  matchedBy?: 'email' | 'phone' | 'both';
 }
 
 export function CustomerSelectInput({
@@ -318,10 +319,24 @@ export function CustomerSelectInput({
           <div className="rounded-[10px] border border-white/20 bg-white/10 p-4 backdrop-blur-xl">
             {duplicate ? (
               <div className="flex flex-col gap-3">
-                <p className="text-[13px] text-warning">
-                  <span className="font-semibold">{duplicate.name}</span> bu firmada zaten mevcut.
-                  {duplicate.email && ` (${duplicate.email})`}
-                </p>
+                <div>
+                  <p className="text-[13px] text-warning">
+                    {duplicate.matchedBy === 'both' &&
+                      'Aynı e-posta adresi ve telefon numarası sistemde farklı bir temsilcide kayıtlıdır.'}
+                    {duplicate.matchedBy === 'email' &&
+                      'Aynı e-posta adresi sistemde farklı bir temsilcide kayıtlıdır.'}
+                    {duplicate.matchedBy === 'phone' &&
+                      'Aynı telefon numarası sistemde farklı bir temsilcide kayıtlıdır.'}
+                    {!duplicate.matchedBy &&
+                      'Bu firmada benzer bilgilere sahip bir temsilci zaten mevcut.'}
+                  </p>
+                  <p className="mt-1 text-[12px] text-white/50">
+                    Mevcut temsilci:{' '}
+                    <span className="font-medium text-white/80">{duplicate.name}</span>
+                    {duplicate.email && ` · ${duplicate.email}`}
+                    {duplicate.phone && ` · ${duplicate.phone}`}
+                  </p>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"

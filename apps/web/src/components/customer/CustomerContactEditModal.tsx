@@ -26,6 +26,7 @@ interface DuplicateWarning {
   name: string;
   phone: string | null;
   email: string | null;
+  matchedBy?: 'email' | 'phone' | 'both';
 }
 
 interface CustomerContactEditModalProps {
@@ -139,7 +140,12 @@ export function CustomerContactEditModal({
   };
 
   const onSubmit = async (data: CreateCustomerContactDto) => {
-    const dto = { ...data, cardImage: cardImage || null };
+    const dto: CreateCustomerContactDto = {
+      ...data,
+      phone: data.phone?.trim() || null,
+      email: data.email?.trim() || null,
+      cardImage: cardImage || null,
+    };
     await submitContact(dto, false);
   };
 
@@ -163,10 +169,20 @@ export function CustomerContactEditModal({
           <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
             <p className="text-[14px] font-medium text-warning">Benzer temsilci mevcut</p>
             <p className="mt-1 text-[13px] text-white/70">
-              Aynı firmada{' '}
-              <span className="font-semibold text-white">{duplicate.name}</span>{' '}
-              {duplicate.email ? `(${duplicate.email})` : ''}{' '}
-              {duplicate.phone ? `/ ${duplicate.phone}` : ''} bilgileriyle bir temsilci zaten var.
+              {duplicate.matchedBy === 'both' &&
+                'Aynı e-posta adresi ve telefon numarası sistemde farklı bir temsilcide kayıtlıdır.'}
+              {duplicate.matchedBy === 'email' &&
+                'Aynı e-posta adresi sistemde farklı bir temsilcide kayıtlıdır.'}
+              {duplicate.matchedBy === 'phone' &&
+                'Aynı telefon numarası sistemde farklı bir temsilcide kayıtlıdır.'}
+              {!duplicate.matchedBy &&
+                'Bu firmada benzer bilgilere sahip bir temsilci zaten mevcut.'}
+            </p>
+            <p className="mt-2 text-[12px] text-white/50">
+              Mevcut temsilci:{' '}
+              <span className="font-semibold text-white/80">{duplicate.name}</span>
+              {duplicate.email && ` · ${duplicate.email}`}
+              {duplicate.phone && ` · ${duplicate.phone}`}
             </p>
           </div>
 
