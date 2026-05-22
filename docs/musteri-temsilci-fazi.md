@@ -1131,7 +1131,7 @@ Bağımlılık: MT-7
 Commit:
   refactor(web): customer list shows company + contact count
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-13 — Frontend Web: Müşteri Profil Sayfası Refactor (Firma 360°)
