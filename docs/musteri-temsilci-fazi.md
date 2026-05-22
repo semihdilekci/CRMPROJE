@@ -1286,7 +1286,7 @@ Commit:
   chore(mobile): minimum compat with Customer/Contact split; full
                  contact management deferred to Phase 5
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-16 — Test & Doğrulama
@@ -1348,7 +1348,7 @@ Bağımlılık: MT-1 — MT-15
 Commit:
   test: verify customer/contact separation end-to-end
 
-Durum: [ ]
+Durum: [x]
 
 ==============================
 ÖZET — İŞ SIRASI
