@@ -140,10 +140,12 @@ export function CustomerContactEditModal({
   };
 
   const onSubmit = async (data: CreateCustomerContactDto) => {
+    const rawEmail = data.email?.trim() ?? '';
     const dto: CreateCustomerContactDto = {
       ...data,
       phone: data.phone?.trim() || null,
-      email: data.email?.trim() || null,
+      // OCR bazen eksik TLD ile e-posta çekebilir; @ içermiyorsa null gönder
+      email: rawEmail && rawEmail.includes('@') ? rawEmail : null,
       cardImage: cardImage || null,
     };
     await submitContact(dto, false);

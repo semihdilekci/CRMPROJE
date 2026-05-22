@@ -204,10 +204,12 @@ export function CustomerSelectInput({
       setContactError('Ad soyad zorunludur.');
       return;
     }
+    const rawEmail = contactEmail.trim();
     const dto: CreateCustomerContactDto = {
       name: contactName.trim(),
       phone: contactPhone.trim() || null,
-      email: contactEmail.trim() || null,
+      // OCR bazen eksik TLD ile e-posta çekebilir; @ içermiyorsa null gönder
+      email: rawEmail && rawEmail.includes('@') ? rawEmail : null,
       cardImage: contactCardImage,
     };
     try {

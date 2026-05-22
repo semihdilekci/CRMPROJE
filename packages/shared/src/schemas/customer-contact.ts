@@ -8,7 +8,7 @@ export const createCustomerContactSchema = z.object({
     .nullable()
     .optional()
     .refine(
-      (val) => !val || /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(val),
+      (val) => !val || val.includes('@'),
       { message: 'Geçerli bir e-posta adresi giriniz' },
     ),
   cardImage: z.string().nullable().optional(),
