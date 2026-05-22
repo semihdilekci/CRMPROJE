@@ -1,0 +1,26 @@
+# Sadece yerel geliştirme PostgreSQL — API/Web Node süreçleri host’ta çalışırken kullanın.
+# Kökten: npm run db:dev:up
+# apps/api/.env → DATABASE_URL=postgresql://crm_dev:crm_dev@localhost:5433/crm_dev
+# Ardından: cd apps/api && npx prisma migrate deploy
+
+name: crm-dev-postgres
+
+services:
+  postgres:
+    image: postgres:16.13-alpine3.23@sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: crm_dev
+      POSTGRES_PASSWORD: crm_dev
+      POSTGRES_DB: crm_dev
+    volumes:
+      - crm_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_dev -d crm_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  crm_dev_pgdata: {}

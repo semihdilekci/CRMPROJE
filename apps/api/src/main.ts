@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
-import { getCorsOrigins } from '@common/cors-origins';
+import { resolveCorsOrigin } from '@common/cors-origins';
 import { jsonRequestLoggerMiddleware } from '@common/middleware/json-request-logger.middleware';
 
 async function bootstrap(): Promise<void> {
@@ -23,12 +23,11 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  const corsOrigins = getCorsOrigins();
   app.use(cookieParser());
   app.use(jsonRequestLoggerMiddleware);
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: resolveCorsOrigin(),
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

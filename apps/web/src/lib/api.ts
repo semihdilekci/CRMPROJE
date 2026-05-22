@@ -7,27 +7,28 @@ import { getAccessToken, setAccessToken } from '@/lib/access-token';
  * DEV (next dev): tarayıcı `/api/v1` → next.config rewrites ile API'ye gider (CORS yok).
  * PROD (next start / Docker): rewrite yok; tarayıcı doğrudan NEXT_PUBLIC_API_URL kullanmalı.
  */
-function getBaseURL(): string {
+function resolveApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '') || '';
 
   if (typeof window === 'undefined') {
-    return envUrl || 'http://localhost:3002/api/v1';
+    return envUrl || 'http://127.0.0.1:3002/api/v1';
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    return envUrl || 'http://localhost:3001/api/v1';
+  if (process.env.NODE_ENV !== 'production') {
+    return '/api/v1';
   }
 
-  return '/api/v1';
+  return envUrl || '/api/v1';
 }
 
 const api = axios.create({
-  baseURL: getBaseURL(),
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
+  config.baseURL = resolveApiBaseUrl();
+
   if (typeof window !== 'undefined') {
     const token = getAccessToken();
     if (token) {

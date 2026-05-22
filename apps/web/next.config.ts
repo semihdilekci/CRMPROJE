@@ -1,9 +1,10 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
 
-/** DEV-only rewrite hedefi; Docker içinde `next dev` için örn. http://api:3001 */
+/** DEV-only rewrite hedefi; API PORT ile uyumlu olmalı (apps/api/.env). IPv6 localhost kaçınmak için 127.0.0.1. */
+const devApiPort = process.env.API_PORT || process.env.PORT || '3002';
 const devApiOrigin =
-  process.env.INTERNAL_API_URL?.replace(/\/$/, '') || 'http://localhost:3002';
+  process.env.INTERNAL_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${devApiPort}`;
 
 const nextConfig: NextConfig = {
   /** Docker runner: yalnızca izlenen dosyalar + server.js (bkz. apps/web/Dockerfile). */

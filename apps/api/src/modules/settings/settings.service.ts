@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '@prisma/prisma.service';
 import { AuditService } from '@modules/audit/audit.service';
 import type { SystemSetting, DisplayConfig } from '@crm/shared';
@@ -105,7 +105,7 @@ const DEFAULTS: Array<{ key: string; value: string; description: string }> = [
 ];
 
 @Injectable()
-export class SettingsService implements OnModuleInit {
+export class SettingsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SettingsService.name);
 
   constructor(
@@ -113,13 +113,18 @@ export class SettingsService implements OnModuleInit {
     private readonly auditService: AuditService
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  /**
+   * onModuleInit yerine bootstrap: PrismaService.$connect() tüm modüllerin
+   * onModuleInit aşamasından sonra tamamlanır; varsayılan ayarlar upsert’i
+   * bağlantı hazır olduktan sonra çalıştırırız (yarış ve erken sorgu hatalarını önler).
+   */
+  async onApplicationBootstrap(): Promise<void> {
     try {
       await this.ensureDefaults();
       this.logger.log('Varsayılan sistem ayarları kontrol edildi / oluşturuldu.');
     } catch (err) {
       this.logger.error(
-        'Varsayılan ayarlar oluşturulurken hata. Veritabanı migration\'ı uygulandı mı?',
+        'Varsayılan ayarlar oluşturulurken hata. DATABASE_URL erişilebilir mi, migration uygulandı mı? (docs/environment-setup.md)',
         err
       );
       throw err;
