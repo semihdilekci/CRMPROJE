@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { OpportunityWithCustomer, Customer } from '@crm/shared';
+import type { OpportunityWithCustomer, Customer, CustomerContact } from '@crm/shared';
 import {
   CURRENCIES,
   CONVERSION_RATES,
   CONVERSION_RATE_LABELS,
   CONVERSION_RATE_COLORS,
+  API_ENDPOINTS,
+  type ApiSuccessResponse,
+  type Currency,
+  type ConversionRate,
+  getNextStageInSequence,
+  isTerminalStage,
 } from '@crm/shared';
-import type { Currency, ConversionRate } from '@crm/shared';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { CustomerSelectInput } from '@/components/opportunity/CustomerSelectInput';
@@ -20,16 +25,17 @@ import {
   useCreateOpportunity,
   useUpdateOpportunity,
 } from '@/hooks/use-opportunities';
-import { useUpdateCustomer } from '@/hooks/use-customers';
+import { useUpdateCustomerContact } from '@/hooks/use-customer-contacts';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
-import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import api from '@/lib/api';
 import { useStageHistory } from '@/hooks/use-opportunity-stages';
 import { useProducts } from '@/hooks/use-products';
 import { StageTransitionModal } from '@/components/opportunity/StageTransitionModal';
 import { OfferDownloadButton } from '@/components/opportunity/OfferDownloadButton';
-import { getNextStageInSequence, isTerminalStage } from '@crm/shared';
+import { useDisplayConfig } from '@/hooks/use-display-config';
+import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
+import { StageHistory } from '@/components/opportunity/StageHistory';
 
 function PipelineAndStageHistoryBlock({
   opportunityId,
@@ -67,16 +73,16 @@ function PipelineAndStageHistoryBlock({
         compact={false}
         interactive
       />
-              <div className="mt-3">
-                <StageHistory
-                  opportunityId={opportunityId}
-                  compact={false}
-                  editable
-                  allowDeleteLast
-                  fairId={fairId}
-                />
-                <OfferDownloadButton opportunityId={opportunityId} />
-              </div>
+      <div className="mt-3">
+        <StageHistory
+          opportunityId={opportunityId}
+          compact={false}
+          editable
+          allowDeleteLast
+          fairId={fairId}
+        />
+        <OfferDownloadButton opportunityId={opportunityId} />
+      </div>
       <StageTransitionModal
         open={showStageModal}
         onClose={() => setShowStageModal(false)}
@@ -89,9 +95,6 @@ function PipelineAndStageHistoryBlock({
     </>
   );
 }
-import { useDisplayConfig } from '@/hooks/use-display-config';
-import { PipelineProgressBar } from '@/components/opportunity/PipelineProgressBar';
-import { StageHistory } from '@/components/opportunity/StageHistory';
 
 interface OpportunityFormModalProps {
   open: boolean;
@@ -109,7 +112,6 @@ export function OpportunityFormModal({
   const isEdit = !!initial;
   const createOpportunity = useCreateOpportunity(fairId);
   const updateOpportunity = useUpdateOpportunity(fairId);
-  const updateCustomer = useUpdateCustomer();
   const queryClient = useQueryClient();
   const { data: productList = [] } = useProducts();
   const { data: displayConfig } = useDisplayConfig();
@@ -121,6 +123,7 @@ export function OpportunityFormModal({
     displayConfig?.conversionRateLabels ?? CONVERSION_RATE_LABELS;
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedContact, setSelectedContact] = useState<CustomerContact | null>(null);
   const [budgetRaw, setBudgetRaw] = useState('');
   const [budgetCurrency, setBudgetCurrency] = useState(defaultCurrency);
   const [conversionRate, setConversionRate] = useState('');
@@ -128,13 +131,16 @@ export function OpportunityFormModal({
   const [cardImage, setCardImage] = useState('');
   const [submitError, setSubmitError] = useState('');
 
+  const updateContact = useUpdateCustomerContact(selectedCustomer?.id ?? '');
+
   useEffect(() => {
     if (open && initial) {
       setSelectedCustomer(initial.customer);
+      setSelectedContact(initial.contact ?? null);
       setBudgetRaw(initial.budgetRaw ?? '');
       setBudgetCurrency(initial.budgetCurrency ?? defaultCurrency);
       setConversionRate(initial.conversionRate ?? '');
-      setCardImage(initial.customer?.cardImage ?? '');
+      setCardImage(initial.contact?.cardImage ?? '');
       setSubmitError('');
       if (initial.opportunityProducts && initial.opportunityProducts.length > 0) {
         setOpportunityProducts(
@@ -148,31 +154,36 @@ export function OpportunityFormModal({
         );
       } else {
         setOpportunityProducts(
-          (initial.products ?? []).map((name) => {
-            const product = productList.find((p) => p.name === name);
-            return {
-              productId: product?.id ?? '',
-              productName: name,
-              quantity: null,
-              unit: 'ton' as const,
-              note: null,
-            };
-          }).filter((p) => p.productId),
+          (initial.products ?? [])
+            .map((name) => {
+              const product = productList.find((p) => p.name === name);
+              return {
+                productId: product?.id ?? '',
+                productName: name,
+                quantity: null as number | null,
+                unit: 'ton' as const,
+                note: null,
+              };
+            })
+            .filter((p) => p.productId),
         );
       }
     } else if (open) {
       resetForm();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, defaultCurrency, productList]);
 
+  // Sync cardImage when contact changes
   useEffect(() => {
-    if (open && selectedCustomer) {
-      setCardImage(selectedCustomer.cardImage ?? '');
+    if (selectedContact) {
+      setCardImage(selectedContact.cardImage ?? '');
     }
-  }, [open, selectedCustomer?.id, selectedCustomer?.cardImage]);
+  }, [selectedContact?.id]);
 
   const resetForm = () => {
     setSelectedCustomer(null);
+    setSelectedContact(null);
     setBudgetRaw('');
     setBudgetCurrency(defaultCurrency);
     setConversionRate('');
@@ -213,6 +224,7 @@ export function OpportunityFormModal({
 
     const opportunityDto = {
       customerId: selectedCustomer.id,
+      contactId: selectedContact?.id ?? null,
       budgetRaw: budgetRaw || null,
       budgetCurrency: budgetRaw ? (budgetCurrency as Currency) : null,
       conversionRate: (conversionRate || null) as ConversionRate | null,
@@ -229,19 +241,18 @@ export function OpportunityFormModal({
 
     try {
       setSubmitError('');
-      const customerCardImage = selectedCustomer.cardImage ?? '';
-      if (cardImage !== customerCardImage) {
-        await updateCustomer.mutateAsync({
-          id: selectedCustomer.id,
+
+      // If card image changed and we have a contact, update it on the contact
+      if (selectedContact && cardImage !== (selectedContact.cardImage ?? '')) {
+        await updateContact.mutateAsync({
+          id: selectedContact.id,
           dto: { cardImage: cardImage || null },
         });
         queryClient.invalidateQueries({
           queryKey: queryKeys.opportunities.byFair(fairId),
         });
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.fairs.byId(fairId),
-        });
       }
+
       if (isEdit && initial) {
         await updateOpportunity.mutateAsync({ id: initial.id, dto: opportunityDto });
       } else {
@@ -266,9 +277,13 @@ export function OpportunityFormModal({
     >
       <div className="flex flex-col gap-4">
         <CustomerSelectInput
-          selectedCustomerId={selectedCustomer?.id ?? null}
           selectedCustomer={selectedCustomer}
-          onSelect={(customer) => setSelectedCustomer(customer)}
+          selectedContact={selectedContact}
+          onSelectCustomer={(c) => {
+            setSelectedCustomer(c);
+            if (!c) setSelectedContact(null);
+          }}
+          onSelectContact={setSelectedContact}
         />
 
         <div>
@@ -281,12 +296,12 @@ export function OpportunityFormModal({
               placeholder="0"
               value={budgetDisplay}
               onChange={(e) => handleBudgetChange(e.target.value)}
-              className="flex-1 rounded-l-[10px] border border-r-0 border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-right text-white transition-colors focus:border-violet-400/60 focus:outline-none"
+              className="flex-1 rounded-l-[10px] border border-r-0 border-white/20 bg-white/5 px-3 py-2.5 text-right text-white backdrop-blur-sm transition-colors focus:border-violet-400/60 focus:outline-none"
             />
             <select
               value={budgetCurrency}
               onChange={(e) => setBudgetCurrency(e.target.value)}
-              className="rounded-r-[10px] border border-l-0 border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 font-bold text-violet-400 transition-colors focus:border-violet-400/60 focus:outline-none"
+              className="rounded-r-[10px] border border-l-0 border-white/20 bg-white/5 px-3 py-2.5 font-bold text-violet-400 backdrop-blur-sm transition-colors focus:border-violet-400/60 focus:outline-none"
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -371,42 +386,50 @@ export function OpportunityFormModal({
           <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
             Kartvizit Fotoğrafı
           </label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          {cardImage ? (
-            <div className="relative">
-              <img
-                src={cardImage}
-                alt="Kartvizit"
-                className="max-h-[160px] rounded-lg object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => setCardImage('')}
-                className="absolute top-2 right-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[12px] text-white"
-                style={{ backgroundColor: '#000000AA' }}
-              >
-                ✕
-              </button>
-            </div>
+          {!selectedContact ? (
+            <p className="text-[13px] text-white/40">
+              Kartvizit temsilciye kaydedilir. Önce bir temsilci seçin veya oluşturun.
+            </p>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full cursor-pointer rounded-[10px] border-2 border-dashed border-white/20 px-4 py-6 text-center text-white/60 transition-colors hover:border-violet-400/60 hover:text-violet-400"
-            >
-              📷 Fotoğraf Yükle
-            </button>
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {cardImage ? (
+                <div className="relative">
+                  <img
+                    src={cardImage}
+                    alt="Kartvizit"
+                    className="max-h-[160px] rounded-lg object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCardImage('')}
+                    className="absolute top-2 right-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[12px] text-white"
+                    style={{ backgroundColor: '#000000AA' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full cursor-pointer rounded-[10px] border-2 border-dashed border-white/20 px-4 py-6 text-center text-white/60 transition-colors hover:border-violet-400/60 hover:text-violet-400"
+                >
+                  📷 Fotoğraf Yükle
+                </button>
+              )}
+            </>
           )}
         </div>
 
         {isEdit && initial && (
-          <div className="mt-2 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-3">
+          <div className="mt-2 rounded-xl border border-white/20 bg-white/5 px-3 py-3 backdrop-blur-sm">
             <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-white/60">
               Pipeline ve Aşama Geçmişi
             </p>
