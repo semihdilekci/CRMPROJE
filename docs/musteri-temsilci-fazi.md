@@ -1067,7 +1067,7 @@ Commit:
   refactor(web): integrate two-step customer/contact picker into
                  OpportunityFormModal; move card image to contact
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-11 — Frontend Web: OpportunityCard Güncelle
