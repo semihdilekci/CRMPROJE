@@ -1221,7 +1221,7 @@ Bağımlılık: MT-13
 Commit:
   chore(web): align audit-log filter and toolbar copy with contact model
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-15 — Mobile: Minimum Uyumluluk
