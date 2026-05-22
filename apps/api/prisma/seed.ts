@@ -56,7 +56,9 @@ async function main(): Promise<void> {
 
   await prisma.opportunityStageLog.deleteMany();
   await prisma.opportunityProduct.deleteMany();
+  await prisma.opportunityNote.deleteMany();
   await prisma.opportunity.deleteMany();
+  await prisma.customerContact.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.fair.deleteMany();
   await prisma.product.deleteMany();
@@ -228,43 +230,48 @@ async function main(): Promise<void> {
   );
   console.log(`   ✓ ${fairs.length} fuar`);
 
-  // --- MÜŞTERİLER ---
+  // --- MÜŞTERİLER (firma + ilk temsilci) ---
   const customerTemplates = [
-    { company: 'Atlas Mühendislik A.Ş.', name: 'Can Öztürk', phone: '+905551234567', email: 'can@atlasmuh.com' },
-    { company: 'Meridyen Tesisat Ltd.', name: 'Zeynep Arslan', phone: '+905559876543', email: 'zeynep@meridyen.com.tr' },
-    { company: 'Nordic HVAC Solutions', name: 'Erik Lindqvist', phone: '+46701234567', email: 'erik@nordichvac.se' },
-    { company: 'Ankara Isı Sistemleri', name: 'Burak Çelik', phone: '+905327654321', email: 'burak@ankaraisi.com.tr' },
-    { company: 'GreenTech Industries GmbH', name: 'Hans Weber', phone: '+491761234567', email: 'h.weber@greentech.de' },
-    { company: 'İzmir Soğutma A.Ş.', name: 'Selin Yıldız', phone: '+905441239876', email: 'selin@izmirsoğutma.com' },
-    { company: 'ThermoFlow BV', name: 'Jan de Vries', phone: '+31612345678', email: 'jan@thermoflow.nl' },
-    { company: 'Bosphorus Valve Co.', name: 'Emre Aktaş', phone: '+905369871234', email: 'emre@bosphorusvalve.com' },
-    { company: 'Clima Italia S.r.l.', name: 'Marco Rossi', phone: '+393481234567', email: 'marco@climaitalia.it' },
-    { company: 'Antalya Pompa San.', name: 'Derya Koç', phone: '+905071236789', email: 'derya@antalyapompa.com.tr' },
-    { company: 'EcoHeat Systems Plc', name: 'James Clark', phone: '+447912345678', email: 'j.clark@ecoheat.co.uk' },
-    { company: 'Sakarya Otomasyon', name: 'Hakan Şahin', phone: '+905531237890', email: 'hakan@sakaryaoto.com.tr' },
-    { company: 'PipeMaster AG', name: 'Thomas Müller', phone: '+41791234567', email: 'thomas@pipemaster.ch' },
-    { company: 'Karadeniz HVAC Ltd.', name: 'Ayşe Yılmaz', phone: '+905421234567', email: 'ayse@karadenizhvac.com' },
-    { company: 'FrostLine Oy', name: 'Mikko Virtanen', phone: '+358401234567', email: 'mikko@frostline.fi' },
-    { company: 'Marmara Filtre San.', name: 'Oğuz Erdoğan', phone: '+905351234567', email: 'oguz@marmarafiltre.com.tr' },
-    { company: 'AquaPure Systems', name: 'Sarah Johnson', phone: '+12125551234', email: 'sarah@aquapure.com' },
-    { company: 'Trakya Kazan A.Ş.', name: 'Serkan Aydın', phone: '+905461239876', email: 'serkan@trakyakazan.com.tr' },
-    { company: 'SolTech Energy AB', name: 'Anna Svensson', phone: '+46731234567', email: 'anna@soltech.se' },
-    { company: 'Ege Pompa Sistemleri', name: 'Metin Aksoy', phone: '+905381234567', email: 'metin@egepompa.com.tr' },
-    { company: 'Delta Klima A.Ş.', name: 'Fatma Korkmaz', phone: '+905321234567', email: 'fatma@deltaklima.com.tr' },
-    { company: 'RusKlima LLC', name: 'Ivan Petrov', phone: '+74951234567', email: 'ivan@rusklima.ru' },
-    { company: 'Gulf HVAC WLL', name: 'Omar Al-Hassan', phone: '+97312345678', email: 'omar@gulfhvac.bh' },
-    { company: 'Polska Chlodnictwo', name: 'Katarzyna Nowak', phone: '+48123456789', email: 'k.nowak@polskachlod.pl' },
-    { company: 'Mediterranean Cooling', name: 'Nikos Papadopoulos', phone: '+302101234567', email: 'nikos@medcool.gr' },
+    { company: 'Atlas Mühendislik A.Ş.', contact: { name: 'Can Öztürk', phone: '+905551234567', email: 'can@atlasmuh.com' } },
+    { company: 'Meridyen Tesisat Ltd.', contact: { name: 'Zeynep Arslan', phone: '+905559876543', email: 'zeynep@meridyen.com.tr' } },
+    { company: 'Nordic HVAC Solutions', contact: { name: 'Erik Lindqvist', phone: '+46701234567', email: 'erik@nordichvac.se' } },
+    { company: 'Ankara Isı Sistemleri', contact: { name: 'Burak Çelik', phone: '+905327654321', email: 'burak@ankaraisi.com.tr' } },
+    { company: 'GreenTech Industries GmbH', contact: { name: 'Hans Weber', phone: '+491761234567', email: 'h.weber@greentech.de' } },
+    { company: 'İzmir Soğutma A.Ş.', contact: { name: 'Selin Yıldız', phone: '+905441239876', email: 'selin@izmirsoğutma.com' } },
+    { company: 'ThermoFlow BV', contact: { name: 'Jan de Vries', phone: '+31612345678', email: 'jan@thermoflow.nl' } },
+    { company: 'Bosphorus Valve Co.', contact: { name: 'Emre Aktaş', phone: '+905369871234', email: 'emre@bosphorusvalve.com' } },
+    { company: 'Clima Italia S.r.l.', contact: { name: 'Marco Rossi', phone: '+393481234567', email: 'marco@climaitalia.it' } },
+    { company: 'Antalya Pompa San.', contact: { name: 'Derya Koç', phone: '+905071236789', email: 'derya@antalyapompa.com.tr' } },
+    { company: 'EcoHeat Systems Plc', contact: { name: 'James Clark', phone: '+447912345678', email: 'j.clark@ecoheat.co.uk' } },
+    { company: 'Sakarya Otomasyon', contact: { name: 'Hakan Şahin', phone: '+905531237890', email: 'hakan@sakaryaoto.com.tr' } },
+    { company: 'PipeMaster AG', contact: { name: 'Thomas Müller', phone: '+41791234567', email: 'thomas@pipemaster.ch' } },
+    { company: 'Karadeniz HVAC Ltd.', contact: { name: 'Ayşe Yılmaz', phone: '+905421234567', email: 'ayse@karadenizhvac.com' } },
+    { company: 'FrostLine Oy', contact: { name: 'Mikko Virtanen', phone: '+358401234567', email: 'mikko@frostline.fi' } },
+    { company: 'Marmara Filtre San.', contact: { name: 'Oğuz Erdoğan', phone: '+905351234567', email: 'oguz@marmarafiltre.com.tr' } },
+    { company: 'AquaPure Systems', contact: { name: 'Sarah Johnson', phone: '+12125551234', email: 'sarah@aquapure.com' } },
+    { company: 'Trakya Kazan A.Ş.', contact: { name: 'Serkan Aydın', phone: '+905461239876', email: 'serkan@trakyakazan.com.tr' } },
+    { company: 'SolTech Energy AB', contact: { name: 'Anna Svensson', phone: '+46731234567', email: 'anna@soltech.se' } },
+    { company: 'Ege Pompa Sistemleri', contact: { name: 'Metin Aksoy', phone: '+905381234567', email: 'metin@egepompa.com.tr' } },
+    { company: 'Delta Klima A.Ş.', contact: { name: 'Fatma Korkmaz', phone: '+905321234567', email: 'fatma@deltaklima.com.tr' } },
+    { company: 'RusKlima LLC', contact: { name: 'Ivan Petrov', phone: '+74951234567', email: 'ivan@rusklima.ru' } },
+    { company: 'Gulf HVAC WLL', contact: { name: 'Omar Al-Hassan', phone: '+97312345678', email: 'omar@gulfhvac.bh' } },
+    { company: 'Polska Chlodnictwo', contact: { name: 'Katarzyna Nowak', phone: '+48123456789', email: 'k.nowak@polskachlod.pl' } },
+    { company: 'Mediterranean Cooling', contact: { name: 'Nikos Papadopoulos', phone: '+302101234567', email: 'nikos@medcool.gr' } },
   ];
 
   const customers = await Promise.all(
     customerTemplates.map((t) =>
       prisma.customer.create({
-        data: t,
+        data: {
+          company: t.company,
+          contacts: { create: [t.contact] },
+        },
+        include: { contacts: true },
       })
     )
   );
-  console.log(`   ✓ ${customers.length} müşteri`);
+  const contactCount = customers.reduce((acc, c) => acc + c.contacts.length, 0);
+  console.log(`   ✓ ${customers.length} müşteri (firma) + ${contactCount} temsilci`);
 
   // --- FIRSATLAR (raporlama için zengin dağılım) ---
   // Pipeline dağılımı: tanisma, toplanti, teklif, sozlesme, satisa_donustu, olumsuz
@@ -310,10 +317,12 @@ async function main(): Promise<void> {
       );
       const productNamesForOpp = selectedProducts.map((p) => p.name);
 
+      const primaryContact = customer.contacts[0];
       const opp = await prisma.opportunity.create({
         data: {
           fairId: fair.id,
           customerId: customer.id,
+          contactId: primaryContact?.id ?? null,
           budgetRaw,
           budgetCurrency: currency,
           conversionRate,
