@@ -129,7 +129,8 @@ export class ReportService {
             createdAt: true,
             fairId: true,
             customerId: true,
-            customer: { select: { id: true, company: true, name: true } },
+            customer: { select: { id: true, company: true } },
+            contact: { select: { id: true, name: true } },
             fair: { select: { id: true, name: true } },
           },
         }),
@@ -244,13 +245,12 @@ export class ReportService {
     // Top 5 customers by total budget value
     const custMap = new Map<
       string,
-      { id: string; company: string; name: string; totalValue: number; count: number }
+      { id: string; company: string; totalValue: number; count: number }
     >();
     for (const opp of opportunities) {
       const entry = custMap.get(opp.customerId) ?? {
         id: opp.customer.id,
         company: opp.customer.company,
-        name: opp.customer.name,
         totalValue: 0,
         count: 0,
       };
@@ -264,7 +264,7 @@ export class ReportService {
       .map((c) => ({
         id: c.id,
         company: c.company,
-        name: c.name,
+        name: c.company,
         totalValue: c.totalValue,
         opportunityCount: c.count,
       }));
@@ -1046,7 +1046,7 @@ export class ReportService {
       const open = c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage));
       const closed = c.opportunities.filter((o) => TERMINAL_STAGES.includes(o.currentStage));
       return {
-        company: c.company, name: c.name, opportunityCount: c.opportunities.length,
+        company: c.company, opportunityCount: c.opportunities.length,
         won: won.length, lost: lost.length, open: open.length,
         totalBudget: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),
         firstContact: c.createdAt.toISOString(), lastContact: c.updatedAt.toISOString(),
@@ -1180,7 +1180,7 @@ export class ReportService {
       .sort((a, b) => b.fairCount - a.fairCount).slice(0, 10);
 
     const inactiveCustomerTable = inactiveCustomers.slice(0, 20).map((c) => ({
-      company: c.company, name: c.name,
+      company: c.company,
       daysSinceLastActivity: daysBetween(c.opportunities[0]?.updatedAt ?? c.updatedAt, now),
       openOpportunities: c.opportunities.filter((o) => OPEN_STAGES.includes(o.currentStage)).length,
       value: c.opportunities.reduce((s, o) => s + budgetToTRY(o.budgetRaw, o.budgetCurrency, rates), 0),

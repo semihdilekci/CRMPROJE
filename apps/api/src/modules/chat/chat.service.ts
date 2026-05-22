@@ -654,7 +654,6 @@ export class ChatService {
       rank: number;
       customerId: string;
       company: string;
-      name: string;
       opportunityCount: number;
       budgetTotalApprox: number;
       byStage: Record<string, number>;
@@ -670,7 +669,7 @@ export class ChatService {
     const [customers, opps] = await Promise.all([
       this.prisma.customer.findMany({
         where: { id: { in: topIds } },
-        select: { id: true, company: true, name: true },
+        select: { id: true, company: true },
       }),
       this.prisma.opportunity.findMany({
         where: { customerId: { in: topIds } },
@@ -683,7 +682,6 @@ export class ChatService {
       rank: number;
       customerId: string;
       company: string;
-      name: string;
       opportunityCount: number;
       budgetTotalApprox: number;
       byStage: Record<string, number>;
@@ -714,7 +712,6 @@ export class ChatService {
         rank: rank++,
         customerId: cid,
         company: c.company,
-        name: c.name,
         opportunityCount: n,
         budgetTotalApprox,
         byStage,
@@ -776,7 +773,8 @@ export class ChatService {
           take: MAX_OPPORTUNITIES_FOR_AI_CONTEXT,
           include: {
             fair: { select: { id: true, name: true } },
-            customer: { select: { id: true, company: true, name: true } },
+            customer: { select: { id: true, company: true } },
+            contact: { select: { id: true, name: true } },
             opportunityProducts: {
               include: { product: { select: { name: true } } },
             },
@@ -877,8 +875,8 @@ export class ChatService {
         fairName: opp.fair.name,
         customer: {
           company: opp.customer.company,
-          name: opp.customer.name,
         },
+        contact: opp.contact ? { name: opp.contact.name } : null,
         budgetRaw: opp.budgetRaw,
         budgetCurrency: opp.budgetCurrency,
         conversionRate: opp.conversionRate,

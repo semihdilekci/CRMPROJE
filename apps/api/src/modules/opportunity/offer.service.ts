@@ -124,6 +124,7 @@ export class OfferService {
       where: { id: opportunityId },
       include: {
         customer: true,
+        contact: true,
         opportunityProducts: { include: { product: true } },
       },
     });
@@ -131,7 +132,7 @@ export class OfferService {
       throw new NotFoundException('Fırsat bulunamadı');
     }
 
-    const { customer } = opportunity;
+    const { customer, contact } = opportunity;
     const displayConfig = await this.settingsService.getDisplayConfig();
     const defaultCurrency = displayConfig.defaultCurrency;
     const exchangeRates = await this.settingsService.getExchangeRates();
@@ -179,11 +180,11 @@ export class OfferService {
     const data = {
       teklif_no: teklifNo,
       teklif_tarihi: teklifTarihi,
-      customer_name: customer.name,
+      customer_name: contact?.name ?? '-',
       customer_company: customer.company,
       customer_address: customer.address ?? '-',
-      customer_phone: customer.phone ?? '-',
-      customer_email: customer.email ?? '-',
+      customer_phone: contact?.phone ?? '-',
+      customer_email: contact?.email ?? '-',
       products,
       product_list: productListText,
       total_amount: formatAmount(totalAmountNum),

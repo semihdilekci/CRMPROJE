@@ -47,11 +47,16 @@ export class OpportunityService {
       throw new BadRequestException('Fırsat oluşturmak için giriş yapmanız gerekiyor');
     }
 
+    if (dto.contactId) {
+      await this.ensureContactBelongsToCustomer(dto.contactId, dto.customerId);
+    }
+
     const opportunity = await this.prisma.$transaction(async (tx) => {
       const created = await tx.opportunity.create({
         data: {
           fairId,
           customerId: dto.customerId,
+          contactId: dto.contactId ?? null,
           budgetRaw: dto.budgetRaw ?? null,
           budgetCurrency: dto.budgetCurrency ?? null,
           conversionRate: dto.conversionRate ?? null,
@@ -82,6 +87,7 @@ export class OpportunityService {
         where: { id: created.id },
         include: {
           customer: true,
+          contact: true,
           opportunityProducts: {
             include: { product: true },
           },
@@ -105,7 +111,7 @@ export class OpportunityService {
     });
 
     this.logger.log(
-      `Opportunity created for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+      `Opportunity created for customer ${opportunity.customer.company}`,
     );
     return result;
   }
@@ -121,12 +127,11 @@ export class OpportunityService {
     const where: Record<string, unknown> = { fairId };
 
     if (search) {
-      where['customer'] = {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { company: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+      where['OR'] = [
+        { customer: { company: { contains: search, mode: 'insensitive' } } },
+        { contact:  { name:    { contains: search, mode: 'insensitive' } } },
+        { contact:  { email:   { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
     if (conversionRate) {
@@ -141,6 +146,7 @@ export class OpportunityService {
       where,
       include: {
         customer: true,
+        contact: true,
         opportunityProducts: {
           include: { product: true },
         },
@@ -175,8 +181,14 @@ export class OpportunityService {
     });
     if (!old) throw new NotFoundException('Fırsat bulunamadı');
 
+    const targetCustomerId = dto.customerId ?? old.customerId;
+
     if (dto.customerId && dto.customerId !== old.customerId) {
       await this.ensureCustomerExists(dto.customerId);
+    }
+
+    if (dto.contactId !== undefined && dto.contactId !== null) {
+      await this.ensureContactBelongsToCustomer(dto.contactId, targetCustomerId);
     }
 
     const opportunity = await this.prisma.$transaction(async (tx) => {
@@ -184,6 +196,7 @@ export class OpportunityService {
         where: { id },
         data: {
           ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+          ...(dto.contactId !== undefined && { contactId: dto.contactId }),
           ...(dto.budgetRaw !== undefined && { budgetRaw: dto.budgetRaw }),
           ...(dto.budgetCurrency !== undefined && { budgetCurrency: dto.budgetCurrency }),
           ...(dto.conversionRate !== undefined && { conversionRate: dto.conversionRate }),
@@ -191,6 +204,7 @@ export class OpportunityService {
         },
         include: {
           customer: true,
+          contact: true,
         },
       });
 
@@ -216,6 +230,7 @@ export class OpportunityService {
         where: { id },
         include: {
           customer: true,
+          contact: true,
           opportunityProducts: {
             include: { product: true },
           },
@@ -240,7 +255,7 @@ export class OpportunityService {
     });
 
     this.logger.log(
-      `Opportunity updated for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+      `Opportunity updated for customer ${opportunity.customer.company}`,
     );
     return result;
   }
@@ -250,6 +265,7 @@ export class OpportunityService {
       where: { id },
       include: {
         customer: true,
+        contact: true,
         opportunityProducts: {
           include: { product: true },
         },
@@ -274,7 +290,7 @@ export class OpportunityService {
     });
 
     this.logger.log(
-      `Opportunity deleted for customer ${opportunity.customer.company} - ${opportunity.customer.name}`,
+      `Opportunity deleted for customer ${opportunity.customer.company}`,
     );
   }
 
@@ -287,6 +303,7 @@ export class OpportunityService {
       where: { id },
       include: {
         customer: true,
+        contact: true,
         opportunityProducts: {
           include: { product: true },
         },
@@ -343,6 +360,7 @@ export class OpportunityService {
         },
         include: {
           customer: true,
+          contact: true,
           opportunityProducts: {
             include: { product: true },
           },
@@ -656,10 +674,23 @@ export class OpportunityService {
     if (!customer) throw new NotFoundException('Müşteri bulunamadı');
   }
 
+  private async ensureContactBelongsToCustomer(
+    contactId: string,
+    customerId: string,
+  ): Promise<void> {
+    const contact = await this.prisma.customerContact.findUnique({ where: { id: contactId } });
+    if (!contact || contact.customerId !== customerId) {
+      throw new BadRequestException(
+        'Belirtilen temsilci bu müşteriye ait değil',
+      );
+    }
+  }
+
   private toResponse(opportunity: {
     id: string;
     fairId: string;
     customerId: string;
+    contactId?: string | null;
     budgetRaw: string | null;
     budgetCurrency: string | null;
     conversionRate: string | null;
@@ -671,14 +702,20 @@ export class OpportunityService {
     customer: {
       id: string;
       company: string;
-      name: string;
       address?: string | null;
-      phone: string | null;
-      email: string | null;
-      cardImage?: string | null;
       createdAt: Date;
       updatedAt: Date;
     };
+    contact?: {
+      id: string;
+      customerId: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+      cardImage: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null;
     opportunityProducts: Array<{
       id: string;
       quantity: number | null;
@@ -707,6 +744,7 @@ export class OpportunityService {
       id: opportunity.id,
       fairId: opportunity.fairId,
       customerId: opportunity.customerId,
+      contactId: opportunity.contactId ?? null,
       budgetRaw: opportunity.budgetRaw,
       budgetCurrency: opportunity.budgetCurrency as OpportunityWithDetails['budgetCurrency'],
       conversionRate: opportunity.conversionRate as OpportunityWithDetails['conversionRate'],
@@ -718,14 +756,22 @@ export class OpportunityService {
       customer: {
         id: opportunity.customer.id,
         company: opportunity.customer.company,
-        name: opportunity.customer.name,
         address: opportunity.customer.address ?? null,
-        phone: opportunity.customer.phone,
-        email: opportunity.customer.email,
-        cardImage: opportunity.customer.cardImage ?? null,
         createdAt: opportunity.customer.createdAt.toISOString(),
         updatedAt: opportunity.customer.updatedAt.toISOString(),
       },
+      contact: opportunity.contact
+        ? {
+            id: opportunity.contact.id,
+            customerId: opportunity.contact.customerId,
+            name: opportunity.contact.name,
+            phone: opportunity.contact.phone,
+            email: opportunity.contact.email,
+            cardImage: opportunity.contact.cardImage,
+            createdAt: opportunity.contact.createdAt.toISOString(),
+            updatedAt: opportunity.contact.updatedAt.toISOString(),
+          }
+        : null,
       opportunityProducts: (opportunity.opportunityProducts ?? []).map((item) => ({
         id: item.id,
         opportunityId: opportunity.id,

@@ -74,6 +74,7 @@ export class FairService {
         opportunities: {
           include: {
             customer: true,
+            contact: true,
             opportunityProducts: { include: { product: true } },
             stageLogs: {
               include: { changedBy: { select: { id: true, name: true, email: true } } },
@@ -95,6 +96,7 @@ export class FairService {
         id: o.id,
         fairId: o.fairId,
         customerId: o.customerId,
+        contactId: o.contactId,
         budgetRaw: o.budgetRaw,
         budgetCurrency: o.budgetCurrency as Currency,
         conversionRate: o.conversionRate as ConversionRate,
@@ -106,14 +108,22 @@ export class FairService {
         customer: {
           id: o.customer.id,
           company: o.customer.company,
-          name: o.customer.name,
           address: o.customer.address ?? null,
-          phone: o.customer.phone,
-          email: o.customer.email,
-          cardImage: o.customer.cardImage ?? null,
           createdAt: o.customer.createdAt.toISOString(),
           updatedAt: o.customer.updatedAt.toISOString(),
         },
+        contact: o.contact
+          ? {
+              id: o.contact.id,
+              customerId: o.contact.customerId,
+              name: o.contact.name,
+              phone: o.contact.phone,
+              email: o.contact.email,
+              cardImage: o.contact.cardImage,
+              createdAt: o.contact.createdAt.toISOString(),
+              updatedAt: o.contact.updatedAt.toISOString(),
+            }
+          : null,
         opportunityProducts: o.opportunityProducts.map((op) => ({
           id: op.id,
           opportunityId: o.id,

@@ -97,7 +97,7 @@ export interface ExecutiveSummaryResponse {
   conversionRateDistribution: Array<{ rate: string; label: string; count: number }>;
   newOpportunitySparkline: number[];
   topFairs: Array<{ id: string; name: string; openOpportunities: number }>;
-  topCustomers: Array<{ id: string; company: string; name: string; totalValue: number; opportunityCount: number }>;
+  topCustomers: Array<{ id: string; company: string; totalValue: number; opportunityCount: number }>;
   recentWonOpportunities: Array<{
     id: string;
     customerCompany: string;
@@ -382,7 +382,6 @@ export interface CustomerOverviewResponse {
   portfolioTreemap: Array<{ company: string; totalValue: number; avgConversionRate: string }>;
   tableData: Array<{
     company: string;
-    name: string;
     opportunityCount: number;
     won: number;
     lost: number;
@@ -440,7 +439,6 @@ export interface CustomerLifecycleResponse {
   }>;
   inactiveCustomerTable: Array<{
     company: string;
-    name: string;
     daysSinceLastActivity: number;
     openOpportunities: number;
     value: number;
