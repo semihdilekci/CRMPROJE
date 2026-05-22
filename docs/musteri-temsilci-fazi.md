@@ -635,7 +635,7 @@ Bağımlılık: MT-1, MT-2
 Commit:
   feat(api): add CustomerContact module with CRUD and duplicate check
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-4 — Backend: Customer Modülünü "Firma" Modeline Sadeleştir
