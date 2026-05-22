@@ -936,7 +936,7 @@ Commit:
   feat(web): simplify CustomerEditModal; add CustomerContactEditModal
              with duplicate warning flow
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-9 — Frontend Web: CustomerSelectInput Refactor (İki Katmanlı)
