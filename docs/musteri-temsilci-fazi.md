@@ -553,7 +553,7 @@ Commit:
   chore(prisma): run musteri-temsilci migration with data transfer
   chore(prisma): update seed to create Customer + CustomerContact
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-3 — Backend: CustomerContact Modülü (Yeni)
