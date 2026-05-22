@@ -1,44 +1,73 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { Customer, CreateCustomerDto } from '@crm/shared';
+import type {
+  Customer,
+  CustomerContact,
+  CreateCustomerContactDto,
+  DuplicateContactMeta,
+} from '@crm/shared';
+import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { useCustomers, useCreateCustomer } from '@/hooks/use-customers';
+import { useCustomers, useCreateCustomerWithContact } from '@/hooks/use-customers';
+import {
+  useCustomerContacts,
+  useCreateCustomerContact,
+} from '@/hooks/use-customer-contacts';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
-import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import api from '@/lib/api';
 
 interface CustomerSelectInputProps {
-  selectedCustomerId: string | null;
   selectedCustomer: Customer | null;
-  onSelect: (customer: Customer) => void;
+  selectedContact: CustomerContact | null;
+  onSelectCustomer: (customer: Customer | null) => void;
+  onSelectContact: (contact: CustomerContact | null) => void;
+}
+
+interface DuplicateWarning {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
 }
 
 export function CustomerSelectInput({
-  selectedCustomerId,
   selectedCustomer,
-  onSelect,
+  selectedContact,
+  onSelectCustomer,
+  onSelectContact,
 }: CustomerSelectInputProps) {
+  // ── Company search state ──────────────────────────────────────────
   const [searchText, setSearchText] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateFirm, setShowCreateFirm] = useState(false);
+  const [newCompany, setNewCompany] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [firmError, setFirmError] = useState('');
+
+  // ── Contact creation state ────────────────────────────────────────
+  const [showCreateContact, setShowCreateContact] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactCardImage, setContactCardImage] = useState<string | null>(null);
+  const [contactError, setContactError] = useState('');
+  const [duplicate, setDuplicate] = useState<DuplicateWarning | null>(null);
 
   const debouncedSearch = useDebounce(searchText, 300);
   const { data: customers = [] } = useCustomers(debouncedSearch || undefined);
-  const createCustomer = useCreateCustomer();
+  const { data: contacts = [], isLoading: contactsLoading } = useCustomerContacts(
+    selectedCustomer?.id ?? null,
+  );
+  const createWithContact = useCreateCustomerWithContact();
+  const createContact = useCreateCustomerContact(selectedCustomer?.id ?? '');
+  const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
 
-  const [newCompany, setNewCompany] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
-  const [createError, setCreateError] = useState('');
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scanBusinessCard, isLoading: isOcrLoading } = useBusinessCardOcr();
+  const scanFileRef = useRef<HTMLInputElement>(null);
+  const cardFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -46,63 +75,89 @@ export function CustomerSelectInput({
         setShowDropdown(false);
       }
     };
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    if (showDropdown) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
-  const resetCreateForm = () => {
+  const resetFirmForm = () => {
     setNewCompany('');
-    setNewName('');
-    setNewPhone('');
-    setNewEmail('');
-    setCardImageUrl(null);
-    setCreateError('');
-    setShowCreateForm(false);
+    setNewAddress('');
+    setFirmError('');
+    setShowCreateFirm(false);
   };
 
-  const handleCreateCustomer = async (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    const dto: CreateCustomerDto = {
-      company: newCompany.trim(),
-      name: newName.trim(),
-      phone: newPhone.trim(),
-      email: newEmail.trim(),
-      cardImage: cardImageUrl || undefined,
-    };
+  const resetContactForm = () => {
+    setContactName('');
+    setContactPhone('');
+    setContactEmail('');
+    setContactCardImage(null);
+    setContactError('');
+    setDuplicate(null);
+    setShowCreateContact(false);
+  };
+
+  const handleSelectCustomer = (c: Customer) => {
+    onSelectCustomer(c);
+    onSelectContact(null);
+    setSearchText('');
+    setShowDropdown(false);
+    setShowCreateFirm(false);
+    resetContactForm();
+  };
+
+  const handleClearAll = () => {
+    onSelectCustomer(null);
+    onSelectContact(null);
+    setSearchText('');
+    setShowDropdown(false);
+    resetFirmForm();
+    resetContactForm();
+  };
+
+  const handleCreateFirm = async () => {
+    if (!newCompany.trim()) {
+      setFirmError('Firma adı zorunludur.');
+      return;
+    }
     try {
-      const created = await createCustomer.mutateAsync(dto);
-      onSelect(created);
-      resetCreateForm();
-      setSearchText('');
-      setShowDropdown(false);
-    } catch (err: unknown) {
-      const res = (err as { response?: { data?: { message?: string; details?: Array<{ field?: string; message?: string }> } } })
-        ?.response?.data;
-      const emailDetail = res?.details?.find((d) => d.field === 'email');
+      const result = await createWithContact.mutateAsync({
+        company: newCompany.trim(),
+        address: newAddress.trim() || undefined,
+      });
+      onSelectCustomer(result);
+      onSelectContact(null);
+      resetFirmForm();
+    } catch (err) {
       const msg =
-        emailDetail?.message ??
-        res?.message ??
-        'Müşteri kaydedilemedi. Lütfen alanları kontrol edin.';
-      setCreateError(msg);
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Firma kaydedilemedi.';
+      setFirmError(msg);
     }
   };
 
-  const handleScanCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScanForFirm = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-
     const parsed = await scanBusinessCard(file);
-    if (parsed) {
+    if (parsed?.company) {
       setNewCompany(parsed.company);
-      setNewName(parsed.name);
-      setNewPhone(parsed.phone);
-      setNewEmail(parsed.email);
+      // Check if company already exists
+      const match = customers.find(
+        (c) => c.company.toLowerCase() === parsed.company.toLowerCase(),
+      );
+      if (match) {
+        handleSelectCustomer(match);
+        return;
+      }
+      setShowCreateFirm(true);
     }
+  };
 
+  const handleUploadCardImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -111,208 +166,360 @@ export function CustomerSelectInput({
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } },
       );
-      if (data.success && data.data?.url) setCardImageUrl(data.data.url);
+      if (data.success && data.data?.url) setContactCardImage(data.data.url);
     } catch {
-      // Error handled by api interceptor
+      // Axios interceptor
     }
   };
 
-  const handleSelectCustomer = (customer: Customer) => {
-    onSelect(customer);
-    setSearchText('');
-    setShowDropdown(false);
-    setShowCreateForm(false);
+  const handleScanForContact = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const parsed = await scanBusinessCard(file);
+    if (parsed) {
+      if (parsed.name) setContactName(parsed.name);
+      if (parsed.phone) setContactPhone(parsed.phone);
+      if (parsed.email) setContactEmail(parsed.email);
+    }
+    // Also upload the image
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post<ApiSuccessResponse<{ url: string }>>(
+        API_ENDPOINTS.UPLOAD.CARD_IMAGE,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      if (data.success && data.data?.url) setContactCardImage(data.data.url);
+    } catch {
+      // Axios interceptor
+    }
   };
 
-  const handleClearSelection = () => {
-    onSelect(null as unknown as Customer);
-    setSearchText('');
-    setShowDropdown(false);
+  const submitContact = async (force = false) => {
+    if (!selectedCustomer) return;
+    if (!contactName.trim()) {
+      setContactError('Ad soyad zorunludur.');
+      return;
+    }
+    const dto: CreateCustomerContactDto = {
+      name: contactName.trim(),
+      phone: contactPhone.trim() || null,
+      email: contactEmail.trim() || null,
+      cardImage: contactCardImage,
+    };
+    try {
+      const created = await createContact.mutateAsync({ ...dto, force });
+      onSelectContact(created);
+      resetContactForm();
+    } catch (err) {
+      const axiosErr = err as {
+        response?: { status?: number; data?: { message?: string; details?: unknown } };
+      };
+      if (axiosErr.response?.status === 409) {
+        const details = axiosErr.response.data?.details as DuplicateContactMeta | undefined;
+        if (details?.duplicateOf) {
+          setDuplicate(details.duplicateOf);
+          return;
+        }
+      }
+      const msg = axiosErr.response?.data?.message ?? 'Temsilci kaydedilemedi.';
+      setContactError(msg);
+    }
   };
 
-  if (selectedCustomerId && selectedCustomer) {
+  // ── Fully selected state (both firm + contact) ────────────────────
+  if (selectedCustomer && selectedContact) {
     return (
-      <div>
-        <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
-          Müşteri
+      <div className="flex flex-col gap-2">
+        <label className="text-[12px] font-bold uppercase tracking-wider text-white/60">
+          Müşteri / Temsilci
         </label>
-        <div className="flex items-center justify-between rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-white">
-              {selectedCustomer.company}
-            </p>
-            <p className="text-[13px] text-white/60">
-              {selectedCustomer.name}
-              {selectedCustomer.phone && ` · ${selectedCustomer.phone}`}
-              {selectedCustomer.email && ` · ${selectedCustomer.email}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearSelection}
-            className="ml-3 shrink-0 cursor-pointer text-[13px] font-medium text-accent transition-colors hover:text-accent/80"
-          >
-            Değiştir
-          </button>
+        <div className="rounded-[10px] border border-white/20 bg-white/5 px-4 py-3 backdrop-blur-sm">
+          <p className="text-[14px] font-semibold text-white">{selectedCustomer.company}</p>
+          <p className="text-[13px] text-white/70">
+            {selectedContact.name}
+            {selectedContact.phone && ` · ${selectedContact.phone}`}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={handleClearAll}
+          className="self-start text-[13px] font-medium text-accent hover:text-accent/80"
+        >
+          Müşteriyi Değiştir
+        </button>
       </div>
     );
   }
 
+  // ── Contact selection mode (firm selected, contact pending) ───────
+  if (selectedCustomer) {
+    return (
+      <div className="flex flex-col gap-3">
+        <label className="text-[12px] font-bold uppercase tracking-wider text-white/60">
+          Müşteri / Temsilci
+        </label>
+
+        <div className="rounded-[10px] border border-white/20 bg-white/5 px-4 py-3 backdrop-blur-sm">
+          <p className="text-[14px] font-semibold text-white">{selectedCustomer.company}</p>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="mt-0.5 text-[12px] text-accent hover:text-accent/80"
+          >
+            Değiştir
+          </button>
+        </div>
+
+        {contactsLoading ? (
+          <p className="text-[13px] text-white/50">Temsilciler yükleniyor...</p>
+        ) : contacts.length > 0 ? (
+          <div className="rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm">
+            {contacts.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onSelectContact(c)}
+                className="flex w-full cursor-pointer items-center gap-3 border-b border-white/10 px-4 py-2.5 text-left last:border-0 hover:bg-white/10"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-white">{c.name}</p>
+                  {(c.phone || c.email) && (
+                    <p className="text-[12px] text-white/60">
+                      {c.phone ?? ''}{c.phone && c.email ? ' · ' : ''}{c.email ?? ''}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onSelectContact(null)}
+            className="text-[13px] text-white/50 hover:text-white/70"
+          >
+            Temsilcisiz devam et
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreateContact(true)}
+            className="text-[13px] font-medium text-accent hover:text-accent/80"
+          >
+            + Yeni Temsilci Ekle
+          </button>
+        </div>
+
+        {showCreateContact && (
+          <div className="rounded-[10px] border border-white/20 bg-white/10 p-4 backdrop-blur-xl">
+            {duplicate ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-[13px] text-warning">
+                  <span className="font-semibold">{duplicate.name}</span> bu firmada zaten mevcut.
+                  {duplicate.email && ` (${duplicate.email})`}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    className="text-[12px]"
+                    onClick={() => {
+                      const found = contacts.find((c) => c.id === duplicate.id);
+                      if (found) onSelectContact(found);
+                      resetContactForm();
+                    }}
+                  >
+                    Mevcut Temsilciyi Seç
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-[12px]"
+                    disabled={createContact.isPending}
+                    onClick={() => submitContact(true)}
+                  >
+                    Yine de Ekle
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-[12px]"
+                    onClick={resetContactForm}
+                  >
+                    İptal
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mb-3 text-[13px] font-semibold text-white">Yeni Temsilci</p>
+                <div className="flex flex-col gap-2.5">
+                  <Input
+                    label="Ad Soyad"
+                    placeholder="Ad soyad (zorunlu)"
+                    value={contactName}
+                    onChange={(e) => { setContactName(e.target.value); setContactError(''); }}
+                  />
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <Input
+                      label="Telefon"
+                      placeholder="+90 5xx ..."
+                      value={contactPhone}
+                      onChange={(e) => { setContactPhone(e.target.value); setContactError(''); }}
+                    />
+                    <Input
+                      label="E-posta"
+                      type="email"
+                      placeholder="ornek@firma.com"
+                      value={contactEmail}
+                      onChange={(e) => { setContactEmail(e.target.value); setContactError(''); }}
+                    />
+                  </div>
+                </div>
+                {contactError && (
+                  <p className="mt-2 rounded-lg bg-danger/20 px-3 py-1.5 text-[12px] text-danger">
+                    {contactError}
+                  </p>
+                )}
+                <input ref={scanFileRef} type="file" accept="image/*" className="hidden" onChange={handleScanForContact} />
+                <input ref={cardFileRef} type="file" accept="image/*" className="hidden" onChange={handleUploadCardImage} />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    className="text-[12px]"
+                    disabled={!contactName.trim() || createContact.isPending}
+                    onClick={() => submitContact(false)}
+                  >
+                    {createContact.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-[12px]"
+                    disabled={ocrLoading}
+                    onClick={() => scanFileRef.current?.click()}
+                  >
+                    {ocrLoading ? 'Taranıyor...' : 'Kartvizit Tara'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-[12px]"
+                    onClick={resetContactForm}
+                  >
+                    İptal
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Company search mode (no firm selected yet) ────────────────────
   return (
     <div>
       <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-white/60">
-        Müşteri
+        Müşteri / Firma
       </label>
 
-      {!showCreateForm ? (
+      {!showCreateFirm ? (
         <div ref={containerRef} className="relative">
           <input
             type="text"
-            placeholder="Müşteri adı veya firma ara..."
+            placeholder="Firma adı ara..."
             value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setShowDropdown(true);
-            }}
+            onChange={(e) => { setSearchText(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
-            className="w-full rounded-[10px] border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-2.5 text-white transition-colors placeholder:text-white/60/70 focus:border-violet-400/60 focus:outline-none"
+            className="w-full rounded-[10px] border border-white/20 bg-white/5 px-3 py-2.5 text-white backdrop-blur-sm transition-colors placeholder:text-white/40 focus:border-violet-400/60 focus:outline-none"
           />
 
           {showDropdown && (searchText.length > 0 || customers.length > 0) && (
-            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-white/20 bg-[rgba(13,13,13,0.9)] backdrop-blur-sm shadow-lg">
+            <div className="absolute z-20 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[10px] border border-white/20 bg-[rgba(13,13,13,0.9)] shadow-lg backdrop-blur-sm">
               {customers.length > 0 ? (
                 customers.map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => handleSelectCustomer(c)}
-                    className="flex w-full cursor-pointer flex-col px-4 py-2.5 text-left transition-colors hover:bg-white/10"
+                    className="flex w-full cursor-pointer flex-col px-4 py-2.5 text-left hover:bg-white/10"
                   >
-                    <span className="text-[13px] font-semibold text-white">
-                      {c.company}
-                    </span>
-                    <span className="text-[12px] text-white/60">
-                      {c.name}
-                      {c.phone && ` · ${c.phone}`}
-                    </span>
+                    <span className="text-[13px] font-semibold text-white">{c.company}</span>
+                    {c.address && (
+                      <span className="text-[12px] text-white/50">{c.address}</span>
+                    )}
                   </button>
                 ))
               ) : debouncedSearch.length > 0 ? (
-                <div className="px-4 py-3 text-[13px] text-white/60">
-                  Sonuç bulunamadı
-                </div>
+                <div className="px-4 py-3 text-[13px] text-white/60">Sonuç bulunamadı</div>
               ) : null}
             </div>
           )}
 
-          <div className="mt-2">
+          <div className="mt-2 flex gap-3">
             <button
               type="button"
-              onClick={() => {
-                setShowDropdown(false);
-                setShowCreateForm(true);
-              }}
-              className="cursor-pointer text-[13px] font-medium text-accent transition-colors hover:text-accent/80"
+              onClick={() => { setShowDropdown(false); setShowCreateFirm(true); }}
+              className="text-[13px] font-medium text-accent hover:text-accent/80"
             >
-              + Yeni Müşteri Ekle
+              + Yeni Firma Ekle
+            </button>
+            <input
+              ref={scanFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleScanForFirm}
+            />
+            <button
+              type="button"
+              disabled={ocrLoading}
+              onClick={() => scanFileRef.current?.click()}
+              className="text-[13px] text-white/50 hover:text-white/70 disabled:opacity-50"
+            >
+              {ocrLoading ? 'Taranıyor...' : 'Kartvizit Tara'}
             </button>
           </div>
         </div>
       ) : (
-        <div className="rounded-[10px] border border-white/20 backdrop-blur-xl bg-white/10 p-4">
-          <p className="mb-3 text-[13px] font-semibold text-white">Yeni Müşteri</p>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-[10px] border border-white/20 bg-white/10 p-4 backdrop-blur-xl">
+          <p className="mb-3 text-[13px] font-semibold text-white">Yeni Firma</p>
+          <div className="flex flex-col gap-2.5">
             <Input
               label="Firma Adı"
-              placeholder="Firma adı"
+              placeholder="Firma adı (zorunlu)"
               value={newCompany}
-              onChange={(e) => {
-                setNewCompany(e.target.value);
-                setCreateError('');
-              }}
+              onChange={(e) => { setNewCompany(e.target.value); setFirmError(''); }}
             />
             <Input
-              label="Ad Soyad"
-              placeholder="Ad soyad"
-              value={newName}
-              onChange={(e) => {
-                setNewName(e.target.value);
-                setCreateError('');
-              }}
+              label="Adres"
+              placeholder="Adres (isteğe bağlı)"
+              value={newAddress}
+              onChange={(e) => setNewAddress(e.target.value)}
             />
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Input
-              label="Telefon"
-              type="tel"
-              placeholder="+90 555 000 00 00"
-              value={newPhone}
-              onChange={(e) => {
-                setNewPhone(e.target.value);
-                setCreateError('');
-              }}
-            />
-            <Input
-              label="E-posta"
-              type="email"
-              placeholder="ornek@email.com"
-              value={newEmail}
-              onChange={(e) => {
-                setNewEmail(e.target.value);
-                setCreateError('');
-              }}
-            />
-          </div>
-          {createError && (
-            <p className="mt-2 rounded-lg bg-danger/20 px-3 py-2 text-[13px] text-danger">
-              {createError}
+          {firmError && (
+            <p className="mt-2 rounded-lg bg-danger/20 px-3 py-1.5 text-[12px] text-danger">
+              {firmError}
             </p>
           )}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                className="text-[13px]"
-                onClick={resetCreateForm}
-              >
-                İptal
-              </Button>
-              <Button
-                type="button"
-                className="text-[13px]"
-                onClick={(e) => handleCreateCustomer(e)}
-                disabled={
-                  !newCompany.trim() ||
-                  !newName.trim() ||
-                  !newPhone.trim() ||
-                  !newEmail.trim() ||
-                  createCustomer.isPending ||
-                  isOcrLoading
-                }
-              >
-                {createCustomer.isPending ? 'Kaydediliyor...' : 'Kaydet'}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleScanCard}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                className="text-[13px]"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isOcrLoading}
-              >
-                {isOcrLoading ? 'Okunuyor...' : 'Kartvizit Tara'}
-              </Button>
-            </div>
+          <div className="mt-3 flex gap-2">
+            <Button
+              type="button"
+              className="text-[12px]"
+              disabled={!newCompany.trim() || createWithContact.isPending}
+              onClick={handleCreateFirm}
+            >
+              {createWithContact.isPending ? 'Kaydediliyor...' : 'Devam Et'}
+            </Button>
+            <Button type="button" variant="secondary" className="text-[12px]" onClick={resetFirmForm}>
+              İptal
+            </Button>
           </div>
         </div>
       )}
