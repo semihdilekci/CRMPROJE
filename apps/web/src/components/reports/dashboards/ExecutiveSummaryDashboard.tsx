@@ -187,7 +187,7 @@ export function ExecutiveSummaryDashboard() {
       (data?.topCustomers ?? []).map((c, i) => ({
         rank: i + 1,
         label: c.company,
-        sublabel: c.name,
+        sublabel: undefined,
         value:
           c.totalValue >= 1_000_000
             ? `₺${(c.totalValue / 1_000_000).toFixed(1)}M`

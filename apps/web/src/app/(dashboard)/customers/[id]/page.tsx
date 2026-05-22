@@ -14,6 +14,7 @@ import {
   useUpdateOpportunityNote,
 } from '@/hooks/use-customers';
 import { CustomerEditModal } from '@/components/customer/CustomerEditModal';
+import { CustomerContactList } from '@/components/customer/CustomerContactList';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
@@ -243,24 +244,16 @@ export default function CustomerProfilePage() {
           >
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="flex gap-5">
-                {profile.customer.cardImage ? (
-                  <img
-                    src={profile.customer.cardImage}
-                    alt={profile.customer.company}
-                    className="h-[110px] w-[110px] rounded-xl border border-white/20 object-cover"
-                  />
-                ) : (
-                  <div
-                    className="flex h-[110px] w-[110px] items-center justify-center rounded-xl border border-violet-500/35 text-[38px] font-bold text-white shadow-[0_0_30px_rgba(139,92,246,0.2)]"
-                    style={{
-                      fontFamily: 'Playfair Display, serif',
-                      background:
-                        'linear-gradient(135deg, rgba(139,92,246,0.35), rgba(6,182,212,0.25))',
-                    }}
-                  >
-                    {initials}
-                  </div>
-                )}
+                <div
+                  className="flex h-[110px] w-[110px] shrink-0 items-center justify-center rounded-xl border border-violet-500/35 text-[38px] font-bold text-white shadow-[0_0_30px_rgba(139,92,246,0.2)]"
+                  style={{
+                    fontFamily: 'Playfair Display, serif',
+                    background:
+                      'linear-gradient(135deg, rgba(139,92,246,0.35), rgba(6,182,212,0.25))',
+                  }}
+                >
+                  {initials}
+                </div>
 
                 <div>
                   <p
@@ -269,20 +262,11 @@ export default function CustomerProfilePage() {
                   >
                     {profile.customer.company}
                   </p>
-                  <p className="mt-1 text-[15px] text-[#f0ede8]/50">{profile.customer.name}</p>
-
-                  <div className="mt-4 flex flex-col gap-2 text-sm text-[#f0ede8]/75">
-                    {profile.customer.phone && (
-                      <a href={`tel:${profile.customer.phone}`} className="hover:text-[#f0ede8]">
-                        📞 {profile.customer.phone}
-                      </a>
-                    )}
-                    {profile.customer.email && (
-                      <a href={`mailto:${profile.customer.email}`} className="hover:text-[#f0ede8]">
-                        ✉ {profile.customer.email}
-                      </a>
-                    )}
-                  </div>
+                  {profile.customer.address && (
+                    <p className="mt-1 text-[14px] text-[#f0ede8]/50">
+                      📍 {profile.customer.address}
+                    </p>
+                  )}
 
                   <p className="mt-4 text-[12px] text-[#f0ede8]/30">
                     İlk Temas: {formatMonthYear(profile.kpi.firstContact)} · Son Temas:{' '}
@@ -313,6 +297,12 @@ export default function CustomerProfilePage() {
               </div>
             </div>
           </section>
+
+          <CustomerContactList
+            customerId={customerId}
+            companyName={profile.customer.company}
+            contacts={profile.contacts}
+          />
 
           <section
             className="fade-up mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
@@ -445,6 +435,11 @@ export default function CustomerProfilePage() {
                         </span>
                       </div>
 
+                      {item.contact && (
+                        <p className="mt-1 text-[12px] text-[#f0ede8]/50">
+                          👤 Temsilci: {item.contact.name}
+                        </p>
+                      )}
                       <p className="mt-2 text-[12px] text-[#f0ede8]/60">
                         📅 {formatDateRange(item.fairStartDate, item.fairEndDate)} · 💰{' '}
                         <span className="text-[#ffb347]">
@@ -642,7 +637,7 @@ export default function CustomerProfilePage() {
         }}
         onConfirm={handleConfirmDeleteCustomer}
         title="Müşteriyi Sil"
-        message={`"${profile.customer.company}" müşterisini ve ilişkili tüm fırsat verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        message={`"${profile.customer.company}" firmasını${profile.contacts.length > 0 ? `, ${profile.contacts.length} temsilcisini` : ''} ve ilişkili tüm fırsat verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
         loading={deleteCustomer.isPending}
         error={deleteCustomerError || undefined}
       />
