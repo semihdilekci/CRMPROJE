@@ -1015,7 +1015,7 @@ Commit:
   feat(web): two-step customer + contact picker with duplicate handling
              and business-card scan
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-10 — Frontend Web: OpportunityFormModal Güncelle
