@@ -26,9 +26,9 @@ function filterOpportunities(
   return opportunities.filter((o) => {
     const searchLower = search.trim().toLowerCase();
     if (searchLower) {
-      const nameMatch = o.customer?.name?.toLowerCase().includes(searchLower);
+      const contactNameMatch = o.contact?.name?.toLowerCase().includes(searchLower);
       const companyMatch = o.customer?.company?.toLowerCase().includes(searchLower);
-      if (!nameMatch && !companyMatch) return false;
+      if (!contactNameMatch && !companyMatch) return false;
     }
     if (selectedRates.length > 0 && (!o.conversionRate || !selectedRates.includes(o.conversionRate))) {
       return false;
@@ -104,7 +104,7 @@ export default function FairDetailScreen() {
     }
     lastAppliedFocusKeyRef.current = focusKey;
     const company = opp.customer?.company?.trim() ?? '';
-    const personName = opp.customer?.name?.trim() ?? '';
+    const personName = opp.contact?.name?.trim() ?? '';
     setSearch(company || personName);
     setSelectedRates(opp.conversionRate ? [opp.conversionRate] : []);
     setStageFilter(opp.currentStage ?? null);

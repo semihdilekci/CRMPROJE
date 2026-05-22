@@ -9,12 +9,12 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import type { CreateCustomerDto } from '@crm/shared';
+import type { CreateCustomerWithContactDto } from '@crm/shared';
 import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useCreateCustomer } from '@/hooks/use-customers';
+import { useCreateCustomerWithContact } from '@/hooks/use-customers';
 import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
 import api, { getAssetBaseUrl } from '@/lib/api';
@@ -30,7 +30,7 @@ export function CustomerForm({
   fairId,
   onClose,
 }: CustomerFormProps) {
-  const createCustomer = useCreateCustomer();
+  const createCustomerWithContact = useCreateCustomerWithContact();
   const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
   const { onCreated, markCreatedSuccessfully } = useCustomerFormStore();
 
@@ -176,24 +176,31 @@ export function CustomerForm({
   };
 
   const handleSubmit = async () => {
-    const dto: CreateCustomerDto = {
-      company: company.trim(),
-      name: name.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      address: address.trim() || undefined,
-      cardImage: cardImage ?? undefined,
-    };
-
-    if (!dto.company || !dto.name || !dto.phone || !dto.email) {
-      setSubmitError('Firma, ad, telefon ve e-posta zorunludur');
+    const nameTrimmed = name.trim();
+    if (!company.trim()) {
+      setSubmitError('Firma adı zorunludur');
+      return;
+    }
+    if (!nameTrimmed) {
+      setSubmitError('Temsilci adı zorunludur');
       return;
     }
 
+    const dto: CreateCustomerWithContactDto = {
+      company: company.trim(),
+      address: address.trim() || undefined,
+      contact: {
+        name: nameTrimmed,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        cardImage: cardImage ?? null,
+      },
+    };
+
     try {
       setSubmitError('');
-      const customer = await createCustomer.mutateAsync(dto);
-      onCreated?.(customer);
+      const result = await createCustomerWithContact.mutateAsync(dto);
+      onCreated?.(result);
       markCreatedSuccessfully();
       onClose();
     } catch {
@@ -203,7 +210,7 @@ export function CustomerForm({
     }
   };
 
-  const loading = createCustomer.isPending;
+  const loading = createCustomerWithContact.isPending;
   const isValid =
     company.trim().length > 0 &&
     name.trim().length > 0 &&

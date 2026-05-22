@@ -114,10 +114,11 @@ export function CustomerProfileScroll({
   }, [profile.allNotes]);
 
   const initials = profile.customer.company.slice(0, 2).toLocaleUpperCase('tr');
-  const cardUri = profile.customer.cardImage
-    ? profile.customer.cardImage.startsWith('http')
-      ? profile.customer.cardImage
-      : `${getAssetBaseUrl()}${profile.customer.cardImage}`
+  const primaryContact = profile.contacts?.[0] ?? null;
+  const cardUri = primaryContact?.cardImage
+    ? primaryContact.cardImage.startsWith('http')
+      ? primaryContact.cardImage
+      : `${getAssetBaseUrl()}${primaryContact.cardImage}`
     : null;
 
   const canEditNote = (createdById: string) =>
@@ -185,15 +186,17 @@ export function CustomerProfileScroll({
           )}
           <View className="flex-1 min-w-[200px]">
             <Text className="text-white text-xl font-semibold">{profile.customer.company}</Text>
-            <Text className="text-white/50 text-[15px] mt-1">{profile.customer.name}</Text>
-            {profile.customer.phone ? (
-              <Pressable onPress={() => Linking.openURL(`tel:${profile.customer.phone}`)}>
-                <Text className="text-white/80 text-sm mt-2">📞 {profile.customer.phone}</Text>
+            {primaryContact && (
+              <Text className="text-white/50 text-[15px] mt-1">{primaryContact.name}</Text>
+            )}
+            {primaryContact?.phone ? (
+              <Pressable onPress={() => Linking.openURL(`tel:${primaryContact.phone}`)}>
+                <Text className="text-white/80 text-sm mt-2">📞 {primaryContact.phone}</Text>
               </Pressable>
             ) : null}
-            {profile.customer.email ? (
-              <Pressable onPress={() => Linking.openURL(`mailto:${profile.customer.email}`)}>
-                <Text className="text-white/80 text-sm mt-1">✉ {profile.customer.email}</Text>
+            {primaryContact?.email ? (
+              <Pressable onPress={() => Linking.openURL(`mailto:${primaryContact.email}`)}>
+                <Text className="text-white/80 text-sm mt-1">✉ {primaryContact.email}</Text>
               </Pressable>
             ) : null}
             <Text className="text-white/30 text-[12px] mt-3">

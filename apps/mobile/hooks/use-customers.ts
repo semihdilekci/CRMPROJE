@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   ApiSuccessResponse,
   Customer,
+  CustomerWithContacts,
   CustomerListItem,
   CustomerListSortBy,
   CustomerProfileResponse,
   CreateCustomerDto,
   UpdateCustomerDto,
+  CreateCustomerWithContactDto,
   UpdateOpportunityNoteInput,
   OpportunityNote,
 } from '@crm/shared';
@@ -63,6 +65,23 @@ export function useCreateCustomer() {
     mutationFn: async (dto: CreateCustomerDto) => {
       const { data } = await api.post<ApiSuccessResponse<Customer>>(
         '/customers',
+        dto
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
+    },
+  });
+}
+
+export function useCreateCustomerWithContact() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: CreateCustomerWithContactDto) => {
+      const { data } = await api.post<ApiSuccessResponse<CustomerWithContacts>>(
+        '/customers/with-contact',
         dto
       );
       return data.data;

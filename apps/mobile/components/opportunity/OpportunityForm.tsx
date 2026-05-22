@@ -34,7 +34,7 @@ import {
   useCreateOpportunity,
   useUpdateOpportunity,
 } from '@/hooks/use-opportunities';
-import { useUpdateCustomer } from '@/hooks/use-customers';
+import { useUpdateCustomerContact } from '@/hooks/use-customer-contacts';
 import { useProducts } from '@/hooks/use-products';
 import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
@@ -57,7 +57,7 @@ export function OpportunityForm({
   const isEdit = !!initial;
   const createOpportunity = useCreateOpportunity(fairId ?? '');
   const updateOpportunity = useUpdateOpportunity(fairId ?? '');
-  const updateCustomer = useUpdateCustomer();
+  const updateContact = useUpdateCustomerContact();
   const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
   const openCustomerForm = useCustomerFormStore((s) => s.open);
   const oppClose = useOpportunityFormStore((s) => s.close);
@@ -84,7 +84,7 @@ export function OpportunityForm({
       setBudgetRaw(initial.budgetRaw ?? '');
       setBudgetCurrency((initial.budgetCurrency as Currency) ?? 'TRY');
       setConversionRate((initial.conversionRate as ConversionRate) ?? '');
-      setCardImage(initial.customer?.cardImage ?? '');
+      setCardImage(initial.contact?.cardImage ?? '');
       setSubmitError('');
       if (
         initial.opportunityProducts &&
@@ -118,7 +118,7 @@ export function OpportunityForm({
       clearPreselectedCustomer();
     } else if (visible && preselectedCustomer) {
       setSelectedCustomer(preselectedCustomer);
-      setCardImage(preselectedCustomer.cardImage ?? '');
+      setCardImage('');
       setSubmitError('');
     } else if (visible) {
       setSelectedCustomer(null);
@@ -133,9 +133,10 @@ export function OpportunityForm({
 
   useEffect(() => {
     if (visible && selectedCustomer) {
-      setCardImage(selectedCustomer.cardImage ?? '');
+      // cardImage artık CustomerContact'a ait; burada sıfırlanır
+      setCardImage('');
     }
-  }, [visible, selectedCustomer?.id, selectedCustomer?.cardImage]);
+  }, [visible, selectedCustomer?.id]);
 
   const handleBudgetChange = (value: string) => {
     const raw = value.replace(/[^0-9]/g, '');
@@ -244,15 +245,14 @@ export function OpportunityForm({
           onPress: async () => {
             if (!selectedCustomer) return;
             setCardImage('');
-            setSelectedCustomer((prev) =>
-              prev ? { ...prev, cardImage: null } : null,
-            );
             try {
-              await updateCustomer.mutateAsync({
-                id: selectedCustomer.id,
-                dto: { cardImage: null },
-                fairId: fairId ?? undefined,
-              });
+              if (initial?.contact?.id) {
+                await updateContact.mutateAsync({
+                  id: initial.contact.id,
+                  dto: { cardImage: null },
+                  customerId: selectedCustomer.id,
+                });
+              }
             } catch {
               setSubmitError('Kartvizit silinirken hata oluştu');
             }
@@ -283,12 +283,12 @@ export function OpportunityForm({
 
     try {
       setSubmitError('');
-      const customerCardImage = selectedCustomer.cardImage ?? '';
-      if (cardImage !== customerCardImage) {
-        await updateCustomer.mutateAsync({
-          id: selectedCustomer.id,
+      const contactCardImage = initial?.contact?.cardImage ?? '';
+      if (cardImage !== contactCardImage && initial?.contact?.id) {
+        await updateContact.mutateAsync({
+          id: initial.contact.id,
           dto: { cardImage: cardImage || null },
-          fairId: fairId ?? undefined,
+          customerId: selectedCustomer.id,
         });
       }
       if (isEdit && initial) {
@@ -342,7 +342,7 @@ export function OpportunityForm({
                 {cardImage ? (
                   <Pressable
                     onPress={handleDeleteCard}
-                    disabled={updateCustomer.isPending}
+                    disabled={updateContact.isPending}
                     className="p-1.5"
                     style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                   >

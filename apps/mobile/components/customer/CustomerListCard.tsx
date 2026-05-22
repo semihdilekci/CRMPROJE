@@ -42,7 +42,9 @@ export function CustomerListCard({ customer, onPress }: CustomerListCardProps) {
           <Text className="text-white text-lg font-semibold" numberOfLines={2}>
             {customer.company}
           </Text>
-          <Text className="text-white/70 text-[14px] mt-1">{customer.name}</Text>
+          <Text className="text-white/70 text-[14px] mt-1">
+            {customer.primaryContact?.name ?? `${customer.contactCount ?? 0} temsilci`}
+          </Text>
           <View className="mt-3">
             <LinearGradient
               colors={['rgba(249,115,22,0.25)', 'rgba(236,72,153,0.18)']}

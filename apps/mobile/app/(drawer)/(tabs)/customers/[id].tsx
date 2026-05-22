@@ -110,9 +110,6 @@ export default function CustomerDetailScreen() {
         customerId={id}
         initial={{
           company: profile.customer.company,
-          name: profile.customer.name,
-          phone: profile.customer.phone ?? '',
-          email: profile.customer.email ?? '',
           address: profile.customer.address ?? null,
         }}
         onClose={() => setEditVisible(false)}

@@ -27,5 +27,10 @@ export const queryKeys = {
       ['customers', 'list', { search: search ?? '', sortBy: sortBy ?? 'lastContact' }] as const,
     profile: (id: string) => ['customers', id, 'profile'] as const,
     byFair: (fairId: string) => [...queryKeys.customers.all, fairId] as const,
+    contacts: (customerId: string) => ['customers', customerId, 'contacts'] as const,
+  },
+  customerContacts: {
+    all: ['customer-contacts'] as const,
+    byCustomer: (customerId: string) => ['customer-contacts', 'by-customer', customerId] as const,
   },
 } as const;

@@ -32,7 +32,7 @@ import { useHasOfferDocument, useDownloadOfferDocument } from '@/hooks/use-offer
 import { useAuthStore } from '@/stores/auth-store';
 import { getAssetBaseUrl } from '@/lib/api';
 import { useRouter } from 'expo-router';
-import { useUpdateCustomer } from '@/hooks/use-customers';
+import { useUpdateCustomerContact } from '@/hooks/use-customer-contacts';
 
 function formatTonnageShort(quantity: number | null, unit: string): string {
   if (quantity == null || quantity === 0) return '';
@@ -69,7 +69,7 @@ export function OpportunityCard({
 
   const user = useAuthStore((s) => s.user);
   const deleteOpportunity = useDeleteOpportunity(fairId);
-  const updateCustomer = useUpdateCustomer();
+  const updateContact = useUpdateCustomerContact();
   const { data: stageLogs = [] } = useStageHistory(opportunity.id, {
     enabled: expanded,
   });
@@ -82,7 +82,7 @@ export function OpportunityCard({
   const { data: hasOffer } = useHasOfferDocument(opportunity.id);
   const downloadOffer = useDownloadOfferDocument(opportunity.id);
 
-  const { customer } = opportunity;
+  const { customer, contact } = opportunity;
   const hasProducts =
     (opportunity.opportunityProducts?.length ?? 0) > 0 ||
     (opportunity.products?.length ?? 0) > 0;
@@ -112,7 +112,9 @@ export function OpportunityCard({
   const handleDeletePress = () => {
     Alert.alert(
       'Fırsatı Sil',
-      `"${customer.name}" (${customer.company}) fırsatını silmek istediğinizden emin misiniz?`,
+      contact
+        ? `"${contact.name}" (${customer.company}) fırsatını silmek istediğinizden emin misiniz?`
+        : `"${customer.company}" fırsatını silmek istediğinizden emin misiniz?`,
       [
         { text: 'İptal', style: 'cancel' },
         {
@@ -125,11 +127,11 @@ export function OpportunityCard({
   };
 
   const handlePhonePress = () => {
-    if (customer.phone) Linking.openURL(`tel:${customer.phone}`);
+    if (contact?.phone) Linking.openURL(`tel:${contact.phone}`);
   };
 
   const handleEmailPress = () => {
-    if (customer.email) Linking.openURL(`mailto:${customer.email}`);
+    if (contact?.email) Linking.openURL(`mailto:${contact.email}`);
   };
 
   const handleAddNote = async () => {
@@ -170,6 +172,7 @@ export function OpportunityCard({
     user?.id === note.createdBy.id || user?.role === 'admin';
 
   const handleDeleteCard = () => {
+    if (!contact) return;
     Alert.alert(
       'Kartviziti Sil',
       'Kartvizit fotoğrafını silmek istediğinizden emin misiniz?',
@@ -179,10 +182,10 @@ export function OpportunityCard({
           text: 'Sil',
           style: 'destructive',
           onPress: () =>
-            updateCustomer.mutate({
-              id: customer.id,
+            updateContact.mutate({
+              id: contact.id,
               dto: { cardImage: null },
-              fairId,
+              customerId: customer.id,
             }),
         },
       ],
@@ -203,11 +206,13 @@ export function OpportunityCard({
             }
           >
             <Text className="text-white font-bold text-[15px]" numberOfLines={2}>
-              {customer.name}
+              {contact?.name ?? customer.company}
             </Text>
-            <Text className="text-white/80 font-semibold text-[13px] mt-0.5" numberOfLines={2}>
-              {customer.company}
-            </Text>
+            {contact && (
+              <Text className="text-white/80 font-semibold text-[13px] mt-0.5" numberOfLines={2}>
+                {customer.company}
+              </Text>
+            )}
           </Pressable>
           <View className="flex-row flex-wrap gap-1.5 mt-2">
             {opportunity.conversionRate && (
@@ -222,7 +227,7 @@ export function OpportunityCard({
               </Badge>
             ))}
             {displayProducts.length > 2 && (
-              <Badge>+{displayProducts.length - 2}</Badge>
+              <Badge>{`+${displayProducts.length - 2}`}</Badge>
             )}
           </View>
         </View>
@@ -230,7 +235,7 @@ export function OpportunityCard({
           {expanded && notes.length > 0 ? (
             <Text className="text-[12px]">💬 {notes.length}</Text>
           ) : null}
-          {customer.cardImage ? (
+          {contact?.cardImage ? (
             <Text className="text-[14px]">📇</Text>
           ) : null}
           <Text className="text-white/60 text-[12px]">
@@ -274,19 +279,19 @@ export function OpportunityCard({
               Kayıt: {formatDateTime(opportunity.createdAt)}
             </Text>
 
-            {(customer.phone || customer.email) && (
+            {(contact?.phone || contact?.email) && (
               <View className="gap-2">
-                {customer.phone ? (
+                {contact?.phone ? (
                   <Pressable onPress={handlePhonePress}>
                     <Text className="text-white/90 text-[13px]">
-                      📞 {customer.phone}
+                      📞 {contact.phone}
                     </Text>
                   </Pressable>
                 ) : null}
-                {customer.email ? (
+                {contact?.email ? (
                   <Pressable onPress={handleEmailPress}>
                     <Text className="text-white/90 text-[13px] break-all">
-                      ✉️ {customer.email}
+                      ✉️ {contact.email}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -298,10 +303,10 @@ export function OpportunityCard({
                 <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
                   Kartvizit
                 </Text>
-                {customer.cardImage ? (
+                {contact?.cardImage ? (
                   <Pressable
                     onPress={handleDeleteCard}
-                    disabled={updateCustomer.isPending}
+                    disabled={updateContact.isPending}
                     className="p-1.5"
                     style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                   >
@@ -309,12 +314,12 @@ export function OpportunityCard({
                   </Pressable>
                 ) : null}
               </View>
-              {customer.cardImage ? (
+              {contact?.cardImage ? (
                 <Image
                   source={{
-                    uri: customer.cardImage.startsWith('http')
-                      ? customer.cardImage
-                      : `${getAssetBaseUrl()}${customer.cardImage}`,
+                    uri: contact.cardImage.startsWith('http')
+                      ? contact.cardImage
+                      : `${getAssetBaseUrl()}${contact.cardImage}`,
                   }}
                   className="h-32 w-full"
                   resizeMode="contain"

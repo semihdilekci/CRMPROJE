@@ -49,9 +49,7 @@ export function CustomerSelectInput({
               {selectedCustomer.company}
             </Text>
             <Text className="text-white/60 text-[13px] mt-0.5">
-              {selectedCustomer.name}
-              {selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}
-              {selectedCustomer.email ? ` · ${selectedCustomer.email}` : ''}
+              {selectedCustomer.address ?? ''}
             </Text>
           </View>
           <Pressable
@@ -111,8 +109,8 @@ export function CustomerSelectInput({
                     {c.company}
                   </Text>
                   <Text className="text-white/60 text-[12px] mt-0.5">
-                    {c.name}
-                    {c.phone ? ` · ${c.phone}` : ''}
+                    {c.primaryContact?.name ?? ''}
+                    {c.address ? ` · ${c.address}` : ''}
                   </Text>
                 </Pressable>
               ))

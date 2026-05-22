@@ -11,9 +11,6 @@ interface CustomerEditSheetProps {
   customerId: string;
   initial: {
     company: string;
-    name: string;
-    phone: string;
-    email: string;
     address: string | null;
   };
   onClose: () => void;
@@ -27,18 +24,12 @@ export function CustomerEditSheet({
 }: CustomerEditSheetProps) {
   const updateCustomer = useUpdateCustomer();
   const [company, setCompany] = useState('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (visible) {
       setCompany(initial.company);
-      setName(initial.name);
-      setPhone(initial.phone ?? '');
-      setEmail(initial.email ?? '');
       setAddress(initial.address ?? '');
       setSubmitError('');
     }
@@ -47,13 +38,10 @@ export function CustomerEditSheet({
   const handleSubmit = async () => {
     const dto: UpdateCustomerDto = {
       company: company.trim(),
-      name: name.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
       address: address.trim() || null,
     };
-    if (!dto.company || !dto.name || !dto.phone || !dto.email) {
-      setSubmitError('Firma, ad, telefon ve e-posta zorunludur');
+    if (!dto.company) {
+      setSubmitError('Firma adı zorunludur');
       return;
     }
     try {
@@ -68,7 +56,7 @@ export function CustomerEditSheet({
   const loading = updateCustomer.isPending;
 
   return (
-    <BottomSheet isVisible={visible} onClose={onClose} title="Müşteriyi Düzenle">
+    <BottomSheet isVisible={visible} onClose={onClose} title="Firmayı Düzenle">
       <ScrollView
         className="max-h-[70vh]"
         showsVerticalScrollIndicator={false}
@@ -77,21 +65,6 @@ export function CustomerEditSheet({
       >
         <View className="gap-4 pb-4">
           <Input label="Firma Adı" value={company} onChangeText={setCompany} maxLength={200} />
-          <Input label="Ad Soyad" value={name} onChangeText={setName} maxLength={100} />
-          <Input
-            label="Telefon"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            maxLength={30}
-          />
-          <Input
-            label="E-posta"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            maxLength={254}
-          />
           <Input label="Adres (opsiyonel)" value={address} onChangeText={setAddress} maxLength={1000} />
           {submitError ? (
             <View className="rounded-lg bg-[#F87171]/20 px-3 py-2">
