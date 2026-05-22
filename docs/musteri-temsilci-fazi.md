@@ -1100,7 +1100,7 @@ Bağımlılık: MT-1, MT-5, MT-10
 Commit:
   refactor(web): show contact name/phone/email in OpportunityCard
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-12 — Frontend Web: Müşteri Liste Sayfası Güncelle
