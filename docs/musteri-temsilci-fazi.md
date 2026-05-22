@@ -776,7 +776,7 @@ Commit:
   feat(api): wire Opportunity.contactId across create/list/update flows
   refactor(api): use contact.name in offer/report/chat templates
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-6 — Backend: Audit, Build & Manuel Test
