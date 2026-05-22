@@ -827,7 +827,7 @@ Commit:
   test(api): manual smoke tests for customer/contact/opportunity flows
   (gerçek commit yoksa sadece doğrulama notu yeterli)
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-7 — Frontend Web: Hooks & Query Keys
