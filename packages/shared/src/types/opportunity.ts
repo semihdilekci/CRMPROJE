@@ -1,5 +1,6 @@
 import { ConversionRate, Currency } from '../constants/enums';
 import { Customer } from './customer';
+import { CustomerContact } from './customer-contact';
 import { OpportunityProduct } from './opportunity-product';
 import type { OpportunityStageLog } from './opportunity-stage';
 
@@ -7,6 +8,7 @@ export interface Opportunity {
   id: string;
   fairId: string;
   customerId: string;
+  contactId: string | null;
   budgetRaw: string | null;
   budgetCurrency: Currency | null;
   conversionRate: ConversionRate | null;
@@ -19,14 +21,14 @@ export interface Opportunity {
 
 export interface OpportunityWithDetails extends Opportunity {
   customer: Customer;
+  contact: CustomerContact | null;
   opportunityProducts: OpportunityProduct[];
   stageLogs: OpportunityStageLog[];
 }
 
-// Geçiş dönemi için OpportunityWithCustomer, opportunityProducts ve stageLogs
-// alanlarını opsiyonel kabul eden daha gevşek bir tip olarak tanımlanır.
 export interface OpportunityWithCustomer extends Opportunity {
   customer: Customer;
+  contact: CustomerContact | null;
   opportunityProducts?: OpportunityProduct[];
   stageLogs?: OpportunityStageLog[];
 }

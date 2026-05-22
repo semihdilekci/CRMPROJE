@@ -3,6 +3,7 @@ export * from './auth';
 export * from './user';
 export * from './fair';
 export * from './customer';
+export * from './customer-contact';
 export * from './customer-profile';
 export * from './opportunity';
 export * from './opportunity-product';

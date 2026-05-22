@@ -17,6 +17,12 @@ export const API_ENDPOINTS = {
   CUSTOMERS: {
     BASE: '/customers',
     BY_ID: (id: string) => `/customers/${id}`,
+    WITH_CONTACT: '/customers/with-contact',
+    PROFILE: (id: string) => `/customers/${id}/profile`,
+    CONTACTS: (customerId: string) => `/customers/${customerId}/contacts`,
+  },
+  CUSTOMER_CONTACTS: {
+    BY_ID: (id: string) => `/customer-contacts/${id}`,
   },
   OPPORTUNITIES: {
     BY_ID: (id: string) => `/opportunities/${id}`,

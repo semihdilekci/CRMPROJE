@@ -1,15 +1,14 @@
 import type { Currency } from '../constants/enums';
+import type { CustomerContact } from './customer-contact';
 
 export type CustomerListSortBy = 'lastContact' | 'company' | 'opportunityCount';
 
 export interface CustomerListItem {
   id: string;
   company: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
   address: string | null;
-  cardImage: string | null;
+  contactCount: number;
+  primaryContact: CustomerContact | null;
   opportunityCount: number;
   wonCount: number;
   activeCount: number;
@@ -52,6 +51,7 @@ export interface OpportunityTimelineItem {
   lossReason: string | null;
   budgetRaw: string | null;
   budgetCurrency: Currency | null;
+  contact: CustomerContact | null;
   opportunityProducts: Array<{
     product: { name: string };
     quantity: number | null;
@@ -85,12 +85,9 @@ export interface CustomerProfileResponse {
   customer: {
     id: string;
     company: string;
-    name: string;
     address: string | null;
-    phone: string | null;
-    email: string | null;
-    cardImage: string | null;
   };
+  contacts: CustomerContact[];
   kpi: CustomerProfileKpi;
   pendingOpportunities: PendingOpportunityItem[];
   opportunityTimeline: OpportunityTimelineItem[];

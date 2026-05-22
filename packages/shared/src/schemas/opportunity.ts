@@ -4,6 +4,7 @@ import { opportunityProductsSchema } from './opportunity-product';
 
 export const createOpportunitySchema = z.object({
   customerId: z.string().min(1, 'Müşteri seçimi zorunludur'),
+  contactId: z.string().nullable().optional(),
   budgetRaw: z.string().nullable().optional(),
   budgetCurrency: z.enum(CURRENCIES).nullable().optional(),
   conversionRate: z.enum(CONVERSION_RATES).nullable().optional(),
