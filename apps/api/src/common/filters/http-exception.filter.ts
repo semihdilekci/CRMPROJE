@@ -65,8 +65,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
 
       const details = (exceptionResponse as Record<string, unknown>).details;
-      if (Array.isArray(details)) {
-        body.details = details;
+      if (details !== undefined && details !== null) {
+        // details can be an array (validation errors) or an object (e.g. duplicateOf meta)
+        body.details = details as ApiErrorResponse['details'];
       }
 
       return { status, body };

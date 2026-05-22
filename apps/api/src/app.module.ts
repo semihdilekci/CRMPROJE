@@ -19,6 +19,7 @@ import { TeamModule } from '@modules/team/team.module';
 import { OpportunityModule } from '@modules/opportunity/opportunity.module';
 import { ChatModule } from '@modules/chat/chat.module';
 import { ReportModule } from '@modules/report/report.module';
+import { CustomerContactModule } from '@modules/customer-contact/customer-contact.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ReportModule } from '@modules/report/report.module';
     UserModule,
     FairModule,
     CustomerModule,
+    CustomerContactModule,
     OpportunityModule,
     ChatModule,
     UploadModule,

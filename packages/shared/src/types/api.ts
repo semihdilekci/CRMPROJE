@@ -16,9 +16,18 @@ export interface ValidationDetail {
   message: string;
 }
 
+export interface DuplicateContactMeta {
+  duplicateOf: {
+    id: string;
+    name: string;
+    phone: string | null;
+    email: string | null;
+  };
+}
+
 export interface ApiErrorResponse {
   success: false;
   message: string;
   error?: string;
-  details?: ValidationDetail[];
+  details?: ValidationDetail[] | DuplicateContactMeta;
 }
