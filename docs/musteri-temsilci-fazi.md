@@ -884,7 +884,7 @@ Commit:
   feat(web): add CustomerContact hooks, update Customer hooks for company
              model
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-8 — Frontend Web: CustomerEditModal Refactor + CustomerContactEditModal (Yeni)
