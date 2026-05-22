@@ -1188,7 +1188,7 @@ Commit:
   feat(web): refactor customer profile to company 360 with contact
              management
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-14 — Frontend Web: Audit Log, Top Bar, Diğer Küçük Yerler
