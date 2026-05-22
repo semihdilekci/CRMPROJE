@@ -73,7 +73,7 @@ export function OpportunityCard({
     setShowDelete(false);
   };
 
-  const { customer } = opportunity;
+  const { customer, contact } = opportunity;
   const hasProducts = (opportunity.opportunityProducts?.length ?? 0) > 0 || (opportunity.products?.length ?? 0) > 0;
   const displayProducts: { productName: string; quantity: number | null; unit: string }[] =
     opportunity.opportunityProducts?.length
@@ -119,9 +119,9 @@ export function OpportunityCard({
               onClick={(e) => e.stopPropagation()}
               className="inline-flex w-fit flex-col text-left hover:opacity-90"
             >
-              <p className="text-[15px] font-bold text-white">{customer.name}</p>
+              <p className="text-[15px] font-bold text-white">{customer.company}</p>
               <p className="text-[13px] font-semibold text-white/80">
-                {customer.company}
+                {contact?.name ?? '— Temsilci atanmamış —'}
               </p>
             </Link>
             <div className="mt-auto flex flex-wrap gap-1.5">
@@ -146,7 +146,7 @@ export function OpportunityCard({
             </div>
           </div>
           <div className="ml-3 flex shrink-0 items-center gap-2 self-center">
-            {customer.cardImage && (
+            {contact?.cardImage && (
               <span title="Kartvizit mevcut" className="text-[14px]">
                 📇
               </span>
@@ -188,24 +188,24 @@ export function OpportunityCard({
                 Kayıt: {formatDateTime(opportunity.createdAt)}
               </p>
 
-              {(customer.phone || customer.email) && (
+              {(contact?.phone || contact?.email) && (
                 <div className="grid grid-cols-2 gap-2">
-                  {customer.phone && (
+                  {contact.phone && (
                     <a
-                      href={`tel:${customer.phone}`}
+                      href={`tel:${contact.phone}`}
                       className="text-white/90 hover:text-white"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      📞 {customer.phone}
+                      📞 {contact.phone}
                     </a>
                   )}
-                  {customer.email && (
+                  {contact.email && (
                     <a
-                      href={`mailto:${customer.email}`}
+                      href={`mailto:${contact.email}`}
                       className="break-all text-white/90 hover:text-white"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      ✉️ {customer.email}
+                      ✉️ {contact.email}
                     </a>
                   )}
                 </div>
@@ -230,10 +230,10 @@ export function OpportunityCard({
                 </div>
               )}
 
-              {customer.cardImage && (
+              {contact?.cardImage && (
                 <div className="mt-2 rounded-xl border border-white/20 overflow-hidden bg-white/5 p-2">
                   <img
-                    src={customer.cardImage}
+                    src={contact.cardImage}
                     alt="Kartvizit"
                     className="max-h-[120px] rounded-lg object-contain"
                   />
@@ -280,7 +280,9 @@ export function OpportunityCard({
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Fırsatı Sil"
-        message={`"${customer.name}" (${customer.company}) fırsatını silmek istediğinizden emin misiniz?`}
+        message={contact
+          ? `"${contact.name}" (${customer.company}) fırsatını silmek istediğinizden emin misiniz?`
+          : `"${customer.company}" fırsatını silmek istediğinizden emin misiniz?`}
         loading={deleteOpportunity.isPending}
       />
 
