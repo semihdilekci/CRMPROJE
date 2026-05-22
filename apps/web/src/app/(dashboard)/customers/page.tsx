@@ -51,7 +51,7 @@ export default function CustomersPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Müşteri veya firma ara..."
+              placeholder="Firma veya temsilci ara..."
             />
           </div>
           <div className="w-[220px]">

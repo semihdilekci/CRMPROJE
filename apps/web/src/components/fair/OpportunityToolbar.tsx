@@ -24,7 +24,7 @@ export function OpportunityToolbar({
     <div className="mb-5 flex flex-wrap items-end gap-3">
       <div className="min-w-[200px] flex-1">
         <Input
-          placeholder="İsim veya firma ara..."
+          placeholder="Firma, temsilci veya e-posta ara..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
