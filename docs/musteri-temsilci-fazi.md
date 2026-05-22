@@ -702,7 +702,7 @@ Commit:
   refactor(api): simplify Customer to company entity; expand profile
                  response with contacts
 
-Durum: [ ]
+Durum: [x]
 
 ----------------------------------------------------------------------
 MT-5 — Backend: Opportunity Modülünü Güncelle (contactId Desteği)
