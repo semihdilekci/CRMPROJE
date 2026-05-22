@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerListSortBy } from '@crm/shared';
 import { TopBar } from '@/components/layout/TopBar';
@@ -24,11 +24,6 @@ export default function CustomersPage() {
   const debouncedSearch = useDebounce(search, 300);
   const { data: customers = [], isLoading } = useCustomerList(debouncedSearch || undefined, sortBy);
 
-  const uniqueCompanyCount = useMemo(
-    () => new Set(customers.map((item) => item.company.trim().toLocaleLowerCase('tr'))).size,
-    [customers],
-  );
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -48,7 +43,7 @@ export default function CustomersPage() {
           Müşteriler
         </h1>
         <p className="mt-2 text-sm text-[#f0ede8]/50">
-          {customers.length} müşteri · {uniqueCompanyCount} farklı firma
+          {customers.length} firma
         </p>
 
         <div className="mt-6 mb-6 flex flex-wrap items-end gap-3">

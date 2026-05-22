@@ -49,7 +49,16 @@ export function CustomerListCard({ customer, onClick }: CustomerListCardProps) {
           >
             {customer.company}
           </p>
-          <p className="mt-1.5 text-[14px] text-white/70">{customer.name}</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[12px] text-white/70">
+              {customer.contactCount} temsilci
+            </span>
+            {customer.primaryContact && (
+              <span className="text-[13px] text-white/60">
+                {customer.primaryContact.name}
+              </span>
+            )}
+          </div>
 
           <div className="mt-auto flex items-center gap-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-gradient-to-r from-orange-500/20 to-pink-500/20 px-3 py-1.5 backdrop-blur-xl">
