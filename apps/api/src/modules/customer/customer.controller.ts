@@ -14,13 +14,16 @@ import {
 import {
   ApiSuccessResponse,
   Customer,
+  CustomerWithContacts,
   CustomerListItem,
   CustomerListSortBy,
   CustomerProfileResponse,
   createCustomerSchema,
   updateCustomerSchema,
+  createCustomerWithContactSchema,
   CreateCustomerDto,
   UpdateCustomerDto,
+  CreateCustomerWithContactDto,
 } from '@crm/shared';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
@@ -33,12 +36,23 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   async create(
     @Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto,
     @CurrentUser() user: { id: string; email: string },
   ): Promise<ApiSuccessResponse<Customer>> {
     const data = await this.customerService.create(dto, user);
     return { success: true, message: 'Müşteri başarıyla oluşturuldu', data };
+  }
+
+  @Post('with-contact')
+  @HttpCode(HttpStatus.CREATED)
+  async createWithContact(
+    @Body(new ZodValidationPipe(createCustomerWithContactSchema)) dto: CreateCustomerWithContactDto,
+    @CurrentUser() user: { id: string; email: string },
+  ): Promise<ApiSuccessResponse<CustomerWithContacts>> {
+    const data = await this.customerService.createWithContact(dto, user);
+    return { success: true, message: 'Müşteri ve temsilci başarıyla oluşturuldu', data };
   }
 
   @Get()
@@ -61,7 +75,7 @@ export class CustomerController {
   @Get(':id')
   async findById(
     @Param('id') id: string,
-  ): Promise<ApiSuccessResponse<Customer>> {
+  ): Promise<ApiSuccessResponse<CustomerWithContacts>> {
     const data = await this.customerService.findById(id);
     return { success: true, message: 'Müşteri başarıyla getirildi', data };
   }

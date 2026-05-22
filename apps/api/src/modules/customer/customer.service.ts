@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import {
   Customer,
+  CustomerWithContacts,
+  CustomerContact,
   CreateCustomerDto,
   UpdateCustomerDto,
+  CreateCustomerWithContactDto,
   type CustomerListItem,
   type CustomerListSortBy,
   type CustomerProfileResponse,
@@ -25,7 +28,9 @@ export class CustomerService {
   ) {}
 
   async create(dto: CreateCustomerDto, auditUser?: AuditUser): Promise<Customer> {
-    const customer = await this.prisma.customer.create({ data: dto });
+    const customer = await this.prisma.customer.create({
+      data: { company: dto.company, address: dto.address ?? null },
+    });
     const result = this.toCustomerResponse(customer);
 
     await this.auditService.log({
@@ -37,8 +42,36 @@ export class CustomerService {
       after: result,
     });
 
-    this.logger.log(`Customer created: ${customer.company} - ${customer.name}`);
+    this.logger.log(`Customer created: ${customer.company}`);
     return result;
+  }
+
+  async createWithContact(
+    dto: CreateCustomerWithContactDto,
+    auditUser?: AuditUser,
+  ): Promise<CustomerWithContacts> {
+    const customer = await this.prisma.customer.create({
+      data: {
+        company: dto.company,
+        address: dto.address ?? null,
+        ...(dto.contact
+          ? { contacts: { create: [{ name: dto.contact.name, phone: dto.contact.phone ?? null, email: dto.contact.email ?? null, cardImage: dto.contact.cardImage ?? null }] } }
+          : {}),
+      },
+      include: { contacts: true },
+    });
+
+    await this.auditService.log({
+      userId: auditUser?.id,
+      userEmail: auditUser?.email,
+      entityType: 'customer',
+      entityId: customer.id,
+      action: 'create',
+      after: { company: customer.company, contactCount: customer.contacts.length },
+    });
+
+    this.logger.log(`Customer with contact created: ${customer.company}`);
+    return this.toCustomerWithContactsResponse(customer);
   }
 
   async findAll(search?: string, sortBy: CustomerListSortBy = 'lastContact'): Promise<CustomerListItem[]> {
@@ -46,14 +79,16 @@ export class CustomerService {
 
     if (search) {
       where['OR'] = [
-        { name: { contains: search, mode: 'insensitive' } },
         { company: { contains: search, mode: 'insensitive' } },
+        { contacts: { some: { name: { contains: search, mode: 'insensitive' } } } },
+        { contacts: { some: { email: { contains: search, mode: 'insensitive' } } } },
       ];
     }
 
     const customers = await this.prisma.customer.findMany({
       where,
       include: {
+        contacts: { orderBy: { updatedAt: 'desc' } },
         opportunities: {
           select: {
             id: true,
@@ -93,14 +128,22 @@ export class CustomerService {
         }
       }
 
+      const primaryContact = customer.contacts[0] ?? null;
+
       return {
-        ...this.toCustomerResponse(customer),
+        id: customer.id,
+        company: customer.company,
+        address: customer.address,
+        contactCount: customer.contacts.length,
+        primaryContact: primaryContact ? this.toContactResponse(primaryContact) : null,
         opportunityCount,
         wonCount,
         activeCount,
         firstContact: firstContact ? firstContact.toISOString() : null,
         lastContact: lastContact ? lastContact.toISOString() : null,
         totalBudgetRaw: totalBudget > 0 ? String(Math.round(totalBudget)) : null,
+        createdAt: customer.createdAt.toISOString(),
+        updatedAt: customer.updatedAt.toISOString(),
       } satisfies CustomerListItem;
     });
 
@@ -118,26 +161,29 @@ export class CustomerService {
     });
   }
 
-  async findById(id: string): Promise<Customer> {
-    const customer = await this.prisma.customer.findUnique({ where: { id } });
+  async findById(id: string): Promise<CustomerWithContacts> {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id },
+      include: { contacts: { orderBy: { updatedAt: 'desc' } } },
+    });
     if (!customer) throw new NotFoundException('Müşteri bulunamadı');
-    return this.toCustomerResponse(customer);
+    return this.toCustomerWithContactsResponse(customer);
   }
 
   async findProfileById(id: string): Promise<CustomerProfileResponse> {
     const customer = await this.prisma.customer.findUnique({
       where: { id },
       include: {
+        contacts: { orderBy: { updatedAt: 'desc' } },
         opportunities: {
           include: {
+            contact: true,
             fair: {
               select: { id: true, name: true, startDate: true, endDate: true },
             },
             opportunityProducts: {
               include: {
-                product: {
-                  select: { name: true },
-                },
+                product: { select: { name: true } },
               },
             },
             stageLogs: {
@@ -145,9 +191,7 @@ export class CustomerService {
               orderBy: { createdAt: 'asc' },
             },
             opportunityNotes: {
-              include: {
-                createdBy: { select: { id: true, name: true } },
-              },
+              include: { createdBy: { select: { id: true, name: true } } },
               orderBy: { createdAt: 'desc' },
             },
           },
@@ -198,6 +242,7 @@ export class CustomerService {
         lossReason: opportunity.lossReason,
         budgetRaw: opportunity.budgetRaw,
         budgetCurrency: opportunity.budgetCurrency as 'USD' | 'EUR' | 'TRY' | 'GBP' | null,
+        contact: opportunity.contact ? this.toContactResponse(opportunity.contact) : null,
         opportunityProducts: opportunity.opportunityProducts.map((item) => ({
           product: { name: item.product.name },
           quantity: item.quantity,
@@ -263,12 +308,9 @@ export class CustomerService {
       customer: {
         id: customer.id,
         company: customer.company,
-        name: customer.name,
         address: customer.address ?? null,
-        phone: customer.phone,
-        email: customer.email,
-        cardImage: customer.cardImage ?? null,
       },
+      contacts: customer.contacts.map(this.toContactResponse),
       kpi: {
         totalOpportunities,
         wonOpportunities,
@@ -295,7 +337,10 @@ export class CustomerService {
 
     const customer = await this.prisma.customer.update({
       where: { id },
-      data: dto,
+      data: {
+        ...(dto.company !== undefined && { company: dto.company }),
+        ...(dto.address !== undefined && { address: dto.address }),
+      },
     });
     const result = this.toCustomerResponse(customer);
 
@@ -309,7 +354,7 @@ export class CustomerService {
       after: result,
     });
 
-    this.logger.log(`Customer updated: ${customer.company} - ${customer.name}`);
+    this.logger.log(`Customer updated: ${customer.company}`);
     return result;
   }
 
@@ -317,42 +362,77 @@ export class CustomerService {
     const customer = await this.prisma.customer.findUnique({ where: { id } });
     if (!customer) throw new NotFoundException('Müşteri bulunamadı');
 
-    const before = this.toCustomerResponse(customer);
-    await this.prisma.customer.delete({ where: { id } });
-
     await this.auditService.log({
       userId: auditUser?.id,
       userEmail: auditUser?.email,
       entityType: 'customer',
       entityId: id,
       action: 'delete',
-      before,
+      before: this.toCustomerResponse(customer),
     });
 
-    this.logger.log(`Customer deleted: ${customer.company} - ${customer.name}`);
+    await this.prisma.customer.delete({ where: { id } });
+    this.logger.log(`Customer deleted: ${customer.company}`);
   }
 
   private toCustomerResponse(customer: {
     id: string;
     company: string;
-    name: string;
     address: string | null;
-    phone: string | null;
-    email: string | null;
-    cardImage: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Customer {
     return {
       id: customer.id,
       company: customer.company,
-      name: customer.name,
       address: customer.address ?? null,
-      phone: customer.phone,
-      email: customer.email,
-      cardImage: customer.cardImage ?? null,
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
+    };
+  }
+
+  private toCustomerWithContactsResponse(customer: {
+    id: string;
+    company: string;
+    address: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    contacts: Array<{
+      id: string;
+      customerId: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+      cardImage: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+  }): CustomerWithContacts {
+    return {
+      ...this.toCustomerResponse(customer),
+      contacts: customer.contacts.map(this.toContactResponse),
+    };
+  }
+
+  private toContactResponse(contact: {
+    id: string;
+    customerId: string;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    cardImage: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): CustomerContact {
+    return {
+      id: contact.id,
+      customerId: contact.customerId,
+      name: contact.name,
+      phone: contact.phone,
+      email: contact.email,
+      cardImage: contact.cardImage,
+      createdAt: contact.createdAt.toISOString(),
+      updatedAt: contact.updatedAt.toISOString(),
     };
   }
 }
