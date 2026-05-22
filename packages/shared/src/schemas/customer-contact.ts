@@ -3,14 +3,9 @@ import { z } from 'zod';
 export const createCustomerContactSchema = z.object({
   name: z.string().min(1, 'Ad soyad zorunludur'),
   phone: z.string().nullable().optional(),
-  email: z
-    .string()
-    .nullable()
-    .optional()
-    .refine(
-      (val) => !val || val.includes('@'),
-      { message: 'Geçerli bir e-posta adresi giriniz' },
-    ),
+  // E-posta formatı serbest bırakıldı: OCR çeşitli formatlar üretebilir,
+  // UI katmanında gösterim; backend'de yalnızca duplicate tespiti yapılır.
+  email: z.string().nullable().optional(),
   cardImage: z.string().nullable().optional(),
 });
 
