@@ -26,6 +26,7 @@ import {
   useDeleteCustomerContact,
 } from '@/hooks/use-customer-contacts';
 import { CustomerContactEditSheet } from '@/components/customer/CustomerContactEditSheet';
+import { useHasPermission } from '@/hooks/use-permissions';
 import { useFairOpportunityFocusStore } from '@/stores/fair-opportunity-focus-store';
 
 const ORDERED_STAGES = ['tanisma', 'toplanti', 'teklif', 'sozlesme'] as const;
@@ -102,6 +103,9 @@ export function CustomerProfileScroll({
 }: CustomerProfileScrollProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const canEdit =
+    useHasPermission('content_editor') || useHasPermission('content_manager');
+  const canDelete = useHasPermission('content_manager');
   const updateNote = useUpdateOpportunityNoteForProfile(customerId);
   const deleteNote = useDeleteOpportunityNoteForProfile(customerId);
   const deleteContact = useDeleteCustomerContact();
@@ -235,14 +239,20 @@ export function CustomerProfileScroll({
             </Text>
           </View>
         </View>
-        <View className="flex-row gap-2 mt-4">
-          <Button onPress={onEditPress} className="flex-1">
-            ✏️ Düzenle
-          </Button>
-          <Button variant="danger" onPress={onDeletePress} className="flex-1">
-            🗑 Sil
-          </Button>
-        </View>
+        {(canEdit || canDelete) ? (
+          <View className="flex-row gap-2 mt-4">
+            {canEdit ? (
+              <Button onPress={onEditPress} className="flex-1">
+                ✏️ Düzenle
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button variant="danger" onPress={onDeletePress} className="flex-1">
+                🗑 Sil
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {/* Temsilciler Bölümü */}
@@ -306,31 +316,41 @@ export function CustomerProfileScroll({
                     </Pressable>
                   ) : null}
                 </View>
-                <View className="flex-row gap-1">
-                  <Pressable
-                    onPress={() => setContactSheet({ visible: true, initial: contact })}
-                    className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
-                  >
-                    <Text className="text-[12px]">✏️</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleDeleteContact(contact)}
-                    className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
-                  >
-                    <Text className="text-[12px]">🗑</Text>
-                  </Pressable>
-                </View>
+                {(canEdit || canDelete) ? (
+                  <View className="flex-row gap-1">
+                    {canEdit ? (
+                      <Pressable
+                        onPress={() => setContactSheet({ visible: true, initial: contact })}
+                        className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
+                      >
+                        <Text className="text-[12px]">✏️</Text>
+                      </Pressable>
+                    ) : null}
+                    {canDelete ? (
+                      <Pressable
+                        onPress={() => handleDeleteContact(contact)}
+                        className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
+                      >
+                        <Text className="text-[12px]">🗑</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             );
           })
         )}
 
-        <Pressable
-          onPress={() => setContactSheet({ visible: true, initial: null })}
-          className="mx-4 my-3 rounded-xl border border-dashed border-violet-500/25 bg-violet-500/10 px-4 py-3"
-        >
-          <Text className="text-violet-300/90 text-sm text-center">+ Temsilci Ekle</Text>
-        </Pressable>
+        {canEdit ? (
+          <Pressable
+            onPress={() => setContactSheet({ visible: true, initial: null })}
+            className="mx-4 my-3 rounded-xl border border-dashed border-violet-500/25 bg-violet-500/10 px-4 py-3"
+          >
+            <Text className="text-violet-300/90 text-sm text-center">+ Temsilci Ekle</Text>
+          </Pressable>
+        ) : (
+          <View className="mx-4 my-3" />
+        )}
       </View>
 
       <CustomerContactEditSheet

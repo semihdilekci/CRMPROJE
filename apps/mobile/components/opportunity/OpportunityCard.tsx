@@ -33,6 +33,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { getAssetBaseUrl } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { useUpdateCustomerContact } from '@/hooks/use-customer-contacts';
+import { useHasPermission } from '@/hooks/use-permissions';
 
 function formatTonnageShort(quantity: number | null, unit: string): string {
   if (quantity == null || quantity === 0) return '';
@@ -68,6 +69,9 @@ export function OpportunityCard({
   const [editingContent, setEditingContent] = useState('');
 
   const user = useAuthStore((s) => s.user);
+  const canEdit =
+    useHasPermission('content_editor') || useHasPermission('content_manager');
+  const canDelete = useHasPermission('content_manager');
   const deleteOpportunity = useDeleteOpportunity(fairId);
   const updateContact = useUpdateCustomerContact();
   const { data: stageLogs = [] } = useStageHistory(opportunity.id, {
@@ -254,7 +258,7 @@ export function OpportunityCard({
               <Text className="text-white font-medium">
                 {stageLabel}
               </Text>
-              {onStageChange && (
+              {onStageChange && canEdit ? (
                 <Button
                   variant="secondary"
                   onPress={onStageChange}
@@ -262,7 +266,7 @@ export function OpportunityCard({
                 >
                   Aşama Değiştir
                 </Button>
-              )}
+              ) : null}
             </View>
 
             {opportunity.budgetRaw ? (
@@ -303,7 +307,7 @@ export function OpportunityCard({
                 <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
                   Kartvizit
                 </Text>
-                {contact?.cardImage ? (
+                {contact?.cardImage && canEdit ? (
                   <Pressable
                     onPress={handleDeleteCard}
                     disabled={updateContact.isPending}
@@ -513,18 +517,24 @@ export function OpportunityCard({
             )}
           </View>
 
-          <View className="flex-row gap-2 mt-4">
-            <Button onPress={onEdit} className="flex-1">
-              ✏️ Düzenle
-            </Button>
-            <Button
-              variant="danger"
-              onPress={handleDeletePress}
-              className="w-[100px]"
-            >
-              🗑 Sil
-            </Button>
-          </View>
+          {(canEdit || canDelete) ? (
+            <View className="flex-row gap-2 mt-4">
+              {canEdit ? (
+                <Button onPress={onEdit} className="flex-1">
+                  ✏️ Düzenle
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button
+                  variant="danger"
+                  onPress={handleDeletePress}
+                  className="w-[100px]"
+                >
+                  🗑 Sil
+                </Button>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       )}
     </View>
