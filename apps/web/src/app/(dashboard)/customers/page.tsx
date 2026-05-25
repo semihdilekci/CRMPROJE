@@ -2,14 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CustomerListSortBy } from '@crm/shared';
+import { hasContentWriteAccess, type CustomerListSortBy } from '@crm/shared';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 import { useCustomerList } from '@/hooks/use-customers';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useMyPermissions } from '@/hooks/use-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 import { CustomerListCard } from '@/components/customer/CustomerListCard';
+import { CustomerCreateModal } from '@/components/customer/CustomerCreateModal';
 
 const SORT_OPTIONS: Array<{ value: CustomerListSortBy; label: string }> = [
   { value: 'lastContact', label: 'Son Temas' },
@@ -21,8 +25,14 @@ export default function CustomersPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<CustomerListSortBy>('lastContact');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
   const { data: customers = [], isLoading } = useCustomerList(debouncedSearch || undefined, sortBy);
+
+  const user = useAuthStore((s) => s.user);
+  const { data: permissions } = useMyPermissions();
+  const isAdmin = user?.role === 'admin';
+  const canWrite = isAdmin || hasContentWriteAccess(permissions?.permissions ?? []);
 
   if (isLoading) {
     return (
@@ -66,7 +76,17 @@ export default function CustomersPage() {
               ))}
             </Select>
           </div>
+          {canWrite && (
+            <Button type="button" onClick={() => setCreateModalOpen(true)}>
+              + Müşteri Ekle
+            </Button>
+          )}
         </div>
+
+        <CustomerCreateModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+        />
 
         {customers.length > 0 ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
