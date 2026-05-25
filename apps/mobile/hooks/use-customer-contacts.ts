@@ -87,6 +87,8 @@ export function useDeleteCustomerContact() {
         });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.opportunities.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fairs.all });
     },
   });
 }
