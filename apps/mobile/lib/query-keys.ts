@@ -33,4 +33,7 @@ export const queryKeys = {
     all: ['customer-contacts'] as const,
     byCustomer: (customerId: string) => ['customer-contacts', 'by-customer', customerId] as const,
   },
+  permissions: {
+    me: ['permissions', 'me'] as const,
+  },
 } as const;

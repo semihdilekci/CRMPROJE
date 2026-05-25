@@ -19,12 +19,6 @@ const backgroundGradient = [
 ] as const;
 
 export default function RootLayout() {
-  useEffect(() => {
-    setAuthErrorHandler(() => {
-      useAuthStore.getState().forceLogout();
-    });
-  }, []);
-
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -37,6 +31,13 @@ export default function RootLayout() {
         },
       })
   );
+
+  useEffect(() => {
+    setAuthErrorHandler(() => {
+      queryClient.removeQueries({ queryKey: ['permissions'] });
+      useAuthStore.getState().forceLogout();
+    });
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
