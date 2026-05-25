@@ -1,5 +1,5 @@
 import { Tabs, usePathname } from 'expo-router';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Alert, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { GradientView } from '@/components/ui/GradientView';
@@ -9,13 +9,23 @@ import { ReportsTabIcon } from '@/components/ui/ReportsTabIcon';
 import { ChartTabIcon } from '@/components/ui/ChartTabIcon';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
+import { usePermissions, useHasPermission } from '@/hooks/use-permissions';
 
 function AddButton(props: React.ComponentProps<typeof Pressable>) {
   const pathname = usePathname();
   const openFairForm = useFairFormStore((s) => s.open);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
+  const canCreate =
+    useHasPermission('content_editor') || useHasPermission('content_manager');
 
   const handlePress = () => {
+    if (!canCreate) {
+      Alert.alert(
+        'Yetki Gerekli',
+        'Bu işlem için content_editor yetkisi gereklidir.',
+      );
+      return;
+    }
     const fairDetailMatch = pathname?.match(/\/fairs\/([^/]+)/);
     if (fairDetailMatch) {
       openOpportunityForm(fairDetailMatch[1]);
@@ -52,6 +62,12 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = 45 + insets.bottom;
   const overflowAmount = tabBarHeight * TAB_BAR_OVERFLOW_RATIO;
+  const { data: permsData, isLoading: permsLoading } = usePermissions();
+  const hasReports =
+    permsLoading ||
+    permsData?.permissions.includes('sales_reporter') ||
+    permsData?.permissions.includes('manager_reporter');
+  const hasChat = permsLoading || permsData?.permissions.includes('ai_analyst');
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -117,6 +133,7 @@ export default function TabLayout() {
           name="reports"
           options={{
             title: 'Raporlar',
+            href: hasReports ? undefined : null,
             tabBarIcon: ({ focused }) => (
               <TabBarIconOnly icon={ReportsTabIcon} focused={focused} />
             ),
@@ -126,6 +143,7 @@ export default function TabLayout() {
           name="chat"
           options={{
             title: 'AI Analiz',
+            href: hasChat ? undefined : null,
             tabBarIcon: ({ focused }) => (
               <TabBarIconOnly icon={ChartTabIcon} focused={focused} />
             ),

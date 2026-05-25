@@ -7,6 +7,7 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { REPORT_CATALOG } from '@crm/shared';
 import type { ApiSuccessResponse, ExecutiveSummaryResponse } from '@crm/shared';
 import api from '@/lib/api';
+import { usePermissions, useAllowedReportSlugs } from '@/hooks/use-permissions';
 
 function formatValue(value: number, format?: string): string {
   switch (format) {
@@ -131,6 +132,43 @@ type ViewMode = 'dashboard' | 'catalog';
 export default function ReportsScreen() {
   const navigation = useNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const { data: permsData, isLoading: permsLoading } = usePermissions();
+  const allowedSlugs = useAllowedReportSlugs();
+  const hasReports =
+    permsData?.permissions.includes('sales_reporter') ||
+    permsData?.permissions.includes('manager_reporter');
+  const hasManagerDashboard = permsData?.permissions.includes('manager_reporter');
+
+  if (permsLoading) {
+    return (
+      <GradientBackground>
+        <Header showSearch={false} title="Raporlar" onMenuPress={() => {
+          (navigation as { openDrawer?: () => void }).openDrawer?.();
+        }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#8b5cf6" />
+          <Text className="text-white/40 text-xs mt-3">Yükleniyor...</Text>
+        </View>
+      </GradientBackground>
+    );
+  }
+
+  if (!hasReports) {
+    return (
+      <GradientBackground>
+        <Header showSearch={false} title="Raporlar" onMenuPress={() => {
+          (navigation as { openDrawer?: () => void }).openDrawer?.();
+        }} />
+        <View className="flex-1 items-center justify-center px-8">
+          <Text className="text-4xl mb-4">🔒</Text>
+          <Text className="text-white text-lg font-semibold text-center">Erişim Kısıtlı</Text>
+          <Text className="text-white/50 text-sm text-center mt-2">
+            Bu bölüme erişim yetkiniz bulunmamaktadır. Yöneticinizle iletişime geçin.
+          </Text>
+        </View>
+      </GradientBackground>
+    );
+  }
 
   return (
     <GradientBackground>
@@ -172,35 +210,49 @@ export default function ReportsScreen() {
               Genel Durum
             </Text>
             <Text className="text-white/40 text-xs mb-4">Yönetici özeti — anlık operasyon metrikleri</Text>
-            <ExecutiveSummaryMini />
+            {hasManagerDashboard ? (
+              <ExecutiveSummaryMini />
+            ) : (
+              <View className="items-center py-8">
+                <Text className="text-white/40 text-sm text-center">
+                  Dashboard görünümü için yönetici rapor yetkisi gereklidir.
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View className="gap-6">
-            {REPORT_CATALOG.map((category) => (
-              <View key={category.id}>
-                <Text className="text-white text-base font-semibold mb-1">{category.title}</Text>
-                <Text className="text-white/40 text-[11px] mb-3">{category.description}</Text>
-                <View className="gap-2.5">
-                  {category.reports.map((report) => (
-                    <View
-                      key={report.slug}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5"
-                    >
-                      <View className="flex-row items-center gap-3">
-                        <Text style={{ fontSize: 20 }}>{report.icon}</Text>
-                        <View className="flex-1">
-                          <Text className="text-white text-[13px] font-semibold">{report.name}</Text>
-                          <Text className="text-white/40 text-[11px] mt-0.5" numberOfLines={2}>{report.description}</Text>
-                        </View>
-                        <View className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5">
-                          <Text className="text-violet-400 text-[10px] font-medium">Web</Text>
+            {REPORT_CATALOG.map((category) => {
+              const visibleReports = category.reports.filter((r) =>
+                allowedSlugs.includes(r.slug),
+              );
+              if (visibleReports.length === 0) return null;
+              return (
+                <View key={category.id}>
+                  <Text className="text-white text-base font-semibold mb-1">{category.title}</Text>
+                  <Text className="text-white/40 text-[11px] mb-3">{category.description}</Text>
+                  <View className="gap-2.5">
+                    {visibleReports.map((report) => (
+                      <View
+                        key={report.slug}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5"
+                      >
+                        <View className="flex-row items-center gap-3">
+                          <Text style={{ fontSize: 20 }}>{report.icon}</Text>
+                          <View className="flex-1">
+                            <Text className="text-white text-[13px] font-semibold">{report.name}</Text>
+                            <Text className="text-white/40 text-[11px] mt-0.5" numberOfLines={2}>{report.description}</Text>
+                          </View>
+                          <View className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5">
+                            <Text className="text-violet-400 text-[10px] font-medium">Web</Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
             <View className="items-center py-4">
               <Text className="text-white/30 text-[11px] text-center">
                 Detaylı dashboard görünümleri web uygulamasından erişilebilir
