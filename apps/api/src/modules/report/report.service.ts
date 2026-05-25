@@ -98,7 +98,7 @@ function resolvePeriodDates(params: {
 @Injectable()
 export class ReportService {
   constructor(
-    readonly prisma: PrismaService,
+    private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
   ) {}
 
