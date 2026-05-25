@@ -170,4 +170,5 @@ IMPORTANT
 - Never bypass the layered structure for convenience.
 - Reference docs/tech-stack.md for allowed technologies.
 - Reference docs/backend-data-access.md for data access terminology and layer rules.
+- Reference docs/phase-9-backend-data-access-alignment.md when implementing ARCH9 layer-alignment work.
 - Reference docs/phase-1-features.md for current development scope.
