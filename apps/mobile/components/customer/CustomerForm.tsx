@@ -14,7 +14,7 @@ import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useCreateCustomerWithContact } from '@/hooks/use-customers';
+import { useCreateCustomerWithContact, useCustomers } from '@/hooks/use-customers';
 import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
 import api, { getAssetBaseUrl } from '@/lib/api';
@@ -32,7 +32,10 @@ export function CustomerForm({
 }: CustomerFormProps) {
   const createCustomerWithContact = useCreateCustomerWithContact();
   const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
-  const { onCreated, markCreatedSuccessfully } = useCustomerFormStore();
+  const { onCreated, markCreatedSuccessfully, setPivotContact, close: closeForm } =
+    useCustomerFormStore();
+  const [ocrCompanySearch, setOcrCompanySearch] = useState('');
+  const { data: existingCustomers = [] } = useCustomers(ocrCompanySearch || undefined);
 
   const [company, setCompany] = useState('');
   const [name, setName] = useState('');
@@ -41,6 +44,9 @@ export function CustomerForm({
   const [address, setAddress] = useState('');
   const [cardImage, setCardImage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState('');
+  const [pendingOcrData, setPendingOcrData] = useState<{
+    name: string; phone: string; email: string; cardImage: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -51,6 +57,8 @@ export function CustomerForm({
       setAddress('');
       setCardImage(null);
       setSubmitError('');
+      setPendingOcrData(null);
+      setOcrCompanySearch('');
     }
   }, [visible]);
 
@@ -68,7 +76,55 @@ export function CustomerForm({
 
     const ocrResult = await scanBusinessCard(uri, filename, type);
     if (ocrResult) {
-      setCompany(ocrResult.parsed.company);
+      const parsedCompany = ocrResult.parsed.company.trim();
+      const contactData = {
+        name: ocrResult.parsed.name,
+        phone: ocrResult.parsed.phone,
+        email: ocrResult.parsed.email,
+        cardImage: ocrResult.url,
+      };
+
+      if (parsedCompany) {
+        setOcrCompanySearch(parsedCompany);
+        const match = existingCustomers.find(
+          (c) => c.company.toLowerCase() === parsedCompany.toLowerCase(),
+        );
+
+        if (match) {
+          setPendingOcrData(contactData);
+          Alert.alert(
+            'Firma Zaten Kayıtlı',
+            `"${match.company}" firması sistemde mevcut. Ne yapmak istersiniz?`,
+            [
+              {
+                text: 'Mevcut Firmaya Temsilci Ekle',
+                onPress: () => {
+                  setPivotContact({
+                    customerId: match.id,
+                    ...contactData,
+                  });
+                  closeForm();
+                },
+              },
+              {
+                text: 'Yeni Firma Olarak Ekle',
+                onPress: () => {
+                  setCompany(parsedCompany);
+                  setName(contactData.name);
+                  setPhone(contactData.phone);
+                  setEmail(contactData.email);
+                  setCardImage(contactData.cardImage);
+                  setPendingOcrData(null);
+                },
+              },
+              { text: 'İptal', style: 'cancel' },
+            ],
+          );
+          return;
+        }
+      }
+
+      setCompany(parsedCompany || ocrResult.parsed.company);
       setName(ocrResult.parsed.name);
       setPhone(ocrResult.parsed.phone);
       setEmail(ocrResult.parsed.email);

@@ -10,11 +10,13 @@ import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingView } from '@/components/ui/LoadingView';
+import { CustomerContactEditSheet } from '@/components/customer/CustomerContactEditSheet';
 import { useFairDetail } from '@/hooks/use-fairs';
 import { isNetworkError } from '@/lib/error-utils';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
 import { useStageTransitionStore } from '@/stores/stage-transition-store';
 import { useFairOpportunityFocusStore } from '@/stores/fair-opportunity-focus-store';
+import { useCustomerFormStore } from '@/stores/customer-form-store';
 import type { OpportunityWithDetails } from '@crm/shared';
 
 function filterOpportunities(
@@ -61,6 +63,9 @@ export default function FairDetailScreen() {
   const lastAppliedFocusKeyRef = useRef<string | null>(null);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
   const openStageTransition = useStageTransitionStore((s) => s.open);
+  const pivotContact = useCustomerFormStore((s) => s.pivotContact);
+  const clearPivotContact = useCustomerFormStore((s) => s.clearPivotContact);
+  const [pivotSheetVisible, setPivotSheetVisible] = useState(false);
 
   const opportunities = fair?.opportunities ?? [];
   const filteredOpportunities = useMemo(
@@ -78,6 +83,12 @@ export default function FairDetailScreen() {
       prev.includes(rate) ? prev.filter((r) => r !== rate) : [...prev, rate]
     );
   };
+
+  useEffect(() => {
+    if (pivotContact) {
+      setPivotSheetVisible(true);
+    }
+  }, [pivotContact]);
 
   /** Yeni deep link veya farklı fuar için aynı oturumda tekrar uygulanabilsin. */
   useEffect(() => {
@@ -166,6 +177,17 @@ export default function FairDetailScreen() {
         title={fair.name}
         showSearch={false}
       />
+      {pivotContact ? (
+        <CustomerContactEditSheet
+          visible={pivotSheetVisible}
+          customerId={pivotContact.customerId}
+          initial={null}
+          onClose={() => {
+            setPivotSheetVisible(false);
+            clearPivotContact();
+          }}
+        />
+      ) : null}
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: 'transparent' }}
