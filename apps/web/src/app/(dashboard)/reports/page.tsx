@@ -52,6 +52,21 @@ export default function ReportsPage() {
           </p>
         </div>
 
+        <div
+          className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-400/8 px-4 py-3"
+          style={{
+            opacity: 0,
+            animation: 'fadeUp 0.4s ease 0.12s forwards',
+          }}
+        >
+          <span className="mt-0.5 shrink-0 text-[16px]">⚠️</span>
+          <p className="text-[13px] leading-relaxed text-amber-200/80">
+            <span className="font-semibold text-amber-300">Geliştirme Aşaması:</span>{' '}
+            Raporlar henüz geliştirme aşamasındadır, bu nedenle verilerde hatalar barındırabilir.
+            Şimdiden anlayışınız için ve geri bildirimlerinizi bizimle paylaştığınız için teşekkür ederiz.
+          </p>
+        </div>
+
         <div className="flex flex-col gap-10">
           {filteredCatalog.map((category, catIdx) => (
             <section key={category.id}>

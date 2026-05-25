@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { formatBudget, getStageLabel } from '@crm/shared';
+import { formatBudget, getStageLabel, hasContentWriteAccess, hasContentDeleteAccess } from '@crm/shared';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
+import { useMyPermissions } from '@/hooks/use-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   useCreateOpportunityNote,
   useCustomerProfile,
@@ -91,6 +93,12 @@ export default function CustomerProfilePage() {
   const customerId = params.id as string;
   const from = searchParams.get('from');
   const fromName = searchParams.get('fromName');
+
+  const user = useAuthStore((s) => s.user);
+  const { data: permissions } = useMyPermissions();
+  const isAdmin = user?.role === 'admin';
+  const canWrite = isAdmin || hasContentWriteAccess(permissions?.permissions ?? []);
+  const canDelete = isAdmin || hasContentDeleteAccess(permissions?.permissions ?? []);
 
   const { data: profile, isLoading } = useCustomerProfile(customerId);
   const updateNote = useUpdateOpportunityNote(customerId);
@@ -275,26 +283,32 @@ export default function CustomerProfilePage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 md:flex-col md:items-end">
-                <Button
-                  type="button"
-                  className="px-5 py-2 text-[13px]"
-                  onClick={() => setEditCustomerOpen(true)}
-                >
-                  ✏️ Düzenle
-                </Button>
-                <Button
-                  type="button"
-                  variant="danger"
-                  className="border border-red-400/25 bg-red-400/10 px-5 py-2 text-[13px] text-red-400"
-                  onClick={() => {
-                    setDeleteCustomerError('');
-                    setDeleteCustomerOpen(true);
-                  }}
-                >
-                  🗑 Sil
-                </Button>
-              </div>
+              {(canWrite || canDelete) && (
+                <div className="flex gap-2 md:flex-col md:items-end">
+                  {canWrite && (
+                    <Button
+                      type="button"
+                      className="px-5 py-2 text-[13px]"
+                      onClick={() => setEditCustomerOpen(true)}
+                    >
+                      ✏️ Düzenle
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="border border-red-400/25 bg-red-400/10 px-5 py-2 text-[13px] text-red-400"
+                      onClick={() => {
+                        setDeleteCustomerError('');
+                        setDeleteCustomerOpen(true);
+                      }}
+                    >
+                      🗑 Sil
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 
@@ -302,6 +316,8 @@ export default function CustomerProfilePage() {
             customerId={customerId}
             companyName={profile.customer.company}
             contacts={profile.contacts}
+            canEdit={canWrite}
+            canDelete={canDelete}
           />
 
           <section

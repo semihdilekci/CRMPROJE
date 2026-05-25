@@ -156,6 +156,8 @@ export default function FairDetailPage() {
                     setEditingOpportunity(opp);
                     setShowOpportunityModal(true);
                   }}
+                  canEdit={canWrite}
+                  canDelete={canDelete}
                 />
               </div>
             ))}

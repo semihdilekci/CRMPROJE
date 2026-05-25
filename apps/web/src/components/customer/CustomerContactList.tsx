@@ -11,12 +11,16 @@ interface CustomerContactListProps {
   customerId: string;
   companyName: string;
   contacts: CustomerContact[];
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function CustomerContactList({
   customerId,
   companyName,
   contacts,
+  canEdit = true,
+  canDelete = true,
 }: CustomerContactListProps) {
   const deleteContact = useDeleteCustomerContact(customerId);
 
@@ -48,13 +52,15 @@ export function CustomerContactList({
           <p className="text-[12px] font-semibold uppercase tracking-[1px] text-[#f0ede8]/50">
             Temsilciler ({contacts.length})
           </p>
-          <Button
-            type="button"
-            className="px-3 py-1.5 text-[12px]"
-            onClick={handleAddNew}
-          >
-            + Temsilci Ekle
-          </Button>
+          {canEdit && (
+            <Button
+              type="button"
+              className="px-3 py-1.5 text-[12px]"
+              onClick={handleAddNew}
+            >
+              + Temsilci Ekle
+            </Button>
+          )}
         </div>
 
         {contacts.length === 0 ? (
@@ -63,14 +69,16 @@ export function CustomerContactList({
             <p className="mt-1 text-[13px] text-[#f0ede8]/30">
               Fuarda kartvizit alıp tarayarak hızlıca ekleyebilirsiniz.
             </p>
-            <Button
-              type="button"
-              variant="secondary"
-              className="mt-4 text-[13px]"
-              onClick={handleAddNew}
-            >
-              + İlk Temsilciyi Ekle
-            </Button>
+            {canEdit && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-4 text-[13px]"
+                onClick={handleAddNew}
+              >
+                + İlk Temsilciyi Ekle
+              </Button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-white/[0.06]">
@@ -104,27 +112,33 @@ export function CustomerContactList({
                   </div>
                 </div>
 
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(contact)}
-                    className="flex h-7 w-7 items-center justify-center rounded-[7px] border border-white/[0.08] bg-white/[0.04] text-[12px] text-[#f0ede8]/65 transition-colors hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-300"
-                    title="Düzenle"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteContactId(contact.id);
-                      setDeleteContactName(contact.name);
-                    }}
-                    className="flex h-7 w-7 items-center justify-center rounded-[7px] border border-white/[0.08] bg-white/[0.04] text-[12px] text-[#f0ede8]/65 transition-colors hover:border-red-400/25 hover:bg-red-400/12 hover:text-red-400"
-                    title="Sil"
-                  >
-                    🗑
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex gap-1.5">
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(contact)}
+                        className="flex h-7 w-7 items-center justify-center rounded-[7px] border border-white/[0.08] bg-white/[0.04] text-[12px] text-[#f0ede8]/65 transition-colors hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-300"
+                        title="Düzenle"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteContactId(contact.id);
+                          setDeleteContactName(contact.name);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-[7px] border border-white/[0.08] bg-white/[0.04] text-[12px] text-[#f0ede8]/65 transition-colors hover:border-red-400/25 hover:bg-red-400/12 hover:text-red-400"
+                        title="Sil"
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

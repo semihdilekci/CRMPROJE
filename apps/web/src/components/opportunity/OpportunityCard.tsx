@@ -42,6 +42,8 @@ interface OpportunityCardProps {
   fairId: string;
   fairName?: string;
   onEdit: () => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function OpportunityCard({
@@ -49,6 +51,8 @@ export function OpportunityCard({
   fairId,
   fairName,
   onEdit,
+  canEdit = true,
+  canDelete = true,
 }: OpportunityCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -250,27 +254,33 @@ export function OpportunityCard({
               <OfferDownloadButton opportunityId={opportunity.id} />
             </div>
 
-            <div className="mt-4 flex gap-2">
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className="flex-1 text-[13px]"
-              >
-                ✏️ Düzenle
-              </Button>
-              <Button
-                variant="danger"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDelete(true);
-                }}
-                className="w-[100px] text-[13px]"
-              >
-                🗑 Sil
-              </Button>
-            </div>
+            {(canEdit || canDelete) && (
+              <div className="mt-4 flex gap-2">
+                {canEdit && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="flex-1 text-[13px]"
+                  >
+                    ✏️ Düzenle
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDelete(true);
+                    }}
+                    className="w-[100px] text-[13px]"
+                  >
+                    🗑 Sil
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

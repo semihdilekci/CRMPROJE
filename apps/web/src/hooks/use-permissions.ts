@@ -14,20 +14,22 @@ import api from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/stores/auth-store';
 
-export function useMyPermissions() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  return useQuery({
-    queryKey: queryKeys.permissions.me(),
-    queryFn: async () => {
-      const { data } = await api.get<ApiSuccessResponse<EffectivePermissions>>(
-        API_ENDPOINTS.PERMISSIONS.ME,
-      );
-      return data.data!;
-    },
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-  });
+/**
+ * Mevcut kullanıcının efektif izinlerini döndürür.
+ * İzinler JWT payload'ından çıkarılarak Zustand'da saklanır;
+ * bu hook hiçbir HTTP isteği yapmaz.
+ *
+ * Token yenilendikçe (her 15 dk) izinler otomatik güncellenir.
+ * Admin izin verdiğinde kullanıcı sayfayı yenilediğinde veya
+ * token refresh edildiğinde yeni izinler görünür olur.
+ */
+export function useMyPermissions(): {
+  data: EffectivePermissions | null;
+  isLoading: boolean;
+} {
+  const permissions = useAuthStore((s) => s.permissions);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  return { data: permissions, isLoading };
 }
 
 export function useUserPermissions(userId: string) {

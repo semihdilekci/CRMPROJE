@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import type { ApiSuccessResponse, User } from '@crm/shared';
+import type { ApiSuccessResponse, User, EffectivePermissions, Permission } from '@crm/shared';
 import api from '@/lib/api';
-import { getAccessToken, setAccessToken } from '@/lib/access-token';
+import { getAccessToken, setAccessToken, onNewAccessToken } from '@/lib/access-token';
 import { decodeJwtPayload } from '@/lib/decode-jwt-payload';
 
 export type LoginResult =
@@ -10,17 +10,29 @@ export type LoginResult =
 
 interface AuthState {
   user: User | null;
+  permissions: EffectivePermissions | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyMfa: (tempToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
+  setPermissions: (permissions: EffectivePermissions | null) => void;
   hydrate: () => Promise<void>;
+}
+
+function extractPermissionsFromToken(token: string): EffectivePermissions | null {
+  const decoded = decodeJwtPayload<{ perms?: string[]; reportSlugs?: string[]; role?: string }>(token);
+  if (!decoded) return null;
+  return {
+    permissions: (decoded.perms ?? []) as Permission[],
+    allowedReportSlugs: decoded.reportSlugs ?? [],
+  };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
+  permissions: null,
   isAuthenticated: false,
   isLoading: true,
 
@@ -37,7 +49,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { user, tokens } = payload as { user: User; tokens: { accessToken: string } };
     setAccessToken(tokens.accessToken);
-    set({ user, isAuthenticated: true, isLoading: false });
+    const permissions = extractPermissionsFromToken(tokens.accessToken);
+    set({ user, permissions, isAuthenticated: true, isLoading: false });
     return { requiresMfa: false };
   },
 
@@ -48,7 +61,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }>('/auth/verify-mfa', { tempToken, code });
     const { user, tokens } = data.data;
     setAccessToken(tokens.accessToken);
-    set({ user, isAuthenticated: true, isLoading: false });
+    const permissions = extractPermissionsFromToken(tokens.accessToken);
+    set({ user, permissions, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
@@ -56,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await api.post('/auth/logout');
     } finally {
       setAccessToken(null);
-      set({ user: null, isAuthenticated: false });
+      set({ user: null, permissions: null, isAuthenticated: false });
     }
   },
 
@@ -64,8 +78,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user, isAuthenticated: !!user });
   },
 
+  setPermissions: (permissions) => {
+    set({ permissions });
+  },
+
   hydrate: async () => {
-    /** SPA’de az önce giriş yapıldıysa access zaten bellekte; refresh çağrısı çerez/proxy gecikmesinde başarısız olup oturumu silmesin. */
+    /** SPA'de az önce giriş yapıldıysa access zaten bellekte; refresh çağrısı çerez/proxy gecikmesinde başarısız olup oturumu silmesin. */
     const existingToken = getAccessToken();
     const existingUser = get().user;
     if (existingToken && existingUser && get().isAuthenticated) {
@@ -86,8 +104,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       const accessToken = data.data.accessToken;
       setAccessToken(accessToken);
-      const payload = decodeJwtPayload<{ sub?: string }>(accessToken);
-      const sub = payload?.sub;
+      const permissions = extractPermissionsFromToken(accessToken);
+      const jwtPayload = decodeJwtPayload<{ sub?: string }>(accessToken);
+      const sub = jwtPayload?.sub;
       if (!sub) {
         throw new Error('no sub');
       }
@@ -95,7 +114,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!userRes.success || !userRes.data) {
         throw new Error('user fetch failed');
       }
-      set({ user: userRes.data, isAuthenticated: true, isLoading: false });
+      set({ user: userRes.data, permissions, isAuthenticated: true, isLoading: false });
     } catch {
       const tokenAfter = getAccessToken();
       const userAfter = get().user;
@@ -104,7 +123,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
       setAccessToken(null);
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, permissions: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));
+
+// api.ts'deki otomatik token refresh interceptor'ı döngüsel bağımlılık oluşturmadan
+// Zustand permissions'ını güncelleyebilsin diye onNewAccessToken callback'ini kayıt ediyoruz.
+onNewAccessToken((token) => {
+  const permissions = extractPermissionsFromToken(token);
+  useAuthStore.setState({ permissions });
+});

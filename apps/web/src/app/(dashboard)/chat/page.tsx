@@ -13,15 +13,20 @@ export default function ChatPage() {
   const { data: permissions, isLoading } = useMyPermissions();
 
   const isAdmin = user?.role === 'admin';
-  const hasAccess = isAdmin || permissions?.permissions.includes('ai_analyst');
+  const hasAccess = isAdmin || (permissions?.permissions.includes('ai_analyst') ?? false);
 
   useEffect(() => {
-    if (!isLoading && permissions && !hasAccess) {
+    if (isAdmin) return;
+    if (!isLoading && !hasAccess) {
       router.replace('/fairs');
     }
-  }, [isLoading, permissions, hasAccess, router]);
+  }, [isLoading, hasAccess, isAdmin, router]);
 
-  if (isLoading || (!hasAccess && !isAdmin)) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAdmin && !hasAccess) {
     return null;
   }
 

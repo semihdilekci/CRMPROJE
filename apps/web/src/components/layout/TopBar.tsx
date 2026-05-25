@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/Button';
 import { getNavForRole } from '@/lib/nav';
+import { useMyPermissions } from '@/hooks/use-permissions';
 
 interface TopBarProps {
   breadcrumb?: string;
@@ -21,7 +22,26 @@ export function TopBar({ breadcrumb, showNewFairButton = false, onNewFair, actio
   const [adminOpen, setAdminOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { main, admin } = getNavForRole(user?.role);
+  const { data: permissions } = useMyPermissions();
+  const isAdmin = user?.role === 'admin';
+
+  const { main: rawMain, admin } = getNavForRole(user?.role);
+
+  const main = isAdmin
+    ? rawMain
+    : rawMain.filter((link) => {
+        if (link.href === '/chat') {
+          return permissions?.permissions.includes('ai_analyst') ?? false;
+        }
+        if (link.href === '/reports') {
+          return (
+            (permissions?.permissions.includes('sales_reporter') ||
+              permissions?.permissions.includes('manager_reporter')) ??
+            false
+          );
+        }
+        return true;
+      });
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
