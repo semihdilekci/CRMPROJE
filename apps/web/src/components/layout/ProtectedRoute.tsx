@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -28,5 +29,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) return null;
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <FeedbackButton />
+    </>
+  );
 }

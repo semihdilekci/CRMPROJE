@@ -47,6 +47,11 @@ export const queryKeys = {
     team: (teamId: string) => ['permissions', 'team', teamId] as const,
     reporterReports: () => ['permissions', 'reporter-reports'] as const,
   },
+  feedback: {
+    all: ['feedback'] as const,
+    list: (filters?: { category?: string; page?: number; limit?: number }) =>
+      ['feedback', 'list', filters ?? {}] as const,
+  },
   reports: {
     executiveSummary: (filters?: Record<string, string>) => ['reports', 'executive-summary', filters ?? {}] as const,
     fairPerformance: (filters?: Record<string, string>) => ['reports', 'fair-performance', filters ?? {}] as const,

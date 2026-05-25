@@ -15,3 +15,4 @@ export * from './secret.schema';
 export * from './team';
 export * from './chat.schema';
 export * from './permission.schema';
+export * from './feedback.schema';

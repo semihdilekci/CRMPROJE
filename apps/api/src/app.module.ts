@@ -23,6 +23,7 @@ import { ReportModule } from '@modules/report/report.module';
 import { CustomerContactModule } from '@modules/customer-contact/customer-contact.module';
 import { SecretsModule } from '@modules/secrets/secrets.module';
 import { PermissionModule } from '@modules/permission/permission.module';
+import { FeedbackModule } from '@modules/feedback/feedback.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PermissionModule } from '@modules/permission/permission.module';
     ReportModule,
     SecretsModule,
     PermissionModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

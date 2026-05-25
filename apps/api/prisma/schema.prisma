@@ -32,6 +32,7 @@ model User {
   opportunityNotes  OpportunityNote[]     @relation("NoteCreatedBy")
   secretsUpdated    SystemSecret[]          @relation("SecretUpdatedBy")
   userPermissions   UserPermission[]
+  feedbacks         Feedback[]
 }
 
 /// Refresh token rotation: her yenilemede yeni satır; replacedAt ile tek kullanımlık; reuse tespitinde familyId iptali.
@@ -290,4 +291,20 @@ model AuditLog {
   @@index([createdAt])
   @@index([entityType])
   @@index([userId])
+}
+
+/// Kullanıcı geri bildirimleri (fikir, hata, soru)
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // idea | bug | question
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
 }

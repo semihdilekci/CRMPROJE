@@ -33,6 +33,7 @@ export function getNavForRole(role: UserRole | undefined): {
           { href: '/admin/products', label: 'Ürün Listesi' },
           { href: '/admin/settings', label: 'Sistem Ayarları' },
           { href: '/admin/audit-log', label: 'İşlem Geçmişi' },
+          { href: '/admin/feedback', label: 'Geri Bildirimler' },
         ],
       },
     };
