@@ -19,11 +19,13 @@ import {
   User,
   LOG_CATEGORIES,
   SECURITY_EVENTS,
+  EffectivePermissions,
 } from '@crm/shared';
 import { StructuredLogService } from '@common/logging/structured-log.service';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
 import { SmsService } from '@modules/sms/sms.service';
+import { PermissionService } from '@modules/permission/permission.service';
 
 const USER_SELECT = {
   id: true,
@@ -47,7 +49,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly settingsService: SettingsService,
     private readonly smsService: SmsService,
-    private readonly structuredLog: StructuredLogService
+    private readonly structuredLog: StructuredLogService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async register(dto: RegisterDto): Promise<LoginSuccess> {
@@ -444,6 +447,8 @@ export class AuthService {
       throw new UnauthorizedException('Erişim reddedildi');
     }
 
+    const perms = await this.permissionService.getEffectivePermissions(user.id);
+
     const tokens = await this.prisma.$transaction(async (tx) => {
       const rotated = await tx.refreshToken.updateMany({
         where: { id: record.id, replacedAt: null },
@@ -454,7 +459,7 @@ export class AuthService {
         throw new UnauthorizedException('Erişim reddedildi');
       }
 
-      return this.persistRefreshTokenPair(user.id, user.role, record.familyId, tx);
+      return this.persistRefreshTokenPair(user.id, user.role, record.familyId, tx, perms);
     });
 
     this.structuredLog.writeLine({
@@ -493,17 +498,24 @@ export class AuthService {
   private async generateTokensForNewSession(userId: string, role: string): Promise<AuthTokenPair> {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
     const familyId = randomUUID();
-    return this.persistRefreshTokenPair(userId, role, familyId, this.prisma);
+    const perms = await this.permissionService.getEffectivePermissions(userId);
+    return this.persistRefreshTokenPair(userId, role, familyId, this.prisma, perms);
   }
 
   private async persistRefreshTokenPair(
     userId: string,
     role: string,
     familyId: string,
-    db: DbClient
+    db: DbClient,
+    perms?: EffectivePermissions,
   ): Promise<AuthTokenPair> {
     const id = randomUUID();
-    const accessPayload = { sub: userId, role };
+    const accessPayload = {
+      sub: userId,
+      role,
+      perms: perms?.permissions ?? [],
+      reportSlugs: perms?.allowedReportSlugs ?? [],
+    };
     const refreshPayload = { sub: userId, rtid: id };
 
     const accessExpiration = this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRATION');

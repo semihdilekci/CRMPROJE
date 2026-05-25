@@ -38,6 +38,10 @@ export type LoginOrMfaResponse = LoginResponse | MfaRequiredResponse;
 export interface JwtPayload {
   sub: string;
   role: string;
+  /** Kullanıcının efektif izin listesi (JWT claims — sadece UX için; güvenlik backend'de enforce edilir) */
+  perms?: string[];
+  /** İzin verilen rapor slug listesi */
+  reportSlugs?: string[];
   iat?: number;
   exp?: number;
 }

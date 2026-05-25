@@ -9,6 +9,7 @@ import { registerAuthThrottleModuleRef } from './auth-throttle.factory';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmsModule } from '@modules/sms/sms.module';
 import { SettingsModule } from '@modules/settings/settings.module';
+import { PermissionModule } from '@modules/permission/permission.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
     JwtModule,
     SmsModule,
     SettingsModule,
+    PermissionModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthCookieHelper, JwtStrategy],
