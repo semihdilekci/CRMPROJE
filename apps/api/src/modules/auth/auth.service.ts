@@ -611,4 +611,36 @@ export class AuthService {
       updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
     };
   }
+
+  /**
+   * JWT strategy'nin kullandığı tek kullanıcı arama kanalı.
+   * Select alanları jwt.strategy.ts validate() ile birebir aynı kalır;
+   * bu sayede guard'ların beklediği user shape bozulmaz.
+   */
+  async findUserForJwtValidation(userId: string): Promise<{
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Kullanıcı bulunamadı');
+    }
+
+    return user;
+  }
 }

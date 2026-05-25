@@ -8,6 +8,7 @@ import { StructuredLogService } from '@common/logging/structured-log.service';
 import { PrismaService } from '@prisma/prisma.service';
 import { SettingsService } from '@modules/settings/settings.service';
 import { SmsService } from '@modules/sms/sms.service';
+import { PermissionService } from '@modules/permission/permission.service';
 
 /** Yalnızca unit test sabitleri — prod sırları değildir (Fortify hardcoded password). */
 const MOCK_PRISMA_USER_PASSWORD_HASH =
@@ -106,6 +107,7 @@ describe('AuthService', () => {
         },
         { provide: SmsService, useValue: { sendOtp: jest.fn(), verifyOtp: jest.fn() } },
         { provide: StructuredLogService, useValue: structuredLog },
+        { provide: PermissionService, useValue: { getEffectivePermissions: jest.fn() } },
       ],
     }).compile();
 
@@ -253,6 +255,45 @@ describe('AuthService', () => {
       expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
       });
+    });
+  });
+
+  describe('findUserForJwtValidation', () => {
+    const mockUser = {
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test User',
+      role: 'user',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    };
+
+    it('kullanıcı bulunduğunda user nesnesini döner', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(mockUser);
+
+      const result = await service.findUserForJwtValidation('user-1');
+
+      expect(result).toEqual(mockUser);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('kullanıcı bulunamadığında UnauthorizedException fırlatır', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.findUserForJwtValidation('non-existent-id'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
