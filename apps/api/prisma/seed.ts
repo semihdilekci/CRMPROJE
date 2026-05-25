@@ -51,6 +51,28 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
+const REPORTER_REPORT_DEFAULTS: Array<{ reporterType: string; reportSlug: string; enabled: boolean }> = [
+  // Satışçı Raportör
+  { reporterType: 'sales_reporter', reportSlug: 'pipeline-overview', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'pipeline-velocity', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'win-loss', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'customer-overview', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'customer-segmentation', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'customer-lifecycle', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'product-analysis', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'product-fair-matrix', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'individual-performance', enabled: true },
+  { reporterType: 'sales_reporter', reportSlug: 'activity-analysis', enabled: true },
+  // Yönetici Raportör
+  { reporterType: 'manager_reporter', reportSlug: 'executive-summary', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'fair-performance', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'fair-comparison', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'fair-targets', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'revenue', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'forecast', enabled: true },
+  { reporterType: 'manager_reporter', reportSlug: 'team-performance', enabled: true },
+];
+
 async function main(): Promise<void> {
   console.log('🗑️  Mevcut veriler siliniyor...');
 
@@ -63,6 +85,17 @@ async function main(): Promise<void> {
   await prisma.fair.deleteMany();
   await prisma.product.deleteMany();
   // User ve Team silinmiyor - mevcut kullanıcılar korunuyor
+
+  // ReporterReportAccess seed (upsert ile idempotent)
+  console.log('🔐 Rapor görünürlük yapılandırması seed ediliyor...');
+  for (const entry of REPORTER_REPORT_DEFAULTS) {
+    await prisma.reporterReportAccess.upsert({
+      where: { reporterType_reportSlug: { reporterType: entry.reporterType, reportSlug: entry.reportSlug } },
+      update: {},
+      create: entry,
+    });
+  }
+  console.log(`   ✓ ${REPORTER_REPORT_DEFAULTS.length} rapor görünürlük kaydı`);
 
   console.log('👤 Kullanıcılar oluşturuluyor...');
 

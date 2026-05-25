@@ -19,10 +19,13 @@ import {
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
+import { PermissionsGuard } from '@modules/permission/permissions.guard';
 import { ChatService } from './chat.service';
 
 @Controller('chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('ai_analyst')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

@@ -29,6 +29,7 @@ export function getNavForRole(role: UserRole | undefined): {
         links: [
           { href: '/admin/users', label: 'Kullanıcı Yönetimi' },
           { href: '/admin/teams', label: 'Ekipler' },
+          { href: '/admin/authorization', label: 'Yetkilendirme' },
           { href: '/admin/products', label: 'Ürün Listesi' },
           { href: '/admin/settings', label: 'Sistem Ayarları' },
           { href: '/admin/audit-log', label: 'İşlem Geçmişi' },

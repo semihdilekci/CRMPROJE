@@ -9,7 +9,7 @@ PROJECT OVERVIEW
 - Application Type: CRM (Customer Relationship Management)
 - Purpose: Managing customer records collected at trade fairs and exhibitions.
 - Platforms: Web (Admin Panel) + Mobile (iOS & Android)
-- Architecture: Monorepo — single repository, shared TypeScript codebase
+- Architecture: Monorepo — single **Git** repository (one codebase root), shared TypeScript codebase
 - All three apps (API, Web, Mobile) use TypeScript as their primary language.
 
 ==============================
@@ -28,7 +28,7 @@ CRMProje/
 
 - Backend, Web, and Mobile MUST share types, validation schemas, and utilities via packages/shared.
 - Do not duplicate type definitions across apps.
-- Do not create separate repositories.
+- Do not split the project into **separate Git repositories** (remain a monorepo; share code via `packages/shared`).
 
 ==============================
 BACKEND STACK (MANDATORY)
@@ -46,8 +46,28 @@ BACKEND STACK (MANDATORY)
 - Helmet — secure HTTP headers
 - CORS — configured per environment
 
-Backend must follow NestJS modular architecture:
-Module → Controller → Service → Repository (Prisma)
+Backend must follow NestJS modular architecture (layered, per feature module):
+
+```
+Module → Controller → Service → PrismaService (data access)
+```
+
+**Data access (Phase 1 — current implementation):**
+
+- Domain services (e.g. `FairService`) inject the global **`PrismaService`** and call Prisma client methods directly (`this.prisma.fair.create`, etc.).
+- There is **no** per-entity `*Repository` class or `I*Repository` interface in this project (not the DDD/Clean Architecture “Repository” pattern).
+- Do **not** add `fair.repository.ts`, `user.repository.ts`, or similar unless an explicit architecture change is approved.
+- Controllers must not call Prisma; only services (or other services) access the database.
+
+**Terminology (avoid confusion for humans and AI):**
+
+| Term in docs | Meaning in this repo |
+|--------------|----------------------|
+| Git repository / monorepo | Version-control root (`CRMProje/`), not a data layer |
+| Repository (DDD) | **Not used** — do not infer separate repository classes from older doc wording |
+| Data access layer | `PrismaService` + `schema.prisma` + migrations |
+
+Ayrıntılı özet: **`docs/backend-data-access.md`**.
 
 No raw SQL in controllers or services.
 No business logic in controllers.
@@ -97,7 +117,7 @@ DATABASE STRATEGY
 - ORM: Prisma (mandatory, no raw SQL)
 - Migration between environments is primarily a **`DATABASE_URL`** change in `.env` (plus network access and TLS, e.g. `sslmode=require` for RDS)
 - Do not use Supabase Auth, Storage, or Realtime — custom implementations via NestJS.
-- No vendor lock-in. Database layer is fully abstracted by Prisma.
+- Schema and migrations are managed by Prisma (portable across PostgreSQL hosts via `DATABASE_URL`). This does **not** mean services are ORM-agnostic: business code is written against the Prisma client API inside services.
 
 ==============================
 SHARED PACKAGE (packages/shared)

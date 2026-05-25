@@ -16,3 +16,4 @@ export * from './secret';
 export * from './team';
 export * from './chat';
 export * from './report';
+export * from './permission';

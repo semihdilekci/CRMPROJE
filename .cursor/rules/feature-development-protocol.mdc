@@ -106,7 +106,7 @@ STEP 5 — BACKEND: SERVICE LAYER
 ==============================
 
 - Implement all business logic in the service class.
-- Inject PrismaService for database operations.
+- Inject PrismaService for database operations (direct Prisma calls in the service — no `*Repository.ts` layer).
 - Inject other services if cross-module logic is needed.
 - Keep the service focused — one service per module.
 - Handle all business rules: access control checks, data transformation, cascade operations.

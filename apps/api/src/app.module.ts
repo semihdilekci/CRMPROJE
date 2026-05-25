@@ -21,6 +21,7 @@ import { ChatModule } from '@modules/chat/chat.module';
 import { ReportModule } from '@modules/report/report.module';
 import { CustomerContactModule } from '@modules/customer-contact/customer-contact.module';
 import { SecretsModule } from '@modules/secrets/secrets.module';
+import { PermissionModule } from '@modules/permission/permission.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SecretsModule } from '@modules/secrets/secrets.module';
     TeamModule,
     ReportModule,
     SecretsModule,
+    PermissionModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

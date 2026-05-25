@@ -75,7 +75,7 @@ BACKEND: UNIT TESTS
 
 Service layer tests (most critical):
 - Test every public method in isolation.
-- Mock PrismaService — do not hit real database.
+- Mock PrismaService — do not hit real database. This is the intended test seam (no per-entity repository interfaces in Phase 1).
 - Mock injected dependencies (other services).
 - Test success paths AND error paths.
 - Test business logic: validation rules, data transformation, access control.

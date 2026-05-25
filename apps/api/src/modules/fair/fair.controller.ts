@@ -23,6 +23,8 @@ import {
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
+import { PermissionsGuard } from '@modules/permission/permissions.guard';
 import { FairService } from './fair.service';
 
 @Controller('fairs')
@@ -31,6 +33,8 @@ export class FairController {
   constructor(private readonly fairService: FairService) {}
 
   @Post()
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async create(
     @Body(new ZodValidationPipe(createFairSchema)) dto: CreateFairDto,
     @CurrentUser() user: { id: string; email: string },
@@ -58,6 +62,8 @@ export class FairController {
   }
 
   @Patch(':id')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateFairSchema)) dto: UpdateFairDto,
@@ -69,6 +75,8 @@ export class FairController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_manager')
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; email: string },

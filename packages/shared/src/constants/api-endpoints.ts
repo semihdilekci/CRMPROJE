@@ -53,4 +53,10 @@ export const API_ENDPOINTS = {
     INDIVIDUAL_PERFORMANCE: '/reports/individual-performance',
     ACTIVITY_ANALYSIS: '/reports/activity-analysis',
   },
+  PERMISSIONS: {
+    ME: '/permissions/me',
+    USER: (userId: string) => `/permissions/users/${userId}`,
+    TEAM: (teamId: string) => `/permissions/teams/${teamId}`,
+    REPORTER_REPORTS: '/permissions/reporter-reports',
+  },
 } as const;

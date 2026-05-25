@@ -4,8 +4,23 @@ import Link from 'next/link';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { REPORT_CATALOG } from '@crm/shared';
+import { useMyPermissions } from '@/hooks/use-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function ReportsPage() {
+  const user = useAuthStore((s) => s.user);
+  const { data: permissions } = useMyPermissions();
+
+  const isAdmin = user?.role === 'admin';
+  const allowedSlugs = isAdmin ? null : (permissions?.allowedReportSlugs ?? []);
+
+  const filteredCatalog = REPORT_CATALOG.map((cat) => ({
+    ...cat,
+    reports: cat.reports.filter(
+      (r) => allowedSlugs === null || allowedSlugs.includes(r.slug),
+    ),
+  })).filter((cat) => cat.reports.length > 0);
+
   let cardIndex = 0;
 
   return (
@@ -38,7 +53,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex flex-col gap-10">
-          {REPORT_CATALOG.map((category, catIdx) => (
+          {filteredCatalog.map((category, catIdx) => (
             <section key={category.id}>
               <div
                 className="mb-4"

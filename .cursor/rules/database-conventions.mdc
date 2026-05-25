@@ -7,6 +7,8 @@ You are designing the database layer for an enterprise-grade Fuar CRM System.
 All database operations use Prisma ORM exclusively.
 These conventions ensure consistency, safety, and scalability across all models.
 
+**Where queries live:** Domain `*.service.ts` files inject `PrismaService` and call Prisma client methods. This project does **not** use per-entity `*Repository.ts` classes; see `docs/tech-stack.md` and `project-architecture.mdc` (data access pattern).
+
 ==============================
 PRISMA SCHEMA CONVENTIONS
 ==============================

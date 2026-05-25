@@ -28,6 +28,8 @@ import {
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
+import { PermissionsGuard } from '@modules/permission/permissions.guard';
 import { CustomerService } from './customer.service';
 
 @Controller('customers')
@@ -37,6 +39,8 @@ export class CustomerController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async create(
     @Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto,
     @CurrentUser() user: { id: string; email: string },
@@ -47,6 +51,8 @@ export class CustomerController {
 
   @Post('with-contact')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async createWithContact(
     @Body(new ZodValidationPipe(createCustomerWithContactSchema)) dto: CreateCustomerWithContactDto,
     @CurrentUser() user: { id: string; email: string },
@@ -81,6 +87,8 @@ export class CustomerController {
   }
 
   @Patch(':id')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateCustomerSchema)) dto: UpdateCustomerDto,
@@ -92,6 +100,8 @@ export class CustomerController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_manager')
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; email: string },

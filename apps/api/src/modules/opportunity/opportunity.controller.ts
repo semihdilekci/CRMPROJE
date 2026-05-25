@@ -38,6 +38,8 @@ import {
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
+import { PermissionsGuard } from '@modules/permission/permissions.guard';
 import { OpportunityService } from './opportunity.service';
 import { OfferService } from './offer.service';
 
@@ -60,6 +62,8 @@ export class OpportunityController {
   ) {}
 
   @Post('fairs/:fairId/opportunities')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async create(
     @Param('fairId') fairId: string,
     @Body(new ZodValidationPipe(createOpportunitySchema)) dto: CreateOpportunityDto,
@@ -101,6 +105,8 @@ export class OpportunityController {
   }
 
   @Post('opportunities/:id/transition')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async transitionStage(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(stageTransitionSchema)) dto: StageTransitionInput,
@@ -121,6 +127,8 @@ export class OpportunityController {
   }
 
   @Patch('opportunities/:id/stages/:logId')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async updateStageLog(
     @Param('id') id: string,
     @Param('logId') logId: string,
@@ -133,6 +141,8 @@ export class OpportunityController {
 
   @Delete('opportunities/:id/stages/:logId')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_manager')
   async deleteLastStageLog(
     @Param('id') id: string,
     @Param('logId') logId: string,
@@ -143,6 +153,8 @@ export class OpportunityController {
   }
 
   @Patch('opportunities/:id')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateOpportunitySchema)) dto: UpdateOpportunityDto,
@@ -205,6 +217,8 @@ export class OpportunityController {
 
   @Delete('opportunities/:id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_manager')
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; email: string },
@@ -214,6 +228,8 @@ export class OpportunityController {
   }
 
   @Post('opportunities/:id/notes')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async addNote(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(createOpportunityNoteSchema)) dto: CreateOpportunityNoteInput,

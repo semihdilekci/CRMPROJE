@@ -10,7 +10,7 @@ interface OpportunityToolbarProps {
   onSearchChange: (value: string) => void;
   stageFilter: string;
   onStageFilterChange: (value: string) => void;
-  onAddOpportunity: () => void;
+  onAddOpportunity?: () => void;
 }
 
 export function OpportunityToolbar({
@@ -39,9 +39,11 @@ export function OpportunityToolbar({
           ))}
         </Select>
       </div>
-      <Button onClick={onAddOpportunity} className="text-[13px]">
-        + Fırsat Ekle
-      </Button>
+      {onAddOpportunity && (
+        <Button onClick={onAddOpportunity} className="text-[13px]">
+          + Fırsat Ekle
+        </Button>
+      )}
     </div>
   );
 }

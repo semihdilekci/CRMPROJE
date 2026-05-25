@@ -1,8 +1,11 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
+import { useMyPermissions } from '@/hooks/use-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 import { REPORT_CATALOG } from '@crm/shared';
 import { ExecutiveSummaryDashboard } from '@/components/reports/dashboards/ExecutiveSummaryDashboard';
 import { FairPerformanceDashboard } from '@/components/reports/dashboards/FairPerformanceDashboard';
@@ -57,6 +60,20 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType> = {
 
 export default function ReportDashboardPage({ params }: ReportDashboardPageProps) {
   const { slug } = use(params);
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const { data: permissions, isLoading: permsLoading } = useMyPermissions();
+
+  const isAdmin = user?.role === 'admin';
+  const hasReportAccess =
+    isAdmin || (permissions?.allowedReportSlugs.includes(slug) ?? false);
+
+  useEffect(() => {
+    if (!permsLoading && permissions && !isAdmin && !hasReportAccess) {
+      router.replace('/reports');
+    }
+  }, [permsLoading, permissions, isAdmin, hasReportAccess, router]);
+
   const result = findReport(slug);
 
   if (!result) {

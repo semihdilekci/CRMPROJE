@@ -27,6 +27,8 @@ Before adding ANY of the following, search the codebase first:
   → Search in apps/web/src/hooks/
 - A new NestJS guard, pipe, or interceptor
   → Search in apps/api/src/common/
+- A new backend `*Repository` / `I*Repository` for database access
+  → **Do not add.** This project uses `*Service` + injected `PrismaService` only (`docs/tech-stack.md`, `project-architecture.mdc`).
 
 If you find something that does the same or similar:
 - Reuse it (import and use), or

@@ -22,6 +22,8 @@ import {
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
+import { PermissionsGuard } from '@modules/permission/permissions.guard';
 import { CustomerContactService } from './customer-contact.service';
 
 @Controller()
@@ -39,6 +41,8 @@ export class CustomerContactController {
 
   @Post('customers/:customerId/contacts')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async create(
     @Param('customerId') customerId: string,
     @Query('force') force: string,
@@ -55,6 +59,8 @@ export class CustomerContactController {
   }
 
   @Patch('customer-contacts/:id')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_editor')
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateCustomerContactSchema)) dto: UpdateCustomerContactDto,
@@ -66,6 +72,8 @@ export class CustomerContactController {
 
   @Delete('customer-contacts/:id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('content_manager')
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; email: string },

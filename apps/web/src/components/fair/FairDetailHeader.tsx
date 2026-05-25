@@ -8,8 +8,8 @@ import type { FairWithOpportunities } from '@crm/shared';
 
 interface FairDetailHeaderProps {
   fair: FairWithOpportunities;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function FairDetailHeader({ fair, onEdit, onDelete }: FairDetailHeaderProps) {
@@ -27,14 +27,20 @@ export function FairDetailHeader({ fair, onEdit, onDelete }: FairDetailHeaderPro
             <span>{formatDate(fair.startDate)} — {formatDate(fair.endDate)}</span>
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="secondary" onClick={onEdit} className="text-[13px]">
-            ✏️ Düzenle
-          </Button>
-          <Button variant="danger" onClick={onDelete} className="text-[13px]">
-            🗑 Sil
-          </Button>
-        </div>
+        {(onEdit || onDelete) && (
+          <div className="flex gap-2 shrink-0">
+            {onEdit && (
+              <Button variant="secondary" onClick={onEdit} className="text-[13px]">
+                ✏️ Düzenle
+              </Button>
+            )}
+            {onDelete && (
+              <Button variant="danger" onClick={onDelete} className="text-[13px]">
+                🗑 Sil
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

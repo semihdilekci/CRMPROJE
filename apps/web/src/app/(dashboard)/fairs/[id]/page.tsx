@@ -14,6 +14,9 @@ import { FairFormModal } from '@/components/fair/FairFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
 import { OpportunityFormModal } from '@/components/opportunity/OpportunityFormModal';
+import { useMyPermissions } from '@/hooks/use-permissions';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasContentWriteAccess, hasContentDeleteAccess } from '@crm/shared';
 import type { OpportunityWithCustomer } from '@crm/shared';
 
 export default function FairDetailPage() {
@@ -35,6 +38,12 @@ export default function FairDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<OpportunityWithCustomer | null>(null);
+
+  const user = useAuthStore((s) => s.user);
+  const { data: permissions } = useMyPermissions();
+  const isAdmin = user?.role === 'admin';
+  const canWrite = isAdmin || hasContentWriteAccess(permissions?.permissions ?? []);
+  const canDelete = isAdmin || hasContentDeleteAccess(permissions?.permissions ?? []);
 
   const { data: opportunities } = useOpportunitiesByFair(
     fairId,
@@ -104,8 +113,8 @@ export default function FairDetailPage() {
 
         <FairDetailHeader
           fair={fair}
-          onEdit={() => setShowEditModal(true)}
-          onDelete={() => setShowDeleteDialog(true)}
+          onEdit={canWrite ? () => setShowEditModal(true) : undefined}
+          onDelete={canDelete ? () => setShowDeleteDialog(true) : undefined}
         />
 
         <FairStats
@@ -129,10 +138,10 @@ export default function FairDetailPage() {
           onSearchChange={setSearch}
           stageFilter={stageFilter}
           onStageFilterChange={setStageFilter}
-          onAddOpportunity={() => {
+          onAddOpportunity={canWrite ? () => {
             setEditingOpportunity(null);
             setShowOpportunityModal(true);
-          }}
+          } : undefined}
         />
 
         {displayOpportunities.length > 0 ? (
@@ -150,18 +159,20 @@ export default function FairDetailPage() {
                 />
               </div>
             ))}
-            <div className="mb-2.5 break-inside-avoid">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingOpportunity(null);
-                  setShowOpportunityModal(true);
-                }}
-                className="flex h-[144px] min-h-[144px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 p-4 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
-              >
-                <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
-              </button>
-            </div>
+            {canWrite && (
+              <div className="mb-2.5 break-inside-avoid">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingOpportunity(null);
+                    setShowOpportunityModal(true);
+                  }}
+                  className="flex h-[144px] min-h-[144px] w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 p-4 text-white/60 transition-all duration-300 hover:border-white/40 hover:text-white hover:bg-white/5"
+                >
+                  <span className="text-[15px] font-medium">+ Yeni Fırsat Ekle</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : search || selectedRates.length > 0 || stageFilter ? (
           <p className="py-12 text-center text-white/60">Arama sonucu bulunamadı.</p>

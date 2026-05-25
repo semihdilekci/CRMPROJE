@@ -40,8 +40,17 @@ GENERAL PRINCIPLES
 BACKEND ARCHITECTURE (NestJS)
 ==============================
 
-Backend follows NestJS modular architecture:
-Module → Controller → Service → Prisma (Repository)
+Backend follows NestJS modular architecture (per feature module):
+
+```
+Module → Controller → Service → PrismaService (data access)
+```
+
+**Data access pattern (mandatory for Phase 1):**
+
+- Services inject `PrismaService` and call Prisma directly. Example: `apps/api/src/modules/fair/fair.service.ts`.
+- Do **not** create per-domain `*Repository` classes or interfaces unless explicitly approved in a future architecture change.
+- The word “repository” in older notes meant **Git monorepo** or was misleading shorthand for Prisma — not the DDD Repository pattern.
 
 Each feature lives in its own NestJS module:
 apps/api/src/modules/auth/
@@ -67,15 +76,16 @@ Controller Layer:
 Service Layer:
 - Contains all business logic.
 - Handles application rules and data transformation.
-- Calls Prisma client directly for database operations.
+- Injects `PrismaService` and performs all database reads/writes via the Prisma client (no separate repository provider per entity).
 - Must not handle HTTP concerns (request, response, status codes).
 - May call other services via dependency injection.
 
-Prisma Layer (Repository):
-- Prisma client is injected as a global service (PrismaService).
-- All database operations go through Prisma ORM.
+Data access layer (PrismaService):
+- Global wrapper: `apps/api/src/prisma/prisma.service.ts` (injectable `PrismaService`).
+- All persistence goes through Prisma ORM from **service** classes — not from controllers.
 - No raw SQL anywhere in the codebase.
-- Schema lives at apps/api/prisma/schema.prisma.
+- Schema and migrations: `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`.
+- Unit tests mock `PrismaService` (see test-strategy.mdc); do not introduce repository interfaces only for testing unless architecture changes.
 
 Shared Utilities:
 - Cross-cutting concerns (guards, filters, interceptors, pipes) live in apps/api/src/common/.
@@ -159,4 +169,5 @@ IMPORTANT
 - Never modify architecture silently.
 - Never bypass the layered structure for convenience.
 - Reference docs/tech-stack.md for allowed technologies.
+- Reference docs/backend-data-access.md for data access terminology and layer rules.
 - Reference docs/phase-1-features.md for current development scope.

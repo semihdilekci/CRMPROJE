@@ -41,6 +41,12 @@ export const queryKeys = {
     notes: (opportunityId: string) =>
       ['opportunities', opportunityId, 'notes'] as const,
   },
+  permissions: {
+    me: () => ['permissions', 'me'] as const,
+    user: (userId: string) => ['permissions', 'user', userId] as const,
+    team: (teamId: string) => ['permissions', 'team', teamId] as const,
+    reporterReports: () => ['permissions', 'reporter-reports'] as const,
+  },
   reports: {
     executiveSummary: (filters?: Record<string, string>) => ['reports', 'executive-summary', filters ?? {}] as const,
     fairPerformance: (filters?: Record<string, string>) => ['reports', 'fair-performance', filters ?? {}] as const,

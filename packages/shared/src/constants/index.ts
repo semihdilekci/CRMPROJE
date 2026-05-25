@@ -8,3 +8,4 @@ export * from './pipeline';
 export * from './report-catalog';
 export * from './structured-logging';
 export * from './secrets';
+export * from './permissions';

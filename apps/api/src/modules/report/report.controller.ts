@@ -1,5 +1,6 @@
 import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
+import { ReportPermissionGuard } from './report-permission.guard';
 import { ReportService } from './report.service';
 import { ReportAuditLogInterceptor } from './report-audit-log.interceptor';
 import type {
@@ -24,7 +25,7 @@ import type {
 } from '@crm/shared';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ReportPermissionGuard)
 @UseInterceptors(ReportAuditLogInterceptor)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
