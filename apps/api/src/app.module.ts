@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import * as path from 'path';
 import { AppCommonModule } from '@common/app-common.module';
 import { AppController } from './app.controller';
+import { HealthModule } from './health/health.module';
 import { PrismaModule } from '@prisma/prisma.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { UserModule } from '@modules/user/user.module';
@@ -38,6 +39,7 @@ import { PermissionModule } from '@modules/permission/permission.module';
     }),
     AppCommonModule,
     PrismaModule,
+    HealthModule,
     AuthModule,
     UserModule,
     FairModule,
