@@ -15,8 +15,9 @@ function AddButton(props: React.ComponentProps<typeof Pressable>) {
   const pathname = usePathname();
   const openFairForm = useFairFormStore((s) => s.open);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
-  const canCreate =
-    useHasPermission('content_editor') || useHasPermission('content_manager');
+  const isEditor = useHasPermission('content_editor');
+  const isManager = useHasPermission('content_manager');
+  const canCreate = isEditor || isManager;
 
   const handlePress = () => {
     if (!canCreate) {

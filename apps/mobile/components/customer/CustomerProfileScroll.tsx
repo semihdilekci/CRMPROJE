@@ -103,9 +103,10 @@ export function CustomerProfileScroll({
 }: CustomerProfileScrollProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const canEdit =
-    useHasPermission('content_editor') || useHasPermission('content_manager');
-  const canDelete = useHasPermission('content_manager');
+  const isEditor = useHasPermission('content_editor');
+  const isManager = useHasPermission('content_manager');
+  const canEdit = isEditor || isManager;
+  const canDelete = isManager;
   const updateNote = useUpdateOpportunityNoteForProfile(customerId);
   const deleteNote = useDeleteOpportunityNoteForProfile(customerId);
   const deleteContact = useDeleteCustomerContact();

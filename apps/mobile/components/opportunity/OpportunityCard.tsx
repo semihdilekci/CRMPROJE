@@ -69,9 +69,10 @@ export function OpportunityCard({
   const [editingContent, setEditingContent] = useState('');
 
   const user = useAuthStore((s) => s.user);
-  const canEdit =
-    useHasPermission('content_editor') || useHasPermission('content_manager');
-  const canDelete = useHasPermission('content_manager');
+  const isEditor = useHasPermission('content_editor');
+  const isManager = useHasPermission('content_manager');
+  const canEdit = isEditor || isManager;
+  const canDelete = isManager;
   const deleteOpportunity = useDeleteOpportunity(fairId);
   const updateContact = useUpdateCustomerContact();
   const { data: stageLogs = [] } = useStageHistory(opportunity.id, {
