@@ -43,7 +43,11 @@ export function CustomerListCard({ customer, onPress }: CustomerListCardProps) {
             {customer.company}
           </Text>
           <Text className="text-white/70 text-[14px] mt-1">
-            {customer.primaryContact?.name ?? `${customer.contactCount ?? 0} temsilci`}
+            {customer.primaryContact?.name
+              ? customer.contactCount && customer.contactCount > 1
+                ? `${customer.primaryContact.name} +${customer.contactCount - 1} temsilci daha`
+                : customer.primaryContact.name
+              : `${customer.contactCount ?? 0} temsilci`}
           </Text>
           <View className="mt-3">
             <LinearGradient

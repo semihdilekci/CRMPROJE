@@ -8,9 +8,10 @@ import {
   Linking,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { CustomerProfileResponse } from '@crm/shared';
+import type { CustomerContact, CustomerProfileResponse } from '@crm/shared';
 import { formatBudget, getStageLabel } from '@crm/shared';
 import { GradientView } from '@/components/ui/GradientView';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,11 @@ import {
   useUpdateOpportunityNoteForProfile,
   useDeleteOpportunityNoteForProfile,
 } from '@/hooks/use-customers';
+import {
+  useCustomerContacts,
+  useDeleteCustomerContact,
+} from '@/hooks/use-customer-contacts';
+import { CustomerContactEditSheet } from '@/components/customer/CustomerContactEditSheet';
 import { useFairOpportunityFocusStore } from '@/stores/fair-opportunity-focus-store';
 
 const ORDERED_STAGES = ['tanisma', 'toplanti', 'teklif', 'sozlesme'] as const;
@@ -98,8 +104,14 @@ export function CustomerProfileScroll({
   const user = useAuthStore((s) => s.user);
   const updateNote = useUpdateOpportunityNoteForProfile(customerId);
   const deleteNote = useDeleteOpportunityNoteForProfile(customerId);
+  const deleteContact = useDeleteCustomerContact();
+  const { data: contacts = [], isLoading: contactsLoading } = useCustomerContacts(customerId);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [contactSheet, setContactSheet] = useState<{
+    visible: boolean;
+    initial: CustomerContact | null;
+  }>({ visible: false, initial: null });
 
   const timeline = useMemo(() => {
     return [...profile.opportunityTimeline].sort(
@@ -123,6 +135,24 @@ export function CustomerProfileScroll({
 
   const canEditNote = (createdById: string) =>
     user?.id === createdById || user?.role === 'admin';
+
+  const handleDeleteContact = (contact: CustomerContact) => {
+    const linkedOpps = profile.opportunityTimeline.filter(
+      (o) => (o as { contact?: { id?: string } }).contact?.id === contact.id,
+    ).length;
+    const message =
+      linkedOpps > 0
+        ? `Bu temsilci ${linkedOpps} fırsata bağlı. Silmek istediğinize emin misiniz?`
+        : 'Bu temsilciyi silmek istediğinize emin misiniz?';
+    Alert.alert('Temsilciyi Sil', message, [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: () => deleteContact.mutate({ id: contact.id, customerId }),
+      },
+    ]);
+  };
 
   const handleSaveNote = async (opportunityId: string, noteId: string) => {
     const content = (noteDrafts[noteId] ?? '').trim();
@@ -214,6 +244,102 @@ export function CustomerProfileScroll({
           </Button>
         </View>
       </View>
+
+      {/* Temsilciler Bölümü */}
+      <View className="mt-4 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <View className="flex-row items-center justify-between border-b border-white/10 px-4 py-3">
+          <Text className="text-white/50 text-[12px] font-semibold uppercase tracking-wide">
+            Temsilciler {contacts.length > 0 ? `(${contacts.length})` : ''}
+          </Text>
+        </View>
+
+        {contactsLoading ? (
+          <View className="py-6 items-center">
+            <ActivityIndicator size="small" color="#8b5cf6" />
+          </View>
+        ) : contacts.length === 0 ? (
+          <View className="px-4 py-5">
+            <Text className="text-white/40 text-[13px] text-center">
+              Henüz temsilci eklenmemiş. Fuar kartvizitlerinden ekleyebilirsiniz.
+            </Text>
+          </View>
+        ) : (
+          contacts.map((contact) => {
+            const thumbUri = contact.cardImage
+              ? contact.cardImage.startsWith('http')
+                ? contact.cardImage
+                : `${getAssetBaseUrl()}${contact.cardImage}`
+              : null;
+            return (
+              <View
+                key={contact.id}
+                className="flex-row items-center gap-3 border-t border-white/10 px-4 py-3"
+              >
+                {thumbUri ? (
+                  <Image
+                    source={{ uri: thumbUri }}
+                    style={{ width: 44, height: 44, borderRadius: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{ width: 44, height: 44, borderRadius: 8 }}
+                    className="bg-white/10 items-center justify-center"
+                  >
+                    <Text className="text-white/50 text-lg font-bold">
+                      {contact.name.slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View className="flex-1 min-w-0">
+                  <Text className="text-white font-semibold text-[14px]" numberOfLines={1}>
+                    {contact.name}
+                  </Text>
+                  {contact.phone ? (
+                    <Pressable onPress={() => Linking.openURL(`tel:${contact.phone}`)}>
+                      <Text className="text-white/60 text-[12px] mt-0.5">{contact.phone}</Text>
+                    </Pressable>
+                  ) : null}
+                  {contact.email ? (
+                    <Pressable onPress={() => Linking.openURL(`mailto:${contact.email}`)}>
+                      <Text className="text-white/60 text-[12px]">{contact.email}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <View className="flex-row gap-1">
+                  <Pressable
+                    onPress={() => setContactSheet({ visible: true, initial: contact })}
+                    className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
+                  >
+                    <Text className="text-[12px]">✏️</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleDeleteContact(contact)}
+                    className="rounded-lg border border-white/10 bg-white/5 w-8 h-8 items-center justify-center"
+                  >
+                    <Text className="text-[12px]">🗑</Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })
+        )}
+
+        <Pressable
+          onPress={() => setContactSheet({ visible: true, initial: null })}
+          className="mx-4 my-3 rounded-xl border border-dashed border-violet-500/25 bg-violet-500/10 px-4 py-3"
+        >
+          <Text className="text-violet-300/90 text-sm text-center">+ Temsilci Ekle</Text>
+        </Pressable>
+      </View>
+
+      <CustomerContactEditSheet
+        visible={contactSheet.visible}
+        customerId={customerId}
+        customerCompany={profile.customer.company}
+        initial={contactSheet.initial}
+        onClose={() => setContactSheet({ visible: false, initial: null })}
+      />
 
       <View className="flex-row flex-wrap gap-2 mt-4">
         <View className="min-w-[45%] flex-1 rounded-[14px] border border-white/10 bg-white/[0.04] p-3">
