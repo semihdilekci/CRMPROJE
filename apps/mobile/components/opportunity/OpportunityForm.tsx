@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import type {
   OpportunityWithDetails,
   Customer,
+  CustomerContact,
   Currency,
   ConversionRate,
 } from '@crm/shared';
@@ -66,21 +67,19 @@ export function OpportunityForm({
   const clearPreselectedCustomer = useOpportunityFormStore((s) => s.clearPreselectedCustomer);
   const { data: productList = [] } = useProducts();
 
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
-  );
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedContact, setSelectedContact] = useState<CustomerContact | null>(null);
   const [budgetRaw, setBudgetRaw] = useState('');
   const [budgetCurrency, setBudgetCurrency] = useState<Currency>('TRY');
   const [conversionRate, setConversionRate] = useState<ConversionRate | ''>('');
-  const [opportunityProducts, setOpportunityProducts] = useState<
-    SelectedProductRow[]
-  >([]);
+  const [opportunityProducts, setOpportunityProducts] = useState<SelectedProductRow[]>([]);
   const [cardImage, setCardImage] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (visible && initial) {
       setSelectedCustomer(initial.customer);
+      setSelectedContact(initial.contact ?? null);
       setBudgetRaw(initial.budgetRaw ?? '');
       setBudgetCurrency((initial.budgetCurrency as Currency) ?? 'TRY');
       setConversionRate((initial.conversionRate as ConversionRate) ?? '');
@@ -118,10 +117,12 @@ export function OpportunityForm({
       clearPreselectedCustomer();
     } else if (visible && preselectedCustomer) {
       setSelectedCustomer(preselectedCustomer);
+      setSelectedContact(null);
       setCardImage('');
       setSubmitError('');
     } else if (visible) {
       setSelectedCustomer(null);
+      setSelectedContact(null);
       setBudgetRaw('');
       setBudgetCurrency('TRY');
       setConversionRate('');
@@ -132,9 +133,9 @@ export function OpportunityForm({
   }, [visible, initial, preselectedCustomer, productList, clearPreselectedCustomer]);
 
   useEffect(() => {
-    if (visible && selectedCustomer) {
-      // cardImage artık CustomerContact'a ait; burada sıfırlanır
+    if (visible && selectedCustomer && !initial) {
       setCardImage('');
+      setSelectedContact(null);
     }
   }, [visible, selectedCustomer?.id]);
 
@@ -168,9 +169,17 @@ export function OpportunityForm({
     const ocrResult = await scanBusinessCard(uri, filename, 'image/jpeg');
     if (ocrResult) {
       setCardImage(ocrResult.url);
-      setSelectedCustomer((prev) =>
-        prev ? { ...prev, cardImage: ocrResult.url } : null,
-      );
+      if (selectedContact) {
+        try {
+          await updateContact.mutateAsync({
+            id: selectedContact.id,
+            dto: { cardImage: ocrResult.url },
+            customerId: selectedCustomer?.id,
+          });
+        } catch {
+          // kartvizit güncelleme hatası sessiz geçer; local state zaten güncellendi
+        }
+      }
       setSubmitError('');
     } else {
       setSubmitError('Kartvizit okunamadı. Lütfen daha net bir fotoğraf deneyin.');
@@ -267,6 +276,7 @@ export function OpportunityForm({
 
     const opportunityDto = {
       customerId: selectedCustomer.id,
+      contactId: selectedContact?.id ?? null,
       budgetRaw: budgetRaw || null,
       budgetCurrency: budgetRaw ? budgetCurrency : null,
       conversionRate: (conversionRate || null) as ConversionRate | null,
@@ -284,9 +294,13 @@ export function OpportunityForm({
     try {
       setSubmitError('');
       const contactCardImage = initial?.contact?.cardImage ?? '';
-      if (cardImage !== contactCardImage && initial?.contact?.id) {
+      if (
+        cardImage !== contactCardImage &&
+        selectedContact?.id &&
+        initial?.contact?.id === selectedContact.id
+      ) {
         await updateContact.mutateAsync({
-          id: initial.contact.id,
+          id: selectedContact.id,
           dto: { cardImage: cardImage || null },
           customerId: selectedCustomer.id,
         });
@@ -302,7 +316,7 @@ export function OpportunityForm({
       onClose();
     } catch {
       setSubmitError(
-        'Kaydetme sırasında bir hata oluştu. Lütfen alanları kontrol edin.'
+        'Kaydetme sırasında bir hata oluştu. Lütfen alanları kontrol edin.',
       );
     }
   };
@@ -331,6 +345,8 @@ export function OpportunityForm({
             selectedCustomer={selectedCustomer}
             onSelect={setSelectedCustomer}
             onAddNew={handleAddNewCustomer}
+            selectedContact={selectedContact}
+            onSelectContact={setSelectedContact}
           />
 
           {selectedCustomer ? (
@@ -338,8 +354,9 @@ export function OpportunityForm({
               <View className="flex-row items-center justify-between px-3 pt-2 pb-1.5">
                 <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider">
                   Kartvizit
+                  {selectedContact ? ` — ${selectedContact.name}` : ''}
                 </Text>
-                {cardImage ? (
+                {cardImage && selectedContact ? (
                   <Pressable
                     onPress={handleDeleteCard}
                     disabled={updateContact.isPending}
@@ -350,7 +367,13 @@ export function OpportunityForm({
                   </Pressable>
                 ) : null}
               </View>
-              {cardImage ? (
+              {!selectedContact ? (
+                <View className="px-3 pb-3">
+                  <Text className="text-white/40 text-[13px] text-center py-4">
+                    Kartvizit eklemek için önce bir temsilci seçin
+                  </Text>
+                </View>
+              ) : cardImage ? (
                 <Image
                   source={{
                     uri: cardImage.startsWith('http')
