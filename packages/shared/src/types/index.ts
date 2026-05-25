@@ -12,6 +12,7 @@ export * from './opportunity-note';
 export * from './offer';
 export * from './product';
 export * from './setting';
+export * from './secret';
 export * from './team';
 export * from './chat';
 export * from './report';

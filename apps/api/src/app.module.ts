@@ -20,6 +20,7 @@ import { OpportunityModule } from '@modules/opportunity/opportunity.module';
 import { ChatModule } from '@modules/chat/chat.module';
 import { ReportModule } from '@modules/report/report.module';
 import { CustomerContactModule } from '@modules/customer-contact/customer-contact.module';
+import { SecretsModule } from '@modules/secrets/secrets.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CustomerContactModule } from '@modules/customer-contact/customer-contac
     SettingsModule,
     TeamModule,
     ReportModule,
+    SecretsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

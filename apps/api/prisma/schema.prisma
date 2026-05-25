@@ -30,6 +30,7 @@ model User {
   fairs             Fair[]
   stageLogs         OpportunityStageLog[] @relation("StageLogChangedBy")
   opportunityNotes  OpportunityNote[]     @relation("NoteCreatedBy")
+  secretsUpdated    SystemSecret[]          @relation("SecretUpdatedBy")
 }
 
 /// Refresh token rotation: her yenilemede yeni satır; replacedAt ile tek kullanımlık; reuse tespitinde familyId iptali.
@@ -195,6 +196,19 @@ model SystemSetting {
   value       String   @db.Text
   description String?  @db.Text
   updatedAt   DateTime @updatedAt
+}
+
+model SystemSecret {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  ciphertext    String   @db.Text
+  keyVersion    Int      @default(1)
+  description   String?  @db.Text
+  updatedAt     DateTime @updatedAt
+  updatedById   String?
+  updatedBy     User?    @relation("SecretUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById])
 }
 
 model OpportunityNote {

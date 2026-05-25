@@ -8,8 +8,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useChatStore } from '@/stores/chat-store';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
-import type { OllamaModel } from '@crm/shared';
 import { getApiErrorMessage } from '@crm/shared';
 
 export function ChatPanel() {
@@ -17,10 +15,7 @@ export function ChatPanel() {
   const logout = useAuthStore((s) => s.logout);
   const messages = useChatStore((s) => s.messages);
   const addMessage = useChatStore((s) => s.addMessage);
-  const setMessages = useChatStore((s) => s.setMessages);
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<'ollama' | 'claude' | 'gemini'>('ollama');
-  const [ollamaModel, setOllamaModel] = useState<OllamaModel>('qwen2.5-coder:7b');
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatQuery = useChatQuery();
 
@@ -48,8 +43,7 @@ export function ChatPanel() {
       const result = await chatQuery.mutateAsync({
         message: msg,
         messages: recentMessages,
-        provider,
-        ...(provider === 'ollama' && { ollamaModel }),
+        provider: 'gemini',
       });
 
       addMessage({
@@ -99,30 +93,12 @@ export function ChatPanel() {
               AI Analiz Asistanı
             </h1>
             <p className="mt-1 text-[13px] text-white/60">
-              Fuar ve müşteri verilerinizi sorarak analiz edin.
+              Fuar ve müşteri verilerinizi Gemini ile analiz edin.
             </p>
           </div>
-          <Select
-            label="Model"
-            value={provider === 'ollama' ? ollamaModel : provider}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === 'claude') {
-                setProvider('claude');
-              } else if (v === 'gemini') {
-                setProvider('gemini');
-              } else {
-                setProvider('ollama');
-                setOllamaModel(v as OllamaModel);
-              }
-            }}
-            className="w-[220px]"
-          >
-            <option value="claude">Claude (Bulut)</option>
-            <option value="gemini">Gemini (Bulut)</option>
-            <option value="qwen2.5-coder:7b">Ollama Qwen 7B (Yerel)</option>
-            <option value="qwen2.5-coder:14b">Ollama Qwen 14B (Yerel)</option>
-          </Select>
+          <span className="rounded-full border border-violet-500/25 bg-violet-500/15 px-3 py-1 text-[12px] font-medium text-violet-300">
+            Gemini
+          </span>
         </div>
       </div>
 

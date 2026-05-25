@@ -6,21 +6,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '@prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import * as path from 'path';
 import * as fs from 'fs';
 import type { ChatQueryInput, ChatQueryResponse, ChartData, TableData } from '@crm/shared';
 import {
+  AI_CHAT_PROVIDER,
   AI_LOG_EVENTS,
   LOG_CATEGORIES,
 } from '@crm/shared';
 import { StructuredLogService } from '@common/logging/structured-log.service';
+import { SecretsService } from '@modules/secrets/secrets.service';
 
 const EXPORT_DIR = path.join(process.cwd(), 'exports');
 const EXPORT_TTL_MS = 60 * 60 * 1000;
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 /** Gemini/proxy istek gövdesi sınırını aşmaması için bağlam JSON üst sınırı (karakter). */
 const MAX_SYSTEM_CONTEXT_JSON_CHARS = 700_000;
 /** AI bağlamında işlenecek en fazla fırsat (en yeni önce). */
@@ -47,6 +47,7 @@ export class ChatService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly structuredLog: StructuredLogService,
+    private readonly secretsService: SecretsService,
   ) {
     if (!fs.existsSync(EXPORT_DIR)) {
       fs.mkdirSync(EXPORT_DIR, { recursive: true });
@@ -57,7 +58,7 @@ export class ChatService {
     userId: string,
     input: ChatQueryInput,
   ): Promise<ChatQueryResponse> {
-    const provider = (input.provider ?? 'ollama') as 'ollama' | 'claude' | 'gemini';
+    const provider = AI_CHAT_PROVIDER;
     const started = Date.now();
     try {
       const contextData = await this.gatherContextData();
@@ -75,20 +76,7 @@ export class ChatService {
             ]
           : [{ role: 'user' as const, content: input.message }];
 
-      let result: ChatQueryResponse;
-      if (provider === 'ollama') {
-        result = await this.queryOllama(
-          userId,
-          systemPrompt,
-          messages,
-          wantsExport,
-          input.ollamaModel,
-        );
-      } else if (provider === 'gemini') {
-        result = await this.queryGemini(userId, systemPrompt, messages, wantsExport);
-      } else {
-        result = await this.queryClaude(userId, systemPrompt, messages, wantsExport);
-      }
+      const result = await this.queryGemini(userId, systemPrompt, messages, wantsExport);
 
       this.writeAiChatLine({
         userId,
@@ -137,110 +125,16 @@ export class ChatService {
     });
   }
 
-  private async queryOllama(
-    userId: string,
-    systemPrompt: string,
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
-    wantsExport: boolean,
-    ollamaModel?: string,
-  ): Promise<ChatQueryResponse> {
-    const baseUrl =
-      this.config.get<string>('OLLAMA_BASE_URL')?.trim() ?? 'http://localhost:11434';
-    const model =
-      ollamaModel?.trim() ||
-      this.config.get<string>('OLLAMA_MODEL')?.trim() ||
-      'qwen2.5-coder:7b';
-
-    this.logger.log(`Ollama isteği: model=${model}, baseUrl=${baseUrl}`);
-
-    const ollamaMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
-    ];
-
-    try {
-      const res = await fetch(`${baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          messages: ollamaMessages,
-          stream: false,
-        }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        this.logger.error('Ollama API hatası', res.status, errText);
-        throw new Error(`Ollama ${res.status}: ${errText}`);
-      }
-
-      const json = (await res.json()) as { message?: { content?: string } };
-      const text = json?.message?.content;
-
-      if (!text || typeof text !== 'string') {
-        this.logger.warn('Ollama boş yanıt', json);
-        throw new InternalServerErrorException('AI yanıt üretilemedi');
-      }
-
-      const parsed = this.parseAiResponse(text);
-      const result: ChatQueryResponse = {
-        text: parsed.text ?? text,
-        charts: parsed.charts,
-        tables: parsed.tables,
-      };
-      const clamped = this.clampChatResponse(result);
-      if (wantsExport && clamped.tables?.length) {
-        const exportId = await this.createExcelExport(clamped.tables, userId);
-        clamped.exportId = exportId;
-        clamped.exportDescription = 'Analiz verisi Excel dosyası';
-      }
-      return clamped;
-    } catch (error) {
-      if (error instanceof InternalServerErrorException) {
-        throw error;
-      }
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      const errStr = String(error);
-      this.logger.error('Ollama hatası', errStr, error instanceof Error ? error.stack : undefined);
-
-      if (
-        errStr.includes('ECONNREFUSED') ||
-        errStr.includes('fetch failed') ||
-        errStr.includes('Failed to fetch')
-      ) {
-        throw new BadRequestException(
-          'Ollama çalışmıyor. Lütfen "ollama serve" ile başlatın veya Claude seçin.',
-        );
-      }
-      if (errStr.includes('404') || errStr.includes('not found')) {
-        throw new BadRequestException(
-          `Ollama modeli bulunamadı: ${model}. "ollama pull ${model}" ile indirin.`,
-        );
-      }
-
-      this.logger.error('Ollama beklenmeyen hata', { error: errStr });
-      throw new InternalServerErrorException(
-        'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin. API loglarına bakın.',
-      );
-    }
-  }
-
   private async queryGemini(
     userId: string,
     systemPrompt: string,
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
     wantsExport: boolean,
   ): Promise<ChatQueryResponse> {
-    const apiKey = this.config.get<string>('GEMINI_API_KEY')?.trim();
+    const apiKey = (await this.secretsService.getGeminiApiKey())?.trim();
     if (!apiKey) {
       throw new BadRequestException(
-        'AI analiz servisi yapılandırılmamış. apps/api/.env içinde GEMINI_API_KEY=... tanımlayın (aistudio.google.com adresinden key alın).',
+        'AI analiz servisi yapılandırılmamış. Yönetim › Sistem Ayarları bölümünden Gemini API anahtarını girin veya SECRETS_ENCRYPTION_KEY ile birlikte .env dosyasında GEMINI_API_KEY tanımlayın.',
       );
     }
 
@@ -311,7 +205,7 @@ export class ChatService {
         this.logger.warn('Gemini boş yanıt', { errDetail, json: JSON.stringify(json).slice(0, 500) });
         throw new InternalServerErrorException(
           finishReason === 'SAFETY'
-            ? 'Gemini güvenlik filtresi yanıtı engelledi. Soruyu farklı şekilde sorun veya başka model deneyin.'
+            ? 'Gemini güvenlik filtresi yanıtı engelledi. Soruyu farklı şekilde sorun.'
             : 'AI yanıt üretilemedi',
         );
       }
@@ -378,94 +272,6 @@ export class ChatService {
       }
 
       this.logger.error('Gemini beklenmeyen hata', { error: errStr });
-      throw new InternalServerErrorException(
-        'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin. API loglarına bakın.',
-      );
-    }
-  }
-
-  private async queryClaude(
-    userId: string,
-    systemPrompt: string,
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
-    wantsExport: boolean,
-  ): Promise<ChatQueryResponse> {
-    const apiKey = this.config.get<string>('ANTHROPIC_API_KEY')?.trim();
-    if (!apiKey) {
-      throw new BadRequestException(
-        'AI analiz servisi yapılandırılmamış. apps/api/.env içinde ANTHROPIC_API_KEY=... tanımlayın (console.anthropic.com adresinden key alın).',
-      );
-    }
-
-    const client = new Anthropic({ apiKey });
-
-    try {
-      const response = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages,
-      });
-
-      const textBlock = response.content.find((b) => b.type === 'text');
-      const text =
-        textBlock && 'text' in textBlock ? (textBlock as { text: string }).text : undefined;
-
-      if (!text || typeof text !== 'string') {
-        this.logger.warn('Claude boş veya geçersiz yanıt', { response });
-        throw new InternalServerErrorException('AI yanıt üretilemedi');
-      }
-
-      const parsed = this.parseAiResponse(text);
-      const result: ChatQueryResponse = {
-        text: parsed.text ?? text,
-        charts: parsed.charts,
-        tables: parsed.tables,
-      };
-      const clamped = this.clampChatResponse(result);
-      if (wantsExport && clamped.tables?.length) {
-        const exportId = await this.createExcelExport(clamped.tables, userId);
-        clamped.exportId = exportId;
-        clamped.exportDescription = 'Analiz verisi Excel dosyası';
-      }
-      return clamped;
-    } catch (error) {
-      if (error instanceof InternalServerErrorException) {
-        throw error;
-      }
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      const errStr = String(error);
-      this.logger.error('Claude API hatası', errStr, error instanceof Error ? error.stack : undefined);
-
-      if (errStr.includes('429') || errStr.includes('overloaded') || errStr.includes('rate')) {
-        throw new InternalServerErrorException(
-          'Claude API kotası aşıldı. Birkaç dakika bekleyip tekrar deneyin.',
-        );
-      }
-      if (errStr.includes('401') || errStr.includes('API key') || errStr.includes('authentication')) {
-        throw new BadRequestException(
-          'ANTHROPIC_API_KEY geçersiz. console.anthropic.com adresinden yeni key alın.',
-        );
-      }
-      if (errStr.includes('credit') || errStr.includes('balance') || errStr.includes('too low')) {
-        throw new BadRequestException(
-          'Anthropic hesabınızda kredi bakiyesi yetersiz. console.anthropic.com → Plans & Billing üzerinden kredi ekleyin veya planı yükseltin.',
-        );
-      }
-      if (
-        errStr.includes('fetch failed') ||
-        errStr.includes('ECONNREFUSED') ||
-        errStr.includes('Failed to fetch') ||
-        errStr.includes('network')
-      ) {
-        throw new InternalServerErrorException(
-          'Claude API\'ye bağlanılamıyor. İnternet bağlantınızı kontrol edin.',
-        );
-      }
-
-      this.logger.error('Claude beklenmeyen hata', { error: errStr });
       throw new InternalServerErrorException(
         'AI analiz sırasında bir hata oluştu. Lütfen tekrar deneyin. API loglarına bakın.',
       );

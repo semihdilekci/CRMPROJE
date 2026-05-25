@@ -14,9 +14,8 @@ import { useRouter } from 'expo-router';
 import { ChatMessage } from './ChatMessage';
 import { useChatQuery } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth-store';
-import { Dropdown } from '@/components/ui/Dropdown';
 import { GradientView } from '@/components/ui/GradientView';
-import { getApiErrorMessage, type ChartData, type TableData, type OllamaModel } from '@crm/shared';
+import { getApiErrorMessage, type ChartData, type TableData } from '@crm/shared';
 
 function LoadingDots() {
   const [anims] = useState(() =>
@@ -108,20 +107,11 @@ interface MessageItem {
   exportId?: string;
 }
 
-const MODEL_OPTIONS = [
-  { value: 'claude' as const, label: 'Claude (Bulut)' },
-  { value: 'gemini' as const, label: 'Gemini (Bulut)' },
-  { value: 'qwen2.5-coder:7b' as OllamaModel, label: 'Ollama Qwen 7B (Yerel)' },
-  { value: 'qwen2.5-coder:14b' as OllamaModel, label: 'Ollama Qwen 14B (Yerel)' },
-];
-
 export function ChatPanel() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<'ollama' | 'claude' | 'gemini'>('ollama');
-  const [ollamaModel, setOllamaModel] = useState<OllamaModel>('qwen2.5-coder:7b');
   const scrollRef = useRef<ScrollView>(null);
   const chatQuery = useChatQuery();
 
@@ -147,8 +137,7 @@ export function ChatPanel() {
       const result = await chatQuery.mutateAsync({
         message: msg,
         messages: recentMessages,
-        provider,
-        ...(provider === 'ollama' && { ollamaModel }),
+        provider: 'gemini',
       });
 
       const assistantMessage: MessageItem = {
@@ -189,19 +178,6 @@ export function ChatPanel() {
     }
   };
 
-  const currentModelValue =
-    provider === 'ollama' ? ollamaModel : provider;
-  const handleModelChange = (v: string) => {
-    if (v === 'claude') {
-      setProvider('claude');
-    } else if (v === 'gemini') {
-      setProvider('gemini');
-    } else {
-      setProvider('ollama');
-      setOllamaModel(v as OllamaModel);
-    }
-  };
-
   const insets = useSafeAreaInsets();
   const tabBarHeight = 45 + insets.bottom;
 
@@ -219,16 +195,11 @@ export function ChatPanel() {
                 AI Analiz Asistanı
               </Text>
               <Text className="text-white/60 text-[13px] mt-0.5">
-                Fuar ve müşteri verilerinizi sorarak analiz edin.
+                Fuar ve müşteri verilerinizi Gemini ile analiz edin.
               </Text>
             </View>
-            <View className="w-[180px]">
-              <Dropdown
-                value={currentModelValue}
-                options={MODEL_OPTIONS}
-                onSelect={handleModelChange}
-                placeholder="Model"
-              />
+            <View className="rounded-full border border-violet-500/25 bg-violet-500/15 px-3 py-1">
+              <Text className="text-[12px] font-medium text-violet-300">Gemini</Text>
             </View>
           </View>
         </View>

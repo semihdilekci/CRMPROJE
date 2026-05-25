@@ -226,7 +226,8 @@ CRM metrikleri için `infra/monitoring/.env.monitoring` içindeki **`POSTGRES_EX
 - [ ] **PORT** (veya host) production ortamına uygun.
 - [ ] **ANTHROPIC_API_KEY** (AI analiz — Claude) — console.anthropic.com'dan alınır; Claude seçildiğinde zorunlu.
 - [ ] **OLLAMA_BASE_URL**, **OLLAMA_MODEL** (AI analiz — Ollama) — opsiyonel; varsayılan model `qwen2.5-coder:7b`; Ollama seçildiğinde local'de `ollama serve` çalışıyor olmalı.
-- [ ] **GEMINI_API_KEY** (AI analiz — Gemini) — aistudio.google.com'dan alınır; Gemini seçildiğinde zorunlu.
+- [ ] **GEMINI_API_KEY** (AI analiz — Gemini) — aistudio.google.com'dan alınır; Gemini seçildiğinde zorunlu. **Alternatif:** Yönetim › Sistem Ayarları panelinden kaydedilebilir (veritabanında AES-256-GCM ile şifreli). Panel kullanımı için **SECRETS_ENCRYPTION_KEY** zorunludur (`openssl rand -base64 32`).
+- [ ] **SECRETS_ENCRYPTION_KEY** — panelden Gemini API anahtarı kaydetmek için zorunlu; repoya commit edilmez.
 - [ ] **TWILIO_ACCOUNT_SID**, **TWILIO_AUTH_TOKEN**, **TWILIO_VERIFY_SERVICE_SID** (MFA SMS) — Twilio Console'dan alınır. Boş bırakılırsa DEV'de OTP terminale basılır; PROD'da gerçek SMS için zorunlu.
 - [ ] **MFA ve rate limit / hesap kilidi** — Yönetim › Sistem Ayarları: MFA_SMS_ENABLED, RATE_LIMIT_*, ACCOUNT_LOCKOUT_* (eşik ve süre; prod’da isteğe bağlı env override: `ACCOUNT_LOCKOUT_THRESHOLD`, `ACCOUNT_LOCKOUT_MINUTES`).
 

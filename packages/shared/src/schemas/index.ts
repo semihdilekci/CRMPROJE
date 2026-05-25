@@ -11,5 +11,6 @@ export * from './opportunity-note';
 export * from './offer';
 export * from './product';
 export * from './setting';
+export * from './secret.schema';
 export * from './team';
 export * from './chat.schema';
