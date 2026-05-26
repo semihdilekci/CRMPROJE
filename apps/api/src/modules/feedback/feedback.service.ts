@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { CreateFeedbackDto, Feedback, FeedbackListQueryDto } from '@crm/shared';
 import { PrismaService } from '@prisma/prisma.service';
 
@@ -54,6 +54,14 @@ export class FeedbackService {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  async remove(id: string): Promise<void> {
+    const row = await this.prisma.feedback.findUnique({ where: { id } });
+    if (!row) {
+      throw new NotFoundException('Geri bildirim bulunamadı');
+    }
+    await this.prisma.feedback.delete({ where: { id } });
   }
 
   private toFeedback(row: {

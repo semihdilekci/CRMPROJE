@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -56,6 +58,19 @@ export class FeedbackController {
       message: 'Geri bildirimler getirildi',
       data: result.data,
       meta: result.meta,
+    };
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id') id: string): Promise<ApiSuccessResponse<null>> {
+    await this.feedbackService.remove(id);
+    return {
+      success: true,
+      message: 'Geri bildirim silindi',
+      data: null,
     };
   }
 }

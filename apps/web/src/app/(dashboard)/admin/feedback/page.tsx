@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { Button } from '@/components/ui/Button';
-import { useFeedbackList } from '@/hooks/use-feedback';
-import type { FeedbackCategory } from '@crm/shared';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useDeleteFeedback, useFeedbackList } from '@/hooks/use-feedback';
+import type { Feedback, FeedbackCategory } from '@crm/shared';
 
 const CATEGORY_FILTER = [
   { value: '', label: 'Tümü' },
@@ -40,12 +41,14 @@ export default function AdminFeedbackPage() {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [appliedCategory, setAppliedCategory] = useState<FeedbackCategory | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<Feedback | null>(null);
 
   const { data, isLoading } = useFeedbackList({
     category: appliedCategory,
     page,
     limit: PAGE_SIZE,
   });
+  const deleteFeedback = useDeleteFeedback();
 
   const entries = data?.data ?? [];
   const meta = data?.meta;
@@ -63,6 +66,19 @@ export default function AdminFeedbackPage() {
     setCategory('');
     setAppliedCategory(undefined);
     setPage(1);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteFeedback.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+      if (entries.length === 1 && page > 1) {
+        setPage((p) => Math.max(1, p - 1));
+      }
+    } catch {
+      // error shown in ConfirmDialog
+    }
   };
 
   return (
@@ -111,6 +127,9 @@ export default function AdminFeedbackPage() {
                     <th className="px-4 py-3 font-semibold text-white">Kullanıcı</th>
                     <th className="px-4 py-3 font-semibold text-white">Kategori</th>
                     <th className="px-4 py-3 font-semibold text-white">Mesaj</th>
+                    <th className="w-[80px] px-4 py-3 font-semibold text-white text-right">
+                      İşlem
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -138,6 +157,15 @@ export default function AdminFeedbackPage() {
                       </td>
                       <td className="max-w-[400px] px-4 py-3 text-white/80">
                         <p className="whitespace-pre-wrap break-words">{e.message}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(e)}
+                          className="text-[13px] text-danger hover:underline"
+                        >
+                          Sil
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -181,6 +209,31 @@ export default function AdminFeedbackPage() {
           </div>
         )}
       </ContentWrapper>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => {
+          setDeleteTarget(null);
+          deleteFeedback.reset();
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Geri bildirimi sil"
+        message={
+          deleteTarget
+            ? `${deleteTarget.userName} tarafından gönderilen "${CATEGORY_LABELS[deleteTarget.category]}" bildirimini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`
+            : ''
+        }
+        confirmLabel="Sil"
+        loading={deleteFeedback.isPending}
+        error={
+          deleteFeedback.isError && deleteFeedback.error
+            ? String(
+                (deleteFeedback.error as { response?: { data?: { message?: string } } })?.response
+                  ?.data?.message ?? 'Silme işlemi başarısız',
+              )
+            : undefined
+        }
+      />
     </div>
   );
 }

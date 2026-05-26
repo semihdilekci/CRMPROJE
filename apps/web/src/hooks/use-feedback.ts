@@ -31,6 +31,19 @@ export function useSubmitFeedback() {
   });
 }
 
+export function useDeleteFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/feedback/${id}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.feedback.all });
+    },
+  });
+}
+
 export function useFeedbackList(filters: FeedbackListFilters = {}) {
   return useQuery({
     queryKey: queryKeys.feedback.list(filters),

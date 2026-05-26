@@ -36,4 +36,8 @@ export const queryKeys = {
   permissions: {
     me: ['permissions', 'me'] as const,
   },
+  feedback: {
+    all: ['feedback'] as const,
+    list: (filters: object) => ['feedback', 'list', filters] as const,
+  },
 } as const;

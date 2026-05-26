@@ -120,6 +120,8 @@ export function CustomerSelectInput({
       setFirmError('Firma adı zorunludur.');
       return;
     }
+    // Tarama yapılmışsa contact verisi zaten set edilmiş olabilir; kaydetmeden önce kontrol ediyoruz
+    const hasContactData = !!(contactName || contactPhone || contactEmail || contactCardImage);
     try {
       const result = await createWithContact.mutateAsync({
         company: newCompany.trim(),
@@ -128,6 +130,10 @@ export function CustomerSelectInput({
       onSelectCustomer(result);
       onSelectContact(null);
       resetFirmForm();
+      // Taramadan gelen temsilci verisi varsa formu doğrudan aç; kullanıcı tekrar taramak zorunda kalmaz
+      if (hasContactData) {
+        setShowCreateContact(true);
+      }
     } catch (err) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -141,17 +147,48 @@ export function CustomerSelectInput({
     if (!file) return;
     e.target.value = '';
     const parsed = await scanBusinessCard(file);
-    if (parsed?.company) {
+    if (!parsed) return;
+
+    const hasContactData = !!(parsed.name || parsed.phone || parsed.email);
+
+    if (parsed.company) {
       setNewCompany(parsed.company);
-      // Check if company already exists
       const match = customers.find(
         (c) => c.company.toLowerCase() === parsed.company.toLowerCase(),
       );
       if (match) {
+        // handleSelectCustomer içeride resetContactForm çağırır; contact verilerini hemen ardından yeniden set ediyoruz
         handleSelectCustomer(match);
-        return;
+        if (parsed.name) setContactName(parsed.name);
+        if (parsed.phone) setContactPhone(parsed.phone);
+        if (parsed.email) setContactEmail(parsed.email);
+        if (hasContactData) setShowCreateContact(true);
+      } else {
+        if (parsed.name) setContactName(parsed.name);
+        if (parsed.phone) setContactPhone(parsed.phone);
+        if (parsed.email) setContactEmail(parsed.email);
+        setShowCreateFirm(true);
       }
-      setShowCreateFirm(true);
+    } else {
+      if (parsed.name) setContactName(parsed.name);
+      if (parsed.phone) setContactPhone(parsed.phone);
+      if (parsed.email) setContactEmail(parsed.email);
+    }
+
+    // Kartvizit görselini arka planda yükle; temsilci formu hazır olduğunda görseli ekler
+    if (hasContactData) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await api.post<ApiSuccessResponse<{ url: string }>>(
+          API_ENDPOINTS.UPLOAD.CARD_IMAGE,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        if (data.success && data.data?.url) setContactCardImage(data.data.url);
+      } catch {
+        // Axios interceptor
+      }
     }
   };
 
