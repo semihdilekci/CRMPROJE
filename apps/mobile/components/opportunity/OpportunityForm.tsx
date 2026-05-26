@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import type {
   OpportunityWithDetails,
   Customer,
   CustomerContact,
+  CustomerWithContacts,
   Currency,
   ConversionRate,
 } from '@crm/shared';
@@ -26,6 +27,8 @@ import {
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Dropdown, type DropdownOption } from '@/components/ui/Dropdown';
+import { useFairs } from '@/hooks/use-fairs';
 import { CustomerSelectInput } from '@/components/customer/CustomerSelectInput';
 import {
   ProductQuantityList,
@@ -56,15 +59,25 @@ export function OpportunityForm({
   onClose,
 }: OpportunityFormProps) {
   const isEdit = !!initial;
-  const createOpportunity = useCreateOpportunity(fairId ?? '');
-  const updateOpportunity = useUpdateOpportunity(fairId ?? '');
+  const [selectedFairId, setSelectedFairId] = useState<string>('');
+  const effectiveFairId = fairId ?? (selectedFairId || null);
+  const needsFairSelection = !fairId && !isEdit;
+  const { data: fairs = [] } = useFairs();
+  const fairOptions: DropdownOption<string>[] = fairs.map((f) => ({
+    value: f.id,
+    label: f.name,
+  }));
+  const createOpportunity = useCreateOpportunity(effectiveFairId ?? '');
+  const updateOpportunity = useUpdateOpportunity(effectiveFairId ?? '');
   const updateContact = useUpdateCustomerContact();
   const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
   const openCustomerForm = useCustomerFormStore((s) => s.open);
   const oppClose = useOpportunityFormStore((s) => s.close);
   const oppOpen = useOpportunityFormStore((s) => s.open);
   const preselectedCustomer = useOpportunityFormStore((s) => s.preselectedCustomer);
-  const clearPreselectedCustomer = useOpportunityFormStore((s) => s.clearPreselectedCustomer);
+  const preselectedContact = useOpportunityFormStore((s) => s.preselectedContact);
+  const clearPreselection = useOpportunityFormStore((s) => s.clearPreselection);
+  const prevCustomerIdRef = useRef<string | null>(null);
   const { data: productList = [] } = useProducts();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -75,6 +88,12 @@ export function OpportunityForm({
   const [opportunityProducts, setOpportunityProducts] = useState<SelectedProductRow[]>([]);
   const [cardImage, setCardImage] = useState('');
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setSelectedFairId(fairId ?? '');
+    }
+  }, [visible, fairId]);
 
   useEffect(() => {
     if (visible && initial) {
@@ -114,12 +133,15 @@ export function OpportunityForm({
             .filter((p) => p.productId)
         );
       }
-      clearPreselectedCustomer();
+      clearPreselection();
+      prevCustomerIdRef.current = initial.customer.id;
     } else if (visible && preselectedCustomer) {
-      setSelectedCustomer(preselectedCustomer);
-      setSelectedContact(null);
-      setCardImage('');
+      setSelectedCustomer(preselectedCustomer as Customer);
+      setSelectedContact(preselectedContact);
+      setCardImage(preselectedContact?.cardImage ?? '');
       setSubmitError('');
+      prevCustomerIdRef.current = preselectedCustomer.id;
+      clearPreselection();
     } else if (visible) {
       setSelectedCustomer(null);
       setSelectedContact(null);
@@ -129,15 +151,32 @@ export function OpportunityForm({
       setOpportunityProducts([]);
       setCardImage('');
       setSubmitError('');
+      prevCustomerIdRef.current = null;
     }
-  }, [visible, initial, preselectedCustomer, productList, clearPreselectedCustomer]);
+  }, [
+    visible,
+    initial,
+    preselectedCustomer,
+    preselectedContact,
+    productList,
+    clearPreselection,
+  ]);
 
   useEffect(() => {
-    if (visible && selectedCustomer && !initial) {
-      setCardImage('');
-      setSelectedContact(null);
+    if (!visible) {
+      prevCustomerIdRef.current = null;
+      return;
     }
-  }, [visible, selectedCustomer?.id]);
+    if (!selectedCustomer || initial) return;
+
+    const prev = prevCustomerIdRef.current;
+    const current = selectedCustomer.id;
+    if (prev !== null && prev !== current) {
+      setSelectedContact(null);
+      setCardImage('');
+    }
+    prevCustomerIdRef.current = current;
+  }, [visible, selectedCustomer?.id, initial]);
 
   const handleBudgetChange = (value: string) => {
     const raw = value.replace(/[^0-9]/g, '');
@@ -149,11 +188,22 @@ export function OpportunityForm({
     : '';
 
   const handleAddNewCustomer = () => {
-    if (!fairId) return;
+    if (!effectiveFairId) return;
     oppClose();
-    const reopenOpp = () => oppOpen(fairId);
-    openCustomerForm(fairId, (customer) => {
-      oppOpen(fairId, undefined, customer);
+    const reopenOpp = () => oppOpen(effectiveFairId);
+    openCustomerForm(effectiveFairId, (created) => {
+      const withContacts = created as CustomerWithContacts;
+      const contact = withContacts.contacts?.[0] ?? null;
+      oppOpen(
+        effectiveFairId,
+        undefined,
+        {
+          id: withContacts.id,
+          company: withContacts.company,
+          address: withContacts.address,
+        },
+        contact,
+      );
     }, reopenOpp);
   };
 
@@ -272,7 +322,7 @@ export function OpportunityForm({
   };
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || !fairId) return;
+    if (!selectedCustomer || !effectiveFairId) return;
 
     const opportunityDto = {
       customerId: selectedCustomer.id,
@@ -322,14 +372,15 @@ export function OpportunityForm({
   };
 
   const loading = createOpportunity.isPending || updateOpportunity.isPending;
-  const isValid = !!selectedCustomer;
+  const isValid =
+    !!selectedCustomer && (!needsFairSelection || !!effectiveFairId);
 
   const conversionRateLabels =
     CONVERSION_RATE_LABELS as Record<string, string>;
 
   return (
     <BottomSheet
-      isVisible={visible && !!fairId}
+      isVisible={visible}
       onClose={onClose}
       title={isEdit ? 'Fırsatı Düzenle' : 'Yeni Fırsat Oluştur'}
     >
@@ -340,11 +391,25 @@ export function OpportunityForm({
         keyboardDismissMode="on-drag"
       >
         <View className="gap-4 pb-4">
+          {needsFairSelection ? (
+            <View>
+              <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider mb-1.5">
+                Fuar
+              </Text>
+              <Dropdown
+                value={selectedFairId}
+                options={fairOptions}
+                onSelect={setSelectedFairId}
+                placeholder="Fuar seçin"
+              />
+            </View>
+          ) : null}
+
           <CustomerSelectInput
             selectedCustomerId={selectedCustomer?.id ?? null}
             selectedCustomer={selectedCustomer}
             onSelect={setSelectedCustomer}
-            onAddNew={handleAddNewCustomer}
+            onAddNew={effectiveFairId ? handleAddNewCustomer : undefined}
             selectedContact={selectedContact}
             onSelectContact={setSelectedContact}
           />

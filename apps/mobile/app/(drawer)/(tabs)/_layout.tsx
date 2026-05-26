@@ -9,12 +9,16 @@ import { ReportsTabIcon } from '@/components/ui/ReportsTabIcon';
 import { ChartTabIcon } from '@/components/ui/ChartTabIcon';
 import { useFairFormStore } from '@/stores/fair-form-store';
 import { useOpportunityFormStore } from '@/stores/opportunity-form-store';
+import { useCustomerFormStore } from '@/stores/customer-form-store';
+import { useActiveViewStore } from '@/stores/active-view-store';
 import { usePermissions, useHasPermission } from '@/hooks/use-permissions';
 
 function AddButton(props: React.ComponentProps<typeof Pressable>) {
   const pathname = usePathname();
   const openFairForm = useFairFormStore((s) => s.open);
   const openOpportunityForm = useOpportunityFormStore((s) => s.open);
+  const openCustomerForm = useCustomerFormStore((s) => s.open);
+  const activeCustomer = useActiveViewStore((s) => s.activeCustomer);
   const isEditor = useHasPermission('content_editor');
   const isManager = useHasPermission('content_manager');
   const canCreate = isEditor || isManager;
@@ -28,11 +32,25 @@ function AddButton(props: React.ComponentProps<typeof Pressable>) {
       return;
     }
     const fairDetailMatch = pathname?.match(/\/fairs\/([^/]+)/);
+    const customerDetailMatch = pathname?.match(/\/customers\/([^/]+)/);
+
     if (fairDetailMatch) {
       openOpportunityForm(fairDetailMatch[1]);
-    } else {
-      openFairForm();
+      return;
     }
+    if (customerDetailMatch) {
+      openOpportunityForm(null, undefined, activeCustomer ?? undefined);
+      return;
+    }
+    if (pathname?.includes('/customers')) {
+      openCustomerForm(null);
+      return;
+    }
+    if (pathname?.includes('/reports') || pathname?.includes('/chat')) {
+      openOpportunityForm(null);
+      return;
+    }
+    openFairForm();
   };
 
   return (

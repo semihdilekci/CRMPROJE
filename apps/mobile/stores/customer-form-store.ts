@@ -17,7 +17,7 @@ interface CustomerFormState {
   createdSuccessfully: boolean;
   pivotContact: PivotContactData | null;
   open: (
-    fairId: string,
+    fairId?: string | null,
     onCreated?: (customer: Customer) => void,
     onCloseCallback?: () => void,
   ) => void;
@@ -34,10 +34,10 @@ export const useCustomerFormStore = create<CustomerFormState>((set, get) => ({
   onCloseCallback: null,
   createdSuccessfully: false,
   pivotContact: null,
-  open: (fairId, onCreated, onCloseCallback) =>
+  open: (fairId = null, onCreated, onCloseCallback) =>
     set({
       visible: true,
-      fairId,
+      fairId: fairId ?? null,
       onCreated: onCreated ?? null,
       onCloseCallback: onCloseCallback ?? null,
       createdSuccessfully: false,

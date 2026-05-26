@@ -14,7 +14,11 @@ import { API_ENDPOINTS, type ApiSuccessResponse } from '@crm/shared';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useCreateCustomerWithContact, useCustomers } from '@/hooks/use-customers';
+import {
+  useCreateCustomer,
+  useCreateCustomerWithContact,
+  useCustomers,
+} from '@/hooks/use-customers';
 import { useBusinessCardOcr } from '@/hooks/use-business-card-ocr';
 import { useCustomerFormStore } from '@/stores/customer-form-store';
 import api, { getAssetBaseUrl } from '@/lib/api';
@@ -30,6 +34,8 @@ export function CustomerForm({
   fairId,
   onClose,
 }: CustomerFormProps) {
+  const isCompanyOnly = !fairId;
+  const createCustomer = useCreateCustomer();
   const createCustomerWithContact = useCreateCustomerWithContact();
   const { scanBusinessCard, isLoading: ocrLoading } = useBusinessCardOcr();
   const { onCreated, markCreatedSuccessfully, setPivotContact, close: closeForm } =
@@ -232,11 +238,28 @@ export function CustomerForm({
   };
 
   const handleSubmit = async () => {
-    const nameTrimmed = name.trim();
     if (!company.trim()) {
       setSubmitError('Firma adı zorunludur');
       return;
     }
+
+    if (isCompanyOnly) {
+      try {
+        setSubmitError('');
+        const result = await createCustomer.mutateAsync({
+          company: company.trim(),
+          address: address.trim() || null,
+        });
+        onCreated?.(result);
+        markCreatedSuccessfully();
+        onClose();
+      } catch {
+        setSubmitError('Firma kaydedilemedi. Lütfen alanları kontrol edin.');
+      }
+      return;
+    }
+
+    const nameTrimmed = name.trim();
     if (!nameTrimmed) {
       setSubmitError('Temsilci adı zorunludur');
       return;
@@ -266,12 +289,15 @@ export function CustomerForm({
     }
   };
 
-  const loading = createCustomerWithContact.isPending;
-  const isValid =
-    company.trim().length > 0 &&
-    name.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    email.trim().length > 0;
+  const loading = isCompanyOnly
+    ? createCustomer.isPending
+    : createCustomerWithContact.isPending;
+  const isValid = isCompanyOnly
+    ? company.trim().length > 0
+    : company.trim().length > 0 &&
+      name.trim().length > 0 &&
+      phone.trim().length > 0 &&
+      email.trim().length > 0;
 
   const cardImageUrl = cardImage
     ? cardImage.startsWith('http')
@@ -281,9 +307,9 @@ export function CustomerForm({
 
   return (
     <BottomSheet
-      isVisible={visible && !!fairId}
+      isVisible={visible}
       onClose={onClose}
-      title="Yeni Müşteri Ekle"
+      title={isCompanyOnly ? 'Yeni Firma Oluştur' : 'Yeni Müşteri Ekle'}
     >
       <ScrollView
         className="max-h-[70vh]"
@@ -302,6 +328,16 @@ export function CustomerForm({
             }}
             maxLength={200}
           />
+          <Input
+            label="Adres (opsiyonel)"
+            placeholder="Adres"
+            value={address}
+            onChangeText={setAddress}
+            maxLength={1000}
+          />
+
+          {isCompanyOnly ? null : (
+            <>
           <Input
             label="Ad Soyad"
             placeholder="Ad soyad"
@@ -334,14 +370,6 @@ export function CustomerForm({
             keyboardType="email-address"
             maxLength={254}
           />
-          <Input
-            label="Adres (opsiyonel)"
-            placeholder="Adres"
-            value={address}
-            onChangeText={setAddress}
-            maxLength={1000}
-          />
-
           <View>
             <Text className="text-white/60 text-[12px] font-bold uppercase tracking-wider mb-1.5">
               Kartvizit Fotoğrafı (opsiyonel)
@@ -386,6 +414,8 @@ export function CustomerForm({
               </View>
             )}
           </View>
+            </>
+          )}
 
           {submitError ? (
             <View className="rounded-lg bg-[#F87171]/20 px-3 py-2">

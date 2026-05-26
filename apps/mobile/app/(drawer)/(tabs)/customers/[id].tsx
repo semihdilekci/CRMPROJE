@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header } from '@/components/layout/Header';
@@ -12,6 +12,7 @@ import {
   useDeleteCustomer,
 } from '@/hooks/use-customers';
 import { isNetworkError } from '@/lib/error-utils';
+import { useActiveViewStore } from '@/stores/active-view-store';
 
 export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,6 +21,17 @@ export default function CustomerDetailScreen() {
 
   const { data: profile, isLoading, error, refetch } = useCustomerProfile(id ?? null);
   const deleteCustomer = useDeleteCustomer();
+  const setActiveCustomer = useActiveViewStore((s) => s.setActiveCustomer);
+  const clearActiveCustomer = useActiveViewStore((s) => s.clearActiveCustomer);
+
+  useEffect(() => {
+    if (profile?.customer) {
+      setActiveCustomer(profile.customer);
+    }
+    return () => {
+      clearActiveCustomer();
+    };
+  }, [profile?.customer, setActiveCustomer, clearActiveCustomer]);
 
   const handleBack = () => {
     if (router.canGoBack()) {

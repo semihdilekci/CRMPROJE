@@ -1,14 +1,21 @@
 import { create } from 'zustand';
-import type { OpportunityWithDetails, Customer } from '@crm/shared';
+import type { OpportunityWithDetails, CustomerContact } from '@crm/shared';
+import type { ActiveCustomerRef } from '@/stores/active-view-store';
 
 interface OpportunityFormState {
   visible: boolean;
   fairId: string | null;
   editingOpportunity: OpportunityWithDetails | null;
-  preselectedCustomer: Customer | null;
-  open: (fairId: string, opportunity?: OpportunityWithDetails, preselectedCustomer?: Customer) => void;
+  preselectedCustomer: ActiveCustomerRef | null;
+  preselectedContact: CustomerContact | null;
+  open: (
+    fairId?: string | null,
+    opportunity?: OpportunityWithDetails,
+    preselectedCustomer?: ActiveCustomerRef,
+    preselectedContact?: CustomerContact | null,
+  ) => void;
   close: () => void;
-  clearPreselectedCustomer: () => void;
+  clearPreselection: () => void;
 }
 
 export const useOpportunityFormStore = create<OpportunityFormState>((set) => ({
@@ -16,14 +23,23 @@ export const useOpportunityFormStore = create<OpportunityFormState>((set) => ({
   fairId: null,
   editingOpportunity: null,
   preselectedCustomer: null,
-  open: (fairId, opportunity, preselectedCustomer) =>
+  preselectedContact: null,
+  open: (fairId = null, opportunity, preselectedCustomer, preselectedContact = null) =>
     set({
       visible: true,
-      fairId,
+      fairId: fairId ?? null,
       editingOpportunity: opportunity ?? null,
       preselectedCustomer: preselectedCustomer ?? null,
+      preselectedContact: preselectedContact ?? null,
     }),
   close: () =>
-    set({ visible: false, fairId: null, editingOpportunity: null, preselectedCustomer: null }),
-  clearPreselectedCustomer: () => set({ preselectedCustomer: null }),
+    set({
+      visible: false,
+      fairId: null,
+      editingOpportunity: null,
+      preselectedCustomer: null,
+      preselectedContact: null,
+    }),
+  clearPreselection: () =>
+    set({ preselectedCustomer: null, preselectedContact: null }),
 }));
